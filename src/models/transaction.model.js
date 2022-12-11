@@ -97,8 +97,12 @@ receiptSchema.pre('save', async function (next) {
     }
 
     if (receipt.type == 'book_ride') {
-        if (!receipt.ride) { throw new BadRequestError('Please specify Ride id') }
-        if (!receipt.rider) { throw new BadRequestError('Please specify Rider id') }
+        if (!receipt.ride) {
+            throw new BadRequestError('Please specify Ride id')
+        }
+        if (!receipt.rider) {
+            throw new BadRequestError('Please specify Rider id')
+        }
     }
 
     next()
