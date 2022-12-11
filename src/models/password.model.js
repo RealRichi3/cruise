@@ -6,13 +6,6 @@ const passwordSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
-        minlength: 8,
-        trim: true,
-        validate(value) {
-            if (value.toLowerCase().includes('password')) {
-                throw new Error('Password cannot contain "password"')
-            }
-        },
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -35,14 +28,14 @@ passwordSchema.changePassword = async (new_password) => {
     const hashedPassword = await bcrypt.hash(new_password, salt)
 
     this.password = hashedPassword
-    
+
     await this.save()
 }
 
 passwordSchema.validatePassword = async (password) => {
     return await bcrypt.compare(password, user.password)
 }
-
+git stat
 const Password = mongoose.model('Password', passwordSchema)
 
 module.exports = Password
