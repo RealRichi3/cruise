@@ -1,18 +1,6 @@
 const mongoose = require('mongoose')
 const schema = mongoose.Schema
 
-const walletSchema = new schema(
-    {
-        balance: { type: Number, required: true, default: 0 },
-        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-        transactions: [{ type: schema.Types.ObjectId, ref: 'Transaction' }],
-        withdrawal_requests: [
-            { type: schema.Types.ObjectId, ref: 'WithdrawalRequest' },
-        ],
-    },
-    { timestamps: true }
-)
-
 const withdrawalRequestSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'User', required: true },
     amount: { type: Number, required: true },
@@ -25,6 +13,18 @@ const withdrawalRequestSchema = new schema({
     transaction: { type: schema.Types.ObjectId, ref: 'Transaction' },
     createdAt: { type: Date, default: Date.now },
 })
+
+const walletSchema = new schema(
+    {
+        balance: { type: Number, required: true, default: 0 },
+        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        transactions: [{ type: schema.Types.ObjectId, ref: 'Transaction' }],
+        withdrawal_requests: [
+            { type: schema.Types.ObjectId, ref: 'WithdrawalRequest' },
+        ],
+    },
+    { timestamps: true }
+)
 
 const bankAccountSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -41,7 +41,7 @@ const cardSchema = new schema({
     cvv: { type: String, required: true },
 })
 
-const paymentDetailsSchema = new schema(
+const paymentInfoSchema = new schema(
     {
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
         cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
@@ -53,7 +53,7 @@ const paymentDetailsSchema = new schema(
 
 const Card = mongoose.model('Card', cardSchema)
 const BankAccount = mongoose.model('BankAccount', bankAccountSchema)
-const PaymentDetails = mongoose.model('PaymentDetails', paymentDetailsSchema)
+const PaymentInfo = mongoose.model('PaymentInfo', paymentInfoSchema)
 const Wallet = mongoose.model('Wallet', walletSchema)
 const WithdrawalRequest = mongoose.model(
     'WithdrawalRequest',
@@ -63,7 +63,7 @@ const WithdrawalRequest = mongoose.model(
 module.exports = {
     Card,
     BankAccount,
-    PaymentDetails,
+    PaymentInfo,
     Wallet,
     WithdrawalRequest,
 }
