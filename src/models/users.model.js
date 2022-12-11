@@ -84,3 +84,32 @@ const riderSchema = new schema(
     },
     { timestamps: true }
 )
+
+const adminSchema = new schema(
+    {
+        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        state: { type: String, required: true },
+    },
+    { timestamps: true }
+)
+
+const superadminSchema = new schema(
+    {
+        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+    },
+    { timestamps: true }
+)
+
+const User = mongoose.model('User', userSchema)
+const Enduser = mongoose.model('Enduser', enduserSchema)
+const Rider = mongoose.model('Rider', riderSchema)
+const Admin = mongoose.model('Admin', adminSchema)
+const Superadmin = mongoose.model('Superadmin', superadminSchema)
+
+module.exports = {
+    User,
+    Enduser,
+    Rider,
+    Admin,
+    Superadmin,
+}
