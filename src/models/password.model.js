@@ -35,7 +35,7 @@ passwordSchema.changePassword = async (new_password) => {
 passwordSchema.validatePassword = async (password) => {
     return await bcrypt.compare(password, user.password)
 }
-git stat
+
 const Password = mongoose.model('Password', passwordSchema)
 
 module.exports = Password
