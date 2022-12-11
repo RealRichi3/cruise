@@ -27,6 +27,9 @@ const withdrawalRequestSchema = new schema({
 })
 
 const Wallet = mongoose.model('Wallet', walletSchema)
-const WithdrawalRequest = mongoose.model('WithdrawalRequest', withdrawalSchema)
+const WithdrawalRequest = mongoose.model(
+    'WithdrawalRequest',
+    withdrawalRequestSchema
+)
 
 module.exports = { Wallet, WithdrawalRequest }
