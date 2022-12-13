@@ -1,7 +1,12 @@
-require('dotenv')
-    .config({ path: `${__dirname}/.env.${process.env.NODE_ENV}` })
+if (process.env.NODE_ENV) {
+    require('dotenv').config({
+        path: `${__dirname}/.env.${process.env.NODE_ENV}`,
+    })
+} else {
+    require('dotenv').config({ path: `${__dirname}/.env` })
+}
 
-    const { MONGO_URI, PORT } = require('./utils/config')
+const { MONGO_URI, PORT } = require('./utils/config')
 
 const app = require('./app')
 
