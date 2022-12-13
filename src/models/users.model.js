@@ -1,6 +1,14 @@
 const { default: mongoose } = require('mongoose')
 const schema = mongoose.Schema
 
+const statusSchema = new schema(
+    {
+        isVerified: { type: Boolean, default: false },
+        isActive: { type: Boolean, default: false },
+    },
+    { timestamps: true }
+)
+
 const userSchema = new schema(
     {
         firstname: { type: String, required: true },
@@ -12,12 +20,7 @@ const userSchema = new schema(
             default: 'user',
             enum: ['enduser', 'rider', 'admin', 'superadmin'],
         },
-        account_status: {
-            type: String,
-            required: true,
-            default: 'active',
-            enum: ['active', 'inactive', 'suspended'],
-        },
+        status: { type: schema.Types.ObjectId, ref: 'Status', required: true },
         password: {
             type: schema.Types.ObjectId,
             ref: 'Password',
@@ -82,6 +85,7 @@ const superadminSchema = new schema(
     { timestamps: true }
 )
 
+const Status = mongoose.model('Status', statusSchema)
 const User = mongoose.model('User', userSchema)
 const Enduser = mongoose.model('Enduser', enduserSchema)
 const Rider = mongoose.model('Rider', riderSchema)
