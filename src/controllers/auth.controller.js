@@ -19,8 +19,8 @@ const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 
 /**
- * Handle existing unverified user
- * Sends new verification email to user
+ * Handle existing unverified user.
+ * it sends new verification email to user
  * @param {MongooseObject} user - Mongoose user object
  * @returns {string} access_token, refresh_token - JWT tokens
  */
@@ -290,9 +290,47 @@ const logout = async (req, res, next) => {
     res.status(200).json({ success: true, data: {} });
 };
 
-const forgotPassword = async (req, res, next) => {};
+const forgotPassword = async (req, res, next) => {
+    const { email } = req.body;
 
-const resetPassword = async (req, res, next) => {};
+    // Check if user exists
+    const user = await User.findOne({email}).populate('status');
+
+    if (!user) throw new BadRequestError('User does not exist');
+
+    // Check if user is verified
+    if (!user.status.isVerified) throw new BadRequestError('User is not verified');
+
+    // Check if user is active
+    if (!user.status.isActive) throw new BadRequestError('User is not active');
+
+    // Generate password reset code
+    const password_reset_code = await genAuthCode(user._id, "password_reset");
+
+    // Send password reset email
+    sendEmail({
+        email: user.email,
+        subject: "Password Reset",
+        text: `Your password reset code is ${password_reset_code}`,
+    })
+};
+
+const resetPassword = async (req, res, next) => {
+    const { email, password_reset_code, password } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({email}).populate('status password');
+
+    if (!user) throw new BadRequestError('User does not exist');
+
+    // Check if user is verified
+    if (!user.status.isVerified) throw new BadRequestError('User is not verified');
+
+    // Check if user is active
+    if (!user.status.isActive) throw new BadRequestError('User is not active');
+
+    
+};
 
 const getLoggedInUserData = async (req, res, next) => {};
 
