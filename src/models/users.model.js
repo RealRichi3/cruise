@@ -17,14 +17,8 @@ const userSchema = new schema(
         role: {
             type: String,
             required: true,
-            default: 'user',
+            default: 'enduser',
             enum: ['enduser', 'rider', 'admin', 'superadmin'],
-        },
-        status: { type: schema.Types.ObjectId, ref: 'Status', required: true },
-        password: {
-            type: schema.Types.ObjectId,
-            ref: 'Password',
-            required: true,
         },
     },
     { timestamps: true }
@@ -84,6 +78,22 @@ const superadminSchema = new schema(
     },
     { timestamps: true }
 )
+
+// Virtuals
+userSchema.virtual('password', {
+    ref: 'Password',
+    localField: '_id',
+    foreignField: 'user',
+    justOne: true,
+})
+
+userSchema.virtual('status', {
+    ref: 'Status',
+    localField: '_id',
+    foreignField: 'user',
+    justOne: true,
+})
+
 
 const Status = mongoose.model('Status', statusSchema)
 const User = mongoose.model('User', userSchema)
