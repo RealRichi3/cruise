@@ -37,17 +37,36 @@ const handleExistingUnverifiedUser = async (user) => {
     return { access_token, refresh_token }
 }
 
+/**
+ * Enduser signup
+ * @description - Creates a new enduser
+ * @route POST /api/v1/auth/signup
+ * @access Public
+ * @param {string} firstname - Firstname of user
+ * @param {string} lastname - Lastname of user
+ * @param {string} email - Email of user
+ * @param {string} password - Password of user
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ * @returns {string} data.refresh_token - JWT refresh token
+ * @returns {string} access_token, refresh_token - JWT tokens
+ * @throws {BadRequestError} - If user already exists
+ * @throws {BadRequestError} - If user already exists and is verified
+ */
 const enduserSignup = asyncWrapper(async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body
 
     // Check if user already exists
     const existing_user = await User.findOne({ email }).populate('status')
-    console.log(existing_user)
-    console.log(existing_user?.toJSON({ virtuals: true}))
+    // console.log(existing_user?.toJSON({ virtuals: true }))
+
     if (existing_user) {
         if (!existing_user.status.isVerified) {
             const { access_token, refresh_token } =
-                handleExistingUnverifiedUser(existing_user)
+                await handleExistingUnverifiedUser(existing_user)
+
+            console.log(access_token, refresh_token)
             return res
                 .status(200)
                 .json({ success: true, data: { access_token, refresh_token } })
@@ -63,11 +82,8 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
         email,
         role: 'enduser',
     })
-    const user_password = await Password.create({ password, user: user._id })
-    const user_status = await Status.create({ user: user._id, isActive: true })
-    console.log(user.populate('status'))
-    console.log(user_password)
-    console.log(user_status)
+    await Password.create({ password, user: user._id })
+    await Status.create({ user: user._id, isActive: true })
 
     // Send verification email
     const { verification_code } = await getAuthCodes(user._id, 'verification')
