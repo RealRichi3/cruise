@@ -238,8 +238,6 @@ const resendVerificationEmail = async (req, res, next) => {
  * @throws {BadRequestError} - If user is not verified
  * @throws {BadRequestError} - If user is not active
  * @throws {BadRequestError} - If password is incorrect
- *
- * @todo - Add password reset functionality
  */
 const login = async (req, res, next) => {
     const { email, password } = req.body;
@@ -406,7 +404,31 @@ const resetPassword = async (req, res, next) => {
     return res.status(200).json({ success: true, data: {} });
 };
 
-const getLoggedInUserData = async (req, res, next) => {};
+/**
+ * Verify email
+ * @description - Verifies user email
+ * @route PATCH /api/v1/auth/verifyemail
+ * @access Private
+ * 
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * 
+ * */ 
+const getLoggedInUserData = async (req, res, next) => {
+    const user = await User.findOne({ email: req.user.email })
+
+    res.status(200).json({
+        success: true,
+        data: {
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+            },
+        },
+    });
+};
 
 module.exports = {
     enduserSignup,

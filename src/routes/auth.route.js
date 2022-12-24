@@ -27,5 +27,6 @@ router
     .post('/verifyemail', basicAuth('verification'), verifyEmail)
     .get('/user', basicAuth(), getLoggedInUserData)
     .get('/authtoken', basicAuth())
+    .get('/loggedinuser', basicAuth(), getLoggedInUserData)
 
 module.exports = router
