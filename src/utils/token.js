@@ -1,5 +1,5 @@
 const { User } = require('../models/entity')
-const { Token } = require('../models/token')
+const { AuthCode } = require('../models/token')
 const asyncWrapper = require('./async_wrapper')
 const { NotFoundError } = require('./custom_errors')
 const jwt = require('jsonwebtoken')
@@ -46,7 +46,7 @@ const getAuthCodes = async (user_id, code_type) => {
 
         if (code_type == 'verification') {
             verification_code = random_code
-            await Token.findOneAndUpdate(
+            await AuthCode.findOneAndUpdate(
                 { user: user_id },
                 { verification_code }
             )
@@ -54,7 +54,7 @@ const getAuthCodes = async (user_id, code_type) => {
 
         if (code_type == 'password_reset') {
             password_reset_code = random_code
-            await Token.findOneAndUpdate(
+            await AuthCode.findOneAndUpdate(
                 { user: user_id },
                 { password_reset_code }
             )
@@ -62,7 +62,7 @@ const getAuthCodes = async (user_id, code_type) => {
 
         if (code_type == 'activation') {
             activation_code = UUID()
-            await Token.findOneAndUpdate({ user: user_id }, { activation_code })
+            await AuthCode.findOneAndUpdate({ user: user_id }, { activation_code })
         }
 
         return { verification_code, password_reset_code, activation_code }
