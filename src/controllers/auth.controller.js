@@ -290,6 +290,20 @@ const logout = async (req, res, next) => {
     res.status(200).json({ success: true, data: {} });
 };
 
+/**
+ * Forgot password
+ * @description - Sends password reset code to user
+ * @route POST /api/v1/auth/forgotpassword
+ * @access Public
+ * @param {string} email - Email of user
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ * @throws {BadRequestError} - If user does not exist
+ *
+ * @todo - Add password reset functionality
+ * @todo - Add password reset email
+ * */
 const forgotPassword = async (req, res, next) => {
     const { email } = req.body;
 
