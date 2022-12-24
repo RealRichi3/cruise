@@ -50,7 +50,7 @@ const basicAuth = function (token_type = null) {
         // Check if the request has a valid authorization header
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new BadRequestError('Invalid authorization header');
+            return next(new BadRequestError('Invalid authorization header'));
         }
 
         let secret = config.JWT_SECRET;
@@ -68,7 +68,7 @@ const basicAuth = function (token_type = null) {
         // Check if access token has been blacklisted
         const blacklisted = await BlacklistedToken.findOne({ token: jwtToken });
         if (blacklisted) {
-            throw new UnauthenticatedError('JWT token expired');
+            return next(new UnauthenticatedError('JWT token expired'));
         }
 
         // To get new access token
@@ -82,8 +82,10 @@ const basicAuth = function (token_type = null) {
         }
 
         if (!req.user.status.isActive) {
-            throw new UnauthenticatedError(
-                'Unauthorized access, users account is not active'
+            return next(
+                new UnauthenticatedError(
+                    'Unauthorized access, users account is not active'
+                )
             );
         }
 

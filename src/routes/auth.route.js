@@ -24,7 +24,7 @@ router
     .post('/forgotpassword', forgotPassword)
     .patch('/resetpassword', basicAuth('password_reset'), resetPassword)
     .get('/verifyemail/:email', resendVerificationEmail)
-    .post('/verifyemail', basicAuth, verifyEmail)
+    .post('/verifyemail', basicAuth('verification'), verifyEmail)
     .get('/user', basicAuth, getLoggedInUserData)
 
 module.exports = router
