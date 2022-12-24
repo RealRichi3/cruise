@@ -26,8 +26,11 @@ const handleExistingUnverifiedUser = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
             // Get verification code
-            const { verification_code } = await getAuthCodes( user.id, 'verification' )
-            
+            const { verification_code } = await getAuthCodes(
+                user.id,
+                'verification'
+            )
+
             // Send verification email
             sendEmail({
                 email: user.email,
@@ -39,7 +42,6 @@ const handleExistingUnverifiedUser = async function (user) {
             const { access_token } = await getAuthTokens(user._id)
 
             resolve({ access_token })
-
         } catch (error) {
             reject(error)
         }
@@ -68,11 +70,12 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
 
     const existing_user = await User.findOne({ email }).populate('status')
     // console.log(existing_user?.toJSON({ virtuals: true }))
-    
+
     if (existing_user) {
         // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
-            const { access_token, refresh_token } = await handleExistingUnverifiedUser(existing_user)
+            const { access_token, refresh_token } =
+                await handleExistingUnverifiedUser(existing_user)
 
             return res
                 .status(200)
@@ -91,6 +94,7 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
     })
     await Password.create({ password, user: user._id })
     await Status.create({ user: user._id, isActive: true })
+    await AuthCode.create({ user: user._id})
 
     // Send verification email
     const { verification_code } = await getAuthCodes(user._id, 'verification')
@@ -112,7 +116,7 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
                 id: user._id,
                 firstname: user.firstname,
                 lastname: user.lastname,
-                email: user.email
+                email: user.email,
             },
         },
     })
@@ -126,7 +130,31 @@ const riderSignup = asyncWrapper(async (req, res, next) => {
 
 const adminSignup = asyncWrapper(async (req, res, next) => {})
 
-const verifyEmail = asyncWrapper(async (req, res, next) => {})
+const verifyEmail = asyncWrapper(async (req, res, next) => {
+    const { email, verification_code } = req.body
+
+    // Check if user exists
+    const user = await User.findOne({ email }).populate('status')
+    console.log(user.toJSON({ virtuals: true }))
+    if (!user) throw new BadRequestError('User does not exist')
+
+    // Check if user is verified
+    if (user.status.isVerified)
+        throw new BadRequestError('User is already verified')
+
+    // Check if verification code is valid
+    const auth_code = await AuthCode.findOne({
+        user: user._id,
+        // verification_code,
+    })
+    console.log(auth_code)
+    if (!auth_code) throw new BadRequestError('Invalid verification code')
+
+    // Verify user
+    await user.status.updateOne({ isVerified: true })
+
+    res.status(200).json({ success: true, data: {} })
+})
 
 /**
  * Resend verification email to user
