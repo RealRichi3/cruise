@@ -24,7 +24,7 @@ const config = require('../utils/config')
  */
 const basicAuth = asyncWrapper(async (req, res, next) => {
     // Check if the request has a valid authorization header
-    const authHeader = req.headers.authrorization
+    const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         throw new BadRequestError('Invalid authorization header')
     }
