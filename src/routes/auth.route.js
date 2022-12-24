@@ -1,15 +1,30 @@
 const express = require('express')
 const { basicAuth } = require('../middlewares/auth')
-// const authController = require('./../controllers/auth.controllers')
 const router = express.Router()
 
-// router.post('/signup', authController.signup)
-// router.post('/login', authController.login)
+const {
+    enduserSignup,
+    riderSignup,
+    adminSignup,
+    login,
+    logout,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    resendVerificationEmail,
+    getLoggedInUserData,
+} = require('../controllers/auth.controller')
 
-// router.post('/forgotpassword', authController.forgetPassword)
-// router.patch('/resetpassword/', authController.resetPassword)
-// router.post('/googlesignin', authController.googleSignin)
-// router.get('/verifyemail/:token', authController.verifyEmail)
-// router.get('/user', authController.getLoggedInUser)
+router
+    .post('/signup/enduser', enduserSignup)
+    .post('/signup/rider', riderSignup)
+    .post('/signup/admin', adminSignup)
+    .post('/login', login)
+    .post('/logout', basicAuth, logout)
+    .post('/forgotpassword', forgotPassword)
+    .patch('/resetpassword', resetPassword)
+    .get('/verifyemail/:token', verifyEmail)
+    .post('/resendverificationemail', resendVerificationEmail)
+    .get('/user', basicAuth, getLoggedInUserData)
 
 module.exports = router
