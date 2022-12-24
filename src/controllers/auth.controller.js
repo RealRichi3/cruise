@@ -201,6 +201,24 @@ const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
     res.status(200).json({ success: true, data: { access_token } });
 });
 
+/**
+ * Login
+ * @description - Logs in user
+ * @route POST /api/v1/auth/login
+ * @access Public
+ * @param {string} email - Email of user
+ * @param {string} password - Password of user
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ * @returns {string} data.refresh_token - JWT refresh token
+ * @throws {BadRequestError} - If user does not exist
+ * @throws {BadRequestError} - If user is not verified
+ * @throws {BadRequestError} - If user is not active
+ * @throws {BadRequestError} - If password is incorrect
+ * 
+ * @todo - Add password reset functionality
+ */
 const login = asyncWrapper(async (req, res, next) => {
     const { email, password } = req.body;
 
