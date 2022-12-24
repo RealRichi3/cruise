@@ -128,6 +128,18 @@ const adminSignup = asyncWrapper(async (req, res, next) => {})
 
 const verifyEmail = asyncWrapper(async (req, res, next) => {})
 
+/**
+ * Resend verification email to user
+ * @description - Resends verification email to user
+ * @route POST /api/v1/auth/resend-verification-email
+ * @access Public
+ * @param {string} email - Email of user
+ * @returns {string} success - Success message
+ * @throws {BadRequestError} - If user does not exist
+ * @throws {BadRequestError} - If user is already verified
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ */
 const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
     const email = req.params.email
     console.log(email)
