@@ -4,6 +4,7 @@ const {
     UnauthorizedError,
 } = require('../utils/custom_errors');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // Models
 const { BlacklistedToken, AuthCode } = require('../models/token.model');
@@ -200,9 +201,72 @@ const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
     res.status(200).json({ success: true, data: { access_token } });
 });
 
-const login = asyncWrapper(async (req, res, next) => {});
+const login = asyncWrapper(async (req, res, next) => {
+    const { email, password } = req.body;
 
-const logout = asyncWrapper(async (req, res, next) => {});
+    const user = await User.findOne({ email }).populate('status password');
+    
+    // Check if user exists
+    if (!user) throw new BadRequestError('User does not exist');
+
+    // Check if user is verified
+    if (!user.status.isVerified)
+        throw new BadRequestError('User is not verified');
+
+    // Check if user is active
+    if (!user.status.isActive) throw new BadRequestError('User is not active');
+
+    // Check if password is correct
+    const password_match = await bcrypt.compare(password, user.password.password);
+    if (!password_match) throw new BadRequestError('Invalid password');
+
+    // Get auth tokens
+    const { access_token, refresh_token } = await getAuthTokens(user._id);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            access_token,
+            refresh_token,
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+            },
+        },
+    });
+});
+
+/**
+ * Logout user
+ * @description - Logs out user
+ * @route POST /api/v1/auth/logout
+ * @access Private
+ * @param {string} refresh_token - Refresh token
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @throws {BadRequestError} - If refresh token is not provided
+ * @throws {BadRequestError} - If access token is not provided
+ */
+const logout = asyncWrapper(async (req, res, next) => {
+    const { refresh_token } = req.body;
+
+    // Get access token from header
+    const access_token = req.headers.authorization.split(' ')[1];
+    
+    // Check if refresh token exists
+    if (!refresh_token) throw new BadRequestError('Refresh token is required');
+
+    // Check if access token exists
+    if (!access_token) throw new BadRequestError('Access token is required');
+
+    // Blacklist jwt tokens
+    BlacklistedToken.create({ token: access_token });
+    BlacklistedToken.create({ token: refresh_token });
+
+    res.status(200).json({ success: true, data: {} });
+});
 
 const forgotPassword = asyncWrapper(async (req, res, next) => {});
 
