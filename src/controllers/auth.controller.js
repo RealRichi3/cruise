@@ -12,7 +12,7 @@ const Password = require('../models/password.model')
 
 // Utils
 const config = require('../utils/config')
-const { asyncWrapper } = require('../utils/async_wrapper')
+const asyncWrapper = require('../utils/async_wrapper')
 const { sendEmail } = require('../utils/email')
 const { getAuthCodes, getAuthTokens } = require('../utils/token')
 
@@ -92,7 +92,11 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
     })
 })
 
-const riderSignup = asyncWrapper(async (req, res, next) => {})
+const riderSignup = asyncWrapper(async (req, res, next) => {
+    const { firstname, lastname, email, password } = req.body
+
+    // Check if user already exists
+})
 
 const adminSignup = asyncWrapper(async (req, res, next) => {})
 

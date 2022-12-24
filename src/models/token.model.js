@@ -10,7 +10,7 @@ const blacklistedTokenSchema = new schema(
     { timestamps: true, expires: JWT_REFRESH_EXPIRES_IN }
 )
 
-const authCodesSchema = new schema(
+const authCodeSchema = new schema(
     {
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
         verification_code: { type: String },
@@ -20,7 +20,7 @@ const authCodesSchema = new schema(
     { timestamps: true, expires: JWT_REFRESH_EXPIRES_IN }
 )
 
-const AuthCode = mongoose.model('AuthCode', tokenSchema)
+const AuthCode = mongoose.model('AuthCode', authCodeSchema)
 
 const BlacklistedToken = mongoose.model(
     'BlacklistedToken',

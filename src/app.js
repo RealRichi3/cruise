@@ -6,13 +6,15 @@ const errorHandler = require('./middlewares/error_handler')
 const app = express()
 
 // Middlewares
-if (process.env.NODE_ENV == 'dev') app.use(morgan('dev'))
+if (process.env.NODE_ENV == 'dev') {
+    app.use(morgan('dev'))
+}
 
 app.use(cors())
-app.use(cookieParser())
 app.use(express.json())
 
-// RouteS
+// Routes
+app.subscribe('/api/v1/auth', require('./routes/auth.route'))
 
 // Error handler middleware
 app.use(errorHandler)

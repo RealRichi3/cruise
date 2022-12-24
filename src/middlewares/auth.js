@@ -1,11 +1,11 @@
-const { asyncWrapper } = require('../utils/async_wrapper')
+const  asyncWrapper  = require('../utils/async_wrapper')
 const {
     CustomAPIError,
     BadRequestError,
     UnauthenticatedError,
 } = require('../utils/custom_errors')
 const jwt = require('jsonwebtoken')
-const { BlacklistedToken } = require('../models/token.models')
+const { BlacklistedToken } = require('../models/token.model')
 
 const config = require('../utils/config')
 
