@@ -6,7 +6,7 @@ const {
 const jwt = require('jsonwebtoken')
 
 // Models
-const { BlacklistedToken, Token } = require('../models/token.model')
+const { BlacklistedToken, AuthCode } = require('../models/token.model')
 const { User } = require('../models/users.model')
 const Password = require('../models/password.model')
 
@@ -14,8 +14,83 @@ const Password = require('../models/password.model')
 const config = require('../utils/config')
 const { asyncWrapper } = require('../utils/async_wrapper')
 const { sendEmail } = require('../utils/email')
+const { getAuthCodes, getAuthTokens } = require('../utils/token')
 
-const enduserSignup = asyncWrapper(async (req, res, next) => {})
+/**
+ * Handle existing unverified user
+ * Sends new verification email to user
+ * @param {MongooseObject} user - Mongoose user object
+ * @returns {string} access_token, refresh_token - JWT tokens
+ */
+const handleExistingUnverifiedUser = async (user) => {
+    // Send verification email
+    const { verification_code } = await getAuthCodes(user._id, 'verification')
+    sendEmail({
+        email: user.email,
+        subject: 'Account Verification',
+        message: 'This is your verification code: ' + verification_code,
+    })
+
+    // Get auth tokens
+    const { access_token, refresh_token } = await getAuthTokens(user._id)
+
+    return { access_token, refresh_token }
+}
+
+const enduserSignup = asyncWrapper(async (req, res, next) => {
+    const { firstname, lastname, email, password } = req.body
+
+    // Check if user already exists
+    const existing_user = await User.findOne({ email })
+    if (existing_user) {
+        if (!existing_user.status.isVerified) {
+            const { access_token, refresh_token } =
+                handleExistingUnverifiedUser(existing_user)
+            return res
+                .status(200)
+                .json({ success: true, data: { access_token, refresh_token } })
+        }
+
+        throw new BadRequestError('User already exists')
+    }
+
+    // Create user
+    const user = await User.create({
+        firstname,
+        lastname,
+        email,
+        role: 'enduser',
+    })
+    const user_password = await Password.create({ password, user: user._id })
+    const user_status = await Status.create({ user: user._id, isActive: true })
+
+    // Send verification email
+    const { verification_code } = await getAuthCodes(user._id, 'verification')
+    sendEmail({
+        email: user.email,
+        subject: 'Account Verification',
+        message: 'This is your verification code: ' + verification_code,
+    })
+
+    // Get auth tokens
+    const { access_token, refresh_token } = await getAuthTokens(user._id)
+
+    res.status(201).json({
+        success: true,
+        data: {
+            access_token,
+            refresh_token,
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+            },
+        },
+    })
+})
 
 const riderSignup = asyncWrapper(async (req, res, next) => {})
 
@@ -47,4 +122,3 @@ module.exports = {
     resendVerificationEmail,
     getLoggedInUserData,
 }
-
