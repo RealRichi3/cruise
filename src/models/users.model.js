@@ -3,6 +3,7 @@ const schema = mongoose.Schema
 
 const statusSchema = new schema(
     {
+        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
         isVerified: { type: Boolean, default: false },
         isActive: { type: Boolean, default: false },
     },
@@ -108,4 +109,5 @@ module.exports = {
     Rider,
     Admin,
     Superadmin,
+    Status
 }

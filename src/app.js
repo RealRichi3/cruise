@@ -14,7 +14,7 @@ app.use(cors())
 app.use(express.json())
 
 // Routes
-app.subscribe('/api/v1/auth', require('./routes/auth.route'))
+app.use('/api/v1/auth', require('./routes/auth.route'))
 
 // Error handler middleware
 app.use(errorHandler)

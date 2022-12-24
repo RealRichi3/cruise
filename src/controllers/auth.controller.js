@@ -7,13 +7,13 @@ const jwt = require('jsonwebtoken')
 
 // Models
 const { BlacklistedToken, AuthCode } = require('../models/token.model')
-const { User } = require('../models/users.model')
+const { User, Status } = require('../models/users.model')
 const Password = require('../models/password.model')
 
 // Utils
 const config = require('../utils/config')
 const asyncWrapper = require('../utils/async_wrapper')
-const { sendEmail } = require('../utils/email')
+const sendEmail = require('../utils/email')
 const { getAuthCodes, getAuthTokens } = require('../utils/token')
 
 /**
@@ -41,7 +41,9 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body
 
     // Check if user already exists
-    const existing_user = await User.findOne({ email })
+    const existing_user = await User.findOne({ email }).populate('status')
+    console.log(existing_user)
+    console.log(existing_user?.toJSON({ virtuals: true}))
     if (existing_user) {
         if (!existing_user.status.isVerified) {
             const { access_token, refresh_token } =
@@ -63,6 +65,9 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
     })
     const user_password = await Password.create({ password, user: user._id })
     const user_status = await Status.create({ user: user._id, isActive: true })
+    console.log(user.populate('status'))
+    console.log(user_password)
+    console.log(user_status)
 
     // Send verification email
     const { verification_code } = await getAuthCodes(user._id, 'verification')
