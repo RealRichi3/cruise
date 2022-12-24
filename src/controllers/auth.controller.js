@@ -22,19 +22,28 @@ const { getAuthCodes, getAuthTokens } = require('../utils/token')
  * @param {MongooseObject} user - Mongoose user object
  * @returns {string} access_token, refresh_token - JWT tokens
  */
-const handleExistingUnverifiedUser = async (user) => {
-    // Send verification email
-    const { verification_code } = await getAuthCodes(user._id, 'verification')
-    sendEmail({
-        email: user.email,
-        subject: 'Account Verification',
-        message: 'This is your verification code: ' + verification_code,
+const handleExistingUnverifiedUser = async function (user) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Get verification code
+            const { verification_code } = await getAuthCodes( user.id, 'verification' )
+            
+            // Send verification email
+            sendEmail({
+                email: user.email,
+                subject: 'Account Verification',
+                message: 'This is your verification code: ' + verification_code,
+            })
+
+            // Get access token
+            const { access_token } = await getAuthTokens(user._id)
+
+            resolve({ access_token })
+
+        } catch (error) {
+            reject(error)
+        }
     })
-
-    // Get auth tokens
-    const { access_token, refresh_token } = await getAuthTokens(user._id)
-
-    return { access_token, refresh_token }
 }
 
 /**
@@ -57,16 +66,14 @@ const handleExistingUnverifiedUser = async (user) => {
 const enduserSignup = asyncWrapper(async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body
 
-    // Check if user already exists
     const existing_user = await User.findOne({ email }).populate('status')
     // console.log(existing_user?.toJSON({ virtuals: true }))
-
+    
     if (existing_user) {
+        // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
-            const { access_token, refresh_token } =
-                await handleExistingUnverifiedUser(existing_user)
+            const { access_token, refresh_token } = await handleExistingUnverifiedUser(existing_user)
 
-            console.log(access_token, refresh_token)
             return res
                 .status(200)
                 .json({ success: true, data: { access_token, refresh_token } })
@@ -105,9 +112,7 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
                 id: user._id,
                 firstname: user.firstname,
                 lastname: user.lastname,
-                email: user.email,
-                role: user.role,
-                status: user.status,
+                email: user.email
             },
         },
     })
@@ -121,6 +126,26 @@ const riderSignup = asyncWrapper(async (req, res, next) => {
 
 const adminSignup = asyncWrapper(async (req, res, next) => {})
 
+const verifyEmail = asyncWrapper(async (req, res, next) => {})
+
+const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
+    const email = req.params.email
+    console.log(email)
+    const user = await User.findOne({ email }).populate('status')
+
+    if (!user) {
+        throw new BadRequestError('User does not exist')
+    }
+
+    if (user.status.isVerified) {
+        throw new BadRequestError('User is already verified')
+    }
+
+    const { access_token } = await handleExistingUnverifiedUser(user)
+
+    res.status(200).json({ success: true, data: { access_token } })
+})
+
 const login = asyncWrapper(async (req, res, next) => {})
 
 const logout = asyncWrapper(async (req, res, next) => {})
@@ -128,10 +153,6 @@ const logout = asyncWrapper(async (req, res, next) => {})
 const forgotPassword = asyncWrapper(async (req, res, next) => {})
 
 const resetPassword = asyncWrapper(async (req, res, next) => {})
-
-const verifyEmail = asyncWrapper(async (req, res, next) => {})
-
-const resendVerificationEmail = asyncWrapper(async (req, res, next) => {})
 
 const getLoggedInUserData = asyncWrapper(async (req, res, next) => {})
 
