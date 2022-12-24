@@ -6,6 +6,7 @@ const {
 } = require('../utils/custom_errors');
 const jwt = require('jsonwebtoken');
 const { BlacklistedToken } = require('../models/token.model');
+const { getAuthTokens } = require('../utils/token');
 
 const config = require('../utils/config');
 
@@ -47,6 +48,7 @@ const getRequiredConfigVars = (type) => {
  */
 const basicAuth = function (token_type = null) {
     return async (req, res, next) => {
+        console.log('basicAuth called')
         // Check if the request has a valid authorization header
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -60,6 +62,7 @@ const basicAuth = function (token_type = null) {
             secret = getRequiredConfigVars(token_type).secret;
         }
 
+        console.log(secret)
         // Verify the token
         const jwtToken = authHeader.split(' ')[1],
             payload = jwt.verify(jwtToken, secret);
@@ -73,6 +76,7 @@ const basicAuth = function (token_type = null) {
 
         // To get new access token
         if (req.method == 'GET' && req.path == '/authtoken') {
+            console.log('get new access token')
             const new_access_token = (await getAuthTokens(payload.id))
                 .access_token;
 

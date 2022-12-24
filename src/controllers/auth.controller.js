@@ -58,18 +58,18 @@ const handleExistingUnverifiedUser = async function (user) {
  * @description - Creates a new enduser
  * @route POST /api/v1/auth/signup/enduser
  * @access Public
- * 
+ *
  * @param {string} firstname - Firstname of user
  * @param {string} lastname - Lastname of user
  * @param {string} email - Email of user
  * @param {string} password - Password of user
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
  * @returns {string} data.refresh_token - JWT refresh token
  * @returns {string} access_token, refresh_token - JWT tokens
- * 
+ *
  * @throws {BadRequestError} - If user already exists
  * @throws {BadRequestError} - If user already exists and is verified
  */
@@ -143,13 +143,13 @@ const adminSignup = async (req, res, next) => {};
  * @description - Verifies user email
  * @route POST /api/v1/auth/verifyemail
  * @access Private
- * 
+ *
  * @param {string} email - Email of user
  * @param {string} verification_code - Verification code
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
- * 
+ *
  * @throws {BadRequestError} - If user does not exist
  * @throws {BadRequestError} - If user is already verified
  * @throws {BadRequestError} - If verification code is invalid
@@ -189,13 +189,13 @@ const verifyEmail = async (req, res, next) => {
  * @description - Resends verification email to user
  * @route GET /api/v1/auth/verifyemail
  * @access Public
- * 
+ *
  * @param {string} email - Email of user
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
- * 
+ *
  * @throws {BadRequestError} - If user does not exist
  * @throws {BadRequestError} - If user is already verified
  */
@@ -225,15 +225,15 @@ const resendVerificationEmail = async (req, res, next) => {
  * @description - Logs in user
  * @route POST /api/v1/auth/login
  * @access Public
- * 
+ *
  * @param {string} email - Email of user
  * @param {string} password - Password of user
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
  * @returns {string} data.refresh_token - JWT refresh token
- * 
+ *
  * @throws {BadRequestError} - If user does not exist
  * @throws {BadRequestError} - If user is not verified
  * @throws {BadRequestError} - If user is not active
@@ -287,12 +287,12 @@ const login = async (req, res, next) => {
  * @description - Logs out user
  * @route POST /api/v1/auth/logout
  * @access Private
- * 
+ *
  * @param {string} refresh_token - Refresh token
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
- * 
+ *
  * @throws {BadRequestError} - If refresh token is not provided
  * @throws {BadRequestError} - If access token is not provided
  */
@@ -320,20 +320,20 @@ const logout = async (req, res, next) => {
  * @description - Sends password reset code to user
  * @route POST /api/v1/auth/forgotpassword
  * @access Public
- * 
+ *
  * @param {string} email - Email of user
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
- * 
+ *
  * @throws {BadRequestError} - If user does not exist
  * */
 const forgotPassword = async (req, res, next) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email }).populate('status');
-    
+
     // Check if user exists
     if (!user) throw new BadRequestError('User does not exist');
 
