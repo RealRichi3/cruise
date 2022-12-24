@@ -22,7 +22,7 @@ const config = require('../utils/config')
  * @throws {UnauthenticatedError} if the user's account is not active
  *
  */
-const basicAuth = asyncWrapper(async (req, res, next) => {
+const basicAuth = async (req, res, next) => {
     // Check if the request has a valid authorization header
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -57,7 +57,7 @@ const basicAuth = asyncWrapper(async (req, res, next) => {
 
     // If all is well, proceed to the next middleware
     next()
-})
+}
 
 module.exports = {
     basicAuth,

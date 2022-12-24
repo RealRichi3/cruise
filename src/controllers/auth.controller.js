@@ -5,6 +5,7 @@ const {
 } = require('../utils/custom_errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+require('express-async-error');
 
 // Models
 const { BlacklistedToken, AuthCode } = require('../models/token.model');
@@ -66,7 +67,7 @@ const handleExistingUnverifiedUser = async function (user) {
  * @throws {BadRequestError} - If user already exists
  * @throws {BadRequestError} - If user already exists and is verified
  */
-const enduserSignup = asyncWrapper(async (req, res, next) => {
+const enduserSignup = async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body;
 
     const existing_user = await User.findOne({ email }).populate('status');
@@ -121,15 +122,15 @@ const enduserSignup = asyncWrapper(async (req, res, next) => {
             },
         },
     });
-});
+};
 
-const riderSignup = asyncWrapper(async (req, res, next) => {
+const riderSignup = async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body;
 
     // Check if user already exists
-});
+};
 
-const adminSignup = asyncWrapper(async (req, res, next) => {});
+const adminSignup = async (req, res, next) => {};
 
 /**
  * Email verification
@@ -141,7 +142,7 @@ const adminSignup = asyncWrapper(async (req, res, next) => {});
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  */
-const verifyEmail = asyncWrapper(async (req, res, next) => {
+const verifyEmail = async (req, res, next) => {
     const { email, verification_code } = req.body;
 
     // Check if user exists
@@ -169,7 +170,7 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
     await user.status.updateOne({ isVerified: true });
 
     res.status(200).json({ success: true, data: {} });
-});
+};
 
 /**
  * Resend verification email to user
@@ -183,7 +184,7 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
  */
-const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
+const resendVerificationEmail = async (req, res, next) => {
     const email = req.params.email;
     console.log(email);
     const user = await User.findOne({ email }).populate('status');
@@ -199,7 +200,7 @@ const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
     const { access_token } = await handleExistingUnverifiedUser(user);
 
     res.status(200).json({ success: true, data: { access_token } });
-});
+};
 
 /**
  * Login
@@ -216,14 +217,14 @@ const resendVerificationEmail = asyncWrapper(async (req, res, next) => {
  * @throws {BadRequestError} - If user is not verified
  * @throws {BadRequestError} - If user is not active
  * @throws {BadRequestError} - If password is incorrect
- * 
+ *
  * @todo - Add password reset functionality
  */
-const login = asyncWrapper(async (req, res, next) => {
+const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).populate('status password');
-    
+
     // Check if user exists
     if (!user) throw new BadRequestError('User does not exist');
 
@@ -235,7 +236,10 @@ const login = asyncWrapper(async (req, res, next) => {
     if (!user.status.isActive) throw new BadRequestError('User is not active');
 
     // Check if password is correct
-    const password_match = await bcrypt.compare(password, user.password.password);
+    const password_match = await bcrypt.compare(
+        password,
+        user.password.password
+    );
     if (!password_match) throw new BadRequestError('Invalid password');
 
     // Get auth tokens
@@ -254,7 +258,7 @@ const login = asyncWrapper(async (req, res, next) => {
             },
         },
     });
-});
+};
 
 /**
  * Logout user
@@ -267,12 +271,12 @@ const login = asyncWrapper(async (req, res, next) => {
  * @throws {BadRequestError} - If refresh token is not provided
  * @throws {BadRequestError} - If access token is not provided
  */
-const logout = asyncWrapper(async (req, res, next) => {
+const logout = async (req, res, next) => {
     const { refresh_token } = req.body;
 
     // Get access token from header
     const access_token = req.headers.authorization.split(' ')[1];
-    
+
     // Check if refresh token exists
     if (!refresh_token) throw new BadRequestError('Refresh token is required');
 
@@ -284,13 +288,13 @@ const logout = asyncWrapper(async (req, res, next) => {
     BlacklistedToken.create({ token: refresh_token });
 
     res.status(200).json({ success: true, data: {} });
-});
+};
 
-const forgotPassword = asyncWrapper(async (req, res, next) => {});
+const forgotPassword = async (req, res, next) => {};
 
-const resetPassword = asyncWrapper(async (req, res, next) => {});
+const resetPassword = async (req, res, next) => {};
 
-const getLoggedInUserData = asyncWrapper(async (req, res, next) => {});
+const getLoggedInUserData = async (req, res, next) => {};
 
 module.exports = {
     enduserSignup,
