@@ -41,7 +41,10 @@ const handleExistingUnverifiedUser = async function (user) {
             });
 
             // Get access token
-            const { access_token } = await getAuthTokens(user._id);
+            const { access_token } = await getAuthTokens(
+                user._id,
+                'verification'
+            );
 
             resolve({ access_token });
         } catch (error) {
@@ -197,7 +200,10 @@ const resendVerificationEmail = async (req, res, next) => {
         throw new BadRequestError('User is already verified');
     }
 
-    const { access_token } = await handleExistingUnverifiedUser(user);
+    const { access_token } = await handleExistingUnverifiedUser(
+        user,
+        config.EMAIL_VERIFICATION_EXP
+    );
 
     res.status(200).json({ success: true, data: { access_token } });
 };
@@ -323,7 +329,7 @@ const forgotPassword = async (req, res, next) => {
     });
 
     // Get auth tokens
-    const { access_token } = await getAuthTokens(user._id);
+    const { access_token } = await getAuthTokens(user._id, 'password_reset');
 
     res.status(200).json({
         success: true,
@@ -333,19 +339,22 @@ const forgotPassword = async (req, res, next) => {
 };
 
 const resetPassword = async (req, res, next) => {
-    const { email, password_reset_code, password } = req.body;
+    // const { password_reset_code, new_password } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email }).populate('status password');
+    // const user = await User.findOne({ email: req.user.email }).populate(
+    //     'status password'
+    // );
 
-    if (!user) throw new BadRequestError('User does not exist');
+    // // Check if password reset code is valid
+    // const password_reset_code_match = await AuthCode.findOne({
+    //     user: user._id,
+    //     password_reset_code,
+    // });
+    // if (!password_reset_code_match)
+    //     throw new BadRequestError('Invalid password reset code');
 
-    // Check if user is verified
-    if (!user.status.isVerified)
-        throw new BadRequestError('User is not verified');
-
-    // Check if user is active
-    if (!user.status.isActive) throw new BadRequestError('User is not active');
+    // // Check if password reset code is expired
+    return res.status(200).json({ success: true, data: {} });
 };
 
 const getLoggedInUserData = async (req, res, next) => {};

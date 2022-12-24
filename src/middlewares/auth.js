@@ -1,13 +1,37 @@
-const  asyncWrapper  = require('../utils/async_wrapper')
+const asyncWrapper = require('../utils/async_wrapper');
 const {
     CustomAPIError,
     BadRequestError,
     UnauthenticatedError,
-} = require('../utils/custom_errors')
-const jwt = require('jsonwebtoken')
-const { BlacklistedToken } = require('../models/token.model')
+} = require('../utils/custom_errors');
+const jwt = require('jsonwebtoken');
+const { BlacklistedToken } = require('../models/token.model');
 
-const config = require('../utils/config')
+const config = require('../utils/config');
+
+const getRequiredConfigVars = (type) => {
+    switch (type) {
+        case 'access':
+            return {
+                secret: config.JWT_ACCESS_SECRET,
+            };
+
+        case 'refresh':
+            return {
+                secret: config.JWT_REFRESH_SECRET,
+            };
+
+        case 'password_reset':
+            return {
+                secret: config.JWT_PASSWORDRESET_SECRET,
+            };
+
+        case 'verification':
+            return {
+                secret: config.JWT_EMAILVERIFICATION_SECRET,
+            };
+    }
+};
 
 /**
  * Middleware to check if the request has a valid authorization header
@@ -20,45 +44,54 @@ const config = require('../utils/config')
  * @throws {UnauthenticatedError} if the token is invalid
  * @throws {UnauthenticatedError} if the token has been blacklisted
  * @throws {UnauthenticatedError} if the user's account is not active
- *
  */
-const basicAuth = async (req, res, next) => {
-    // Check if the request has a valid authorization header
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new BadRequestError('Invalid authorization header')
-    }
+const basicAuth = function (token_type = null) {
+    return async (req, res, next) => {
+        // Check if the request has a valid authorization header
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new BadRequestError('Invalid authorization header');
+        }
 
-    // Verify the token
-    const jwtToken = authHeader.split(' ')[1],
-        payload = jwt.verify(jwtToken, config.JWT_SECRET)
-    req.user = payload
+        let secret = config.JWT_SECRET;
 
-    // Check if access token has been blacklisted
-    const blacklisted = await BlacklistedToken.findOne({ token: jwtToken })
-    if (blacklisted) {
-        throw new UnauthenticatedError('JWT token expired')
-    }
+        // If token type is specified, check if the token is of the specified type
+        if (token_type) {
+            secret = getRequiredConfigVars(token_type).secret;
+        }
 
-    // To get new access token
-    if (req.method == 'GET' && req.path == '/authtoken') {
-        const new_access_token = (await getAuthTokens(payload.id)).access_token
+        // Verify the token
+        const jwtToken = authHeader.split(' ')[1],
+            payload = jwt.verify(jwtToken, secret);
+        req.user = payload;
 
-        return res
-            .status(200)
-            .send({ message: 'success', access_token: new_access_token })
-    }
+        // Check if access token has been blacklisted
+        const blacklisted = await BlacklistedToken.findOne({ token: jwtToken });
+        if (blacklisted) {
+            throw new UnauthenticatedError('JWT token expired');
+        }
 
-    if (!req.user.status.isActive) {
-        throw new UnauthenticatedError(
-            'Unauthorized access, users account is not active'
-        )
-    }
+        // To get new access token
+        if (req.method == 'GET' && req.path == '/authtoken') {
+            const new_access_token = (await getAuthTokens(payload.id))
+                .access_token;
 
-    // If all is well, proceed to the next middleware
-    next()
-}
+            return res
+                .status(200)
+                .send({ message: 'success', access_token: new_access_token });
+        }
+
+        if (!req.user.status.isActive) {
+            throw new UnauthenticatedError(
+                'Unauthorized access, users account is not active'
+            );
+        }
+
+        // If all is well, proceed to the next middleware
+        next();
+    };
+};
 
 module.exports = {
     basicAuth,
-}
+};
