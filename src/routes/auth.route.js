@@ -23,8 +23,8 @@ router
     .post('/logout', basicAuth, logout)
     .post('/forgotpassword', forgotPassword)
     .patch('/resetpassword', resetPassword)
-    .get('/verifyemail/:token', verifyEmail)
-    .post('/resendverificationemail', resendVerificationEmail)
+    .get('/verifyemail/:email', resendVerificationEmail)
+    .post('/verifyemail', verifyEmail)
     .get('/user', basicAuth, getLoggedInUserData)
 
 module.exports = router

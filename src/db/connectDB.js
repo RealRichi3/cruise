@@ -1,18 +1,24 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose')
 
 async function connectDatabase(url) {
     return new Promise((resolve, reject) => {
-        mongoose.connect(url)
-            .then((response) => {
+        mongoose.connect(url).then(
+            (response) => {
+                // drop database
+                // mongoose.connection.db.dropDatabase()
+
                 if (process.env.NODE_ENV != 'test') {
-                    console.log(`Connection to ${mongoose.connection.name} database Successful!`)
+                    console.log(
+                        `Connection to ${mongoose.connection.name} database Successful!`
+                    )
                 }
                 resolve('Successful')
-            }, (error) => {
+            },
+            (error) => {
                 console.log(error)
                 reject(error)
-            });
-
+            }
+        )
     })
 }
 

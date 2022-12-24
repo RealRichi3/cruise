@@ -65,6 +65,7 @@ const getAuthCodes = async (user_id, code_type) => {
             await AuthCode.findOneAndUpdate({ user: user_id }, { activation_code })
         }
 
+        console.log('getAuthCodes', verification_code, password_reset_code, activation_code)
         return { verification_code, password_reset_code, activation_code }
     } catch (error) {
         throw error
