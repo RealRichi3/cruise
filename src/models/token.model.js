@@ -10,9 +10,21 @@ const blacklistedTokenSchema = new schema(
     { timestamps: true, expires: JWT_REFRESH_EXPIRES_IN }
 )
 
+const tokenSchema = new schema(
+    {
+        user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        verification_code: { type: String },
+        password_reset_code: { type: String },
+        createdAt: { type: Date, default: Date.now },
+    },
+    { timestamps: true, expires: JWT_REFRESH_EXPIRES_IN }
+)
+
+const Token = mongoose.model('Token', tokenSchema)
+
 const BlacklistedToken = mongoose.model(
     'BlacklistedToken',
     blacklistedTokenSchema
 )
 
-module.exports = BlacklistedToken
+module.exports = { BlacklistedToken, Token }
