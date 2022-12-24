@@ -51,7 +51,7 @@ const handleExistingUnverifiedUser = async function (user) {
 /**
  * Enduser signup
  * @description - Creates a new enduser
- * @route POST /api/v1/auth/signup
+ * @route POST /api/v1/auth/signup/enduser
  * @access Public
  * @param {string} firstname - Firstname of user
  * @param {string} lastname - Lastname of user
@@ -130,12 +130,23 @@ const riderSignup = asyncWrapper(async (req, res, next) => {
 
 const adminSignup = asyncWrapper(async (req, res, next) => {});
 
+/**
+ * Email verification
+ * @description - Verifies user email
+ * @route POST /api/v1/auth/verifyemail
+ * @access Public
+ * @param {string} email - Email of user
+ * @param {string} verification_code - Verification code
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ */
 const verifyEmail = asyncWrapper(async (req, res, next) => {
     const { email, verification_code } = req.body;
 
     // Check if user exists
     const user = await User.findOne({ email }).populate('status');
-    console.log(user.toJSON({ virtuals: true }));
+    // console.log(user.toJSON({ virtuals: true }));
+
     if (!user) throw new BadRequestError('User does not exist');
 
     // Check if user is verified
@@ -147,8 +158,11 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
         user: user._id,
         verification_code,
     });
-    console.log(auth_code);
+    // console.log(auth_code);
     if (!auth_code) throw new BadRequestError('Invalid verification code');
+
+    // Remove verification code
+    auth_code.updateOne({ verification_code: null });
 
     // Verify user
     await user.status.updateOne({ isVerified: true });
@@ -159,7 +173,7 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
 /**
  * Resend verification email to user
  * @description - Resends verification email to user
- * @route POST /api/v1/auth/resend-verification-email
+ * @route GET /api/v1/auth/verifyemail
  * @access Public
  * @param {string} email - Email of user
  * @returns {string} success - Success message
