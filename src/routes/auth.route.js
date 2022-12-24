@@ -20,11 +20,13 @@ router
     .post('/signup/rider', riderSignup)
     .post('/signup/admin', adminSignup)
     .post('/login', login)
-    .post('/logout', basicAuth, logout)
+    .post('/logout', basicAuth(), logout)
     .post('/forgotpassword', forgotPassword)
-    .patch('/resetpassword', resetPassword)
-    .get('/verifyemail/:token', verifyEmail)
-    .post('/resendverificationemail', resendVerificationEmail)
-    .get('/user', basicAuth, getLoggedInUserData)
+    .patch('/resetpassword', basicAuth('password_reset'), resetPassword)
+    .get('/verifyemail/:email', resendVerificationEmail)
+    .post('/verifyemail', basicAuth('verification'), verifyEmail)
+    .get('/user', basicAuth(), getLoggedInUserData)
+    .get('/authtoken', basicAuth())
+    .get('/loggedinuser', basicAuth(), getLoggedInUserData)
 
 module.exports = router
