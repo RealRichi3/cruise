@@ -121,26 +121,25 @@ const getAuthCodes = async (user_id, code_type) => {
             activation_code3 = UUID(); // Will be sent to second admin
 
             const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
-            const hashed_activation_code = await bcrypt.hash(
-                activation_code,
-                10
-            );
 
             AuthCode.findOneAndUpdate(
                 { user: user_id },
-                { activation_code: hashed_activation_code },
+                { activation_code },
                 { new: true, upsert: true }
             );
         }
 
-        console.log(
-            'getAuthCodes',
-            verification_code,
-            password_reset_code,
-            activation_code1,
-            activation_code2,
-            activation_code3
-        );
+        if (process.env.NODE_ENV === 'development') {
+            console.log(
+                'getAuthCodes',
+                verification_code,
+                password_reset_code,
+                activation_code1,
+                activation_code2,
+                activation_code3
+            );
+        }
+        
         return {
             verification_code,
             password_reset_code,
