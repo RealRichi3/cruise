@@ -28,10 +28,7 @@ const handleUnverifiedUser = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
             // Get verification code
-            const { verification_code } = await getAuthCodes(
-                user.id,
-                'verification'
-            );
+            const { verification_code } = getAuthCodes(user.id, 'verification');
 
             // Send verification email
             sendEmail({
@@ -57,10 +54,8 @@ const handleUnverifiedSuperAdmin = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
             // Get verification code
-            const { activation_code1, activation_code2, activation_code3 } = await getAuthCodes(
-                user.id,
-                'su_activation'
-            );
+            const { activation_code1, activation_code2, activation_code3 } =
+                await getAuthCodes(user.id, 'su_activation');
 
             // Send first activation code to new user
             sendEmail({
@@ -88,7 +83,7 @@ const handleUnverifiedSuperAdmin = async function (user) {
                 user._id,
                 'verification'
             );
-                
+
             resolve({ access_token });
         } catch (error) {
             reject(error);
@@ -125,15 +120,14 @@ const enduserSignup = async (req, res, next) => {
     if (existing_user) {
         // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
-            const { access_token } =
-                await handleUnverifiedUser(existing_user);
+            const { access_token } = await handleUnverifiedUser(existing_user);
 
             return res
                 .status(200)
-                .json({ success: true, data: { access_token} });
+                .json({ success: true, data: { access_token } });
         }
 
-        throw new BadRequestError('User already exists');
+        next(new BadRequestError('User already exists'));
     }
 
     // Create user
@@ -143,20 +137,12 @@ const enduserSignup = async (req, res, next) => {
         email,
         role: 'enduser',
     });
-    await Password.create({ password, user: user._id });
-    await Status.create({ user: user._id, isActive: true });
-    await AuthCode.create({ user: user._id });
 
-    // Send verification email
-    const { verification_code } = await getAuthCodes(user._id, 'verification');
-    sendEmail({
-        email: user.email,
-        subject: 'Account Verification',
-        message: 'This is your verification code: ' + verification_code,
-    });
+    Password.create({ password, user: user._id });
+    Status.create({ user: user._id, isActive: true });
 
     // Get auth tokens
-    const { access_token } = await getAuthTokens(user._id);
+    const { access_token } = await handleUnverifiedUser(user);
 
     res.status(201).json({
         success: true,
@@ -449,13 +435,13 @@ const resetPassword = async (req, res, next) => {
  * @description - Verifies user email
  * @route PATCH /api/v1/auth/verifyemail
  * @access Private
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
- * 
- * */ 
+ *
+ * */
 const getLoggedInUserData = async (req, res, next) => {
-    const user = await User.findOne({ email: req.user.email })
+    const user = await User.findOne({ email: req.user.email });
 
     res.status(200).json({
         success: true,
@@ -471,23 +457,84 @@ const getLoggedInUserData = async (req, res, next) => {
 };
 
 // Admin controllers
-
-const adminSignup = async (req, res, next) => {
+/**
+ * Super admin signup
+ * @description - Creates super admin
+ * @route POST /api/v1/auth/signup/superadmin
+ * 
+ * @param {string} firstname - Firstname of user
+ * @param {string} lastname - Lastname of user
+ * @param {string} email - Email of user
+ * @param {string} password - Password of user
+ * 
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ * @returns {string} data.user - User object
+ * @returns {string} data.user.id - User id
+ * @returns {string} data.user.firstname - User firstname
+ * @returns {string} data.user.lastname - User lastname
+ * @returns {string} data.user.email - User email
+ * 
+ * @throws {BadRequestError} - If user already exists
+ */
+const superAdminSignup = async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body;
 
     // Check if user exists
     const existing_user = await User.findOne({ email }).populate('status');
 
     if (existing_user) {
+        // If Admin exists and is not verified
         if (!existing_user.status.isVerified) {
-            const { access_token } = await getAuthTokens(existing_user._id);
+            const { access_token } = await handleUnverifiedSuperAdmin(
+                existing_user
+            );
+
+            return res.status(200).json({
+                success: true,
+                message:
+                    'Super admin account created. Please verify your email',
+                data: { access_token },
+            });
         }
+
+        // If Admin exists and is verified
+        next(new BadRequestError('User already exists'));
+    }
+
+    // Create new user
+    const admin = await User.create({
+        firstname,
+        lastname,
+        email,
+        role: 'superadmin',
+    });
+
+    Password.create({ user: admin._id, password });
+    Status.create({ user: admin._id });
+
+    // Get auth tokens
+    const { access_token } = await handleUnverifiedSuperAdmin(admin);
+
+    res.status(201).json({
+        success: true,
+        data: {
+            access_token,
+            user: {
+                id: admin._id,
+                firstname: admin.firstname,
+                lastname: admin.lastname,
+                email: admin.email,
+            },
+        },
+    });
 };
 
 module.exports = {
     enduserSignup,
     riderSignup,
-    adminSignup,
+    superAdminSignup,
     login,
     logout,
     forgotPassword,
