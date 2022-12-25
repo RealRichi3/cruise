@@ -3,6 +3,7 @@ const { AuthCode } = require('../models/token.model');
 const asyncWrapper = require('./async_wrapper');
 const { NotFoundError } = require('./custom_errors');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const config = require('./config');
 const { v4: UUID } = require('uuid');
 
@@ -97,14 +98,19 @@ const getAuthCodes = async (user_id, code_type) => {
 
         if (code_type == 'verification') {
             verification_code = random_code;
-            AuthCode.findOneAndUpdate({ user: user_id }, { verification_code });
+            AuthCode.findOneAndUpdate(
+                { user: user_id },
+                { verification_code },
+                { new: true, upsert: true }
+            );
         }
 
         if (code_type == 'password_reset') {
             password_reset_code = random_code;
             AuthCode.findOneAndUpdate(
                 { user: user_id },
-                { password_reset_code }
+                { password_reset_code },
+                { new: true, upsert: true }
             );
         }
 
@@ -122,7 +128,8 @@ const getAuthCodes = async (user_id, code_type) => {
 
             AuthCode.findOneAndUpdate(
                 { user: user_id },
-                { activation_code: hashed_activation_code }
+                { activation_code: hashed_activation_code },
+                { new: true, upsert: true }
             );
         }
 
