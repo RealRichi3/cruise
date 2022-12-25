@@ -28,7 +28,10 @@ const handleUnverifiedUser = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
             // Get verification code
-            const { verification_code } = getAuthCodes(user.id, 'verification');
+            const { verification_code } = await getAuthCodes(
+                user.id,
+                'verification'
+            );
 
             // Send verification email
             sendEmail({
@@ -50,6 +53,15 @@ const handleUnverifiedUser = async function (user) {
     });
 };
 
+/**
+ * Handle Unverified superAdmin
+ * It sends verification code to user, admin1 and admin2 then returns access token
+ * @param {MongooseObject} user - Mongoose user object
+ *
+ * @returns {string} access_token - JWT tokens
+ *
+ * @throws {BadRequestError} - If user is already verified
+ * */
 const handleUnverifiedSuperAdmin = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -461,12 +473,12 @@ const getLoggedInUserData = async (req, res, next) => {
  * Super admin signup
  * @description - Creates super admin
  * @route POST /api/v1/auth/signup/superadmin
- * 
+ *
  * @param {string} firstname - Firstname of user
  * @param {string} lastname - Lastname of user
  * @param {string} email - Email of user
  * @param {string} password - Password of user
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
@@ -475,7 +487,7 @@ const getLoggedInUserData = async (req, res, next) => {
  * @returns {string} data.user.firstname - User firstname
  * @returns {string} data.user.lastname - User lastname
  * @returns {string} data.user.email - User email
- * 
+ *
  * @throws {BadRequestError} - If user already exists
  */
 const superAdminSignup = async (req, res, next) => {
