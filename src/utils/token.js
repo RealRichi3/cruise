@@ -67,7 +67,7 @@ const getAuthTokens = async (user_id, token_type = null) => {
 
         // Get token secret and expiry
         let { secret, expiry } = getRequiredConfigVars(token_type);
-        console.log(expiry)
+        console.log(expiry);
 
         // Set token expiry to 6 hours if in development
         if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -89,29 +89,40 @@ const getAuthTokens = async (user_id, token_type = null) => {
 const getAuthCodes = async (user_id, code_type) => {
     try {
         let random_code = `${Math.floor(100000 + Math.random() * 900000)}`;
-        let verification_code, password_reset_code, activation_code;
+        let verification_code,
+            password_reset_code,
+            activation_code1,
+            activation_code2,
+            activation_code3;
 
         if (code_type == 'verification') {
             verification_code = random_code;
-            await AuthCode.findOneAndUpdate(
-                { user: user_id },
-                { verification_code }
-            );
+            AuthCode.findOneAndUpdate({ user: user_id }, { verification_code });
         }
 
         if (code_type == 'password_reset') {
             password_reset_code = random_code;
-            await AuthCode.findOneAndUpdate(
+            AuthCode.findOneAndUpdate(
                 { user: user_id },
                 { password_reset_code }
             );
         }
 
-        if (code_type == 'activation') {
-            activation_code = UUID();
-            await AuthCode.findOneAndUpdate(
+        // If code_type is 'su_activation', generate 3 codes - SuperAdminAccountActivation
+        if (code_type == 'su_activation') {
+            activation_code1 = UUID(); // Will be sent to user
+            activation_code2 = UUID(); // Will be sent to first admin
+            activation_code3 = UUID(); // Will be sent to second admin
+
+            const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
+            const hashed_activation_code = await bcrypt.hash(
+                activation_code,
+                10
+            );
+
+            AuthCode.findOneAndUpdate(
                 { user: user_id },
-                { activation_code }
+                { activation_code: hashed_activation_code }
             );
         }
 
@@ -119,9 +130,17 @@ const getAuthCodes = async (user_id, code_type) => {
             'getAuthCodes',
             verification_code,
             password_reset_code,
-            activation_code
+            activation_code1,
+            activation_code2,
+            activation_code3
         );
-        return { verification_code, password_reset_code, activation_code };
+        return {
+            verification_code,
+            password_reset_code,
+            activation_code1,
+            activation_code2,
+            activation_code3,
+        };
     } catch (error) {
         throw error;
     }
