@@ -139,7 +139,7 @@ const enduserSignup = async (req, res, next) => {
                 .json({ success: true, data: { access_token } });
         }
 
-        next(new BadRequestError('User already exists'));
+        return next(new BadRequestError('User already exists'));
     }
 
     // Create user
@@ -495,7 +495,7 @@ const superAdminSignup = async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body;
 
     if (!firstname || !lastname || !email || !password) {
-        next(new BadRequestError('All fields are required'));
+        return next(new BadRequestError('All fields are required'));
     }
 
     // Check if user exists
@@ -517,7 +517,7 @@ const superAdminSignup = async (req, res, next) => {
         }
 
         // If Admin exists and is verified
-        next(new BadRequestError('User already exists'));
+        return next(new BadRequestError('User already exists'));
     }
 
     // Create new user
@@ -548,15 +548,53 @@ const superAdminSignup = async (req, res, next) => {
     });
 };
 
+/**
+ * Activate super admin
+ * @description - Activates super admin
+ * @route POST /api/v1/auth/activate/superadmin
+ * 
+ * @param {string} activation_code1 - First part of activation code
+ * @param {string} activation_code2 - Second part of activation code
+ * @param {string} activation_code3 - Third part of activation code
+ * 
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * 
+ * @throws {BadRequestError} - If user does not exist
+ * @throws {BadRequestError} - If activation code is invalid
+ * @throws {BadRequestError} - If all fields are not provided
+ * */
 const activateSuperAdmin = async (req, res, next) => {
-    const { email, activation_code1, activation_code2, activation_code3 } =
+    const { activation_code1, activation_code2, activation_code3 } =
         req.body;
+
+    if (!activation_code1 || !activation_code2 || !activation_code3) {
+        return next(new BadRequestError('All fields are required'));
+    }
+
+    const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
+
+    // Compare activation code
+    const auth_code = await AuthCode.findOne({ user: req.user.id, activation_code});
+    if (!auth_code) { return next(new BadRequestError('Invalid activation code')); }
+
+    // Update user status
+    Status.findOneAndUpdate({ user: req.user.id }, { isVerified: true }, { isActive: true });
+
+    // Delete activation code
+    AuthCode.findOneAndUpdate({ user: req.user.id }, { activation_code: null });
+
+    // Blacklist jwt tokens
+    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
+
+    res.status(200).json({ success: true, data: {} });
 };
 
 module.exports = {
     enduserSignup,
     riderSignup,
     superAdminSignup,
+    activateSuperAdmin,
     login,
     logout,
     forgotPassword,

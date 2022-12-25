@@ -13,12 +13,14 @@ const {
     verifyEmail,
     resendVerificationEmail,
     getLoggedInUserData,
+    activateSuperAdmin,
 } = require('../controllers/auth.controller')
 
 router
     .post('/signup/enduser', enduserSignup)
     .post('/signup/rider', riderSignup)
     .post('/signup/superadmin', superAdminSignup)
+    .post('/activate/superadmin', basicAuth('verification'), activateSuperAdmin)
     .post('/login', login)
     .post('/logout', basicAuth(), logout)
     .post('/forgotpassword', forgotPassword)
