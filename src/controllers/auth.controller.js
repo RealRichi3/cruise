@@ -69,6 +69,7 @@ const handleUnverifiedSuperAdmin = async function (user) {
             const { activation_code1, activation_code2, activation_code3 } =
                 await getAuthCodes(user.id, 'su_activation');
 
+            console.log(activation_code1, activation_code2, activation_code3)
             // Send first activation code to new user
             sendEmail({
                 email: user.email,
@@ -282,6 +283,8 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({ email }).populate('status password');
 
+    console.log(user.toJSON({ virtuals: true }))
+
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
 
@@ -395,6 +398,7 @@ const forgotPassword = async (req, res, next) => {
 
 /**
  * Reset password
+ * If request is made by superAdmin, account will require activation aftewards to login
  * @description - Resets user password
  * @route PATCH /api/v1/auth/resetpassword
  * @access Private
@@ -421,23 +425,40 @@ const resetPassword = async (req, res, next) => {
         password_reset_code,
     });
     if (!password_reset_code_match)
-        throw new BadRequestError('Invalid password reset code');
+        return next(new BadRequestError('Invalid password reset code')) 
 
     // Hash new password
     const salt = await bcrypt.genSalt(10);
     const hashed_password = await bcrypt.hash(new_password, salt);
 
     // Update password
-    Password.findOneAndUpdate(
+    await Password.findOneAndUpdate(
         { user: user._id },
         { password: hashed_password }
     );
 
+    if (user.role === 'superadmin') {
+        user.status.isActive = false;
+        user.save();
+
+        const { access_token } = await handleUnverifiedSuperAdmin(user);
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Password reset successful. Please Activate your admin account',
+            data: { access_token },
+        });
+    }
+
     // Delete password reset code
-    AuthCode.findOneAndDelete({ user: user._id });
+    // AuthCode.findOneAndUpdate(
+    //     { user: user._id },
+    //     { password_reset_code: null }
+    // );
 
     // Blacklist jwt tokens
-    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
+    // BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
 
     return res.status(200).json({ success: true, data: {} });
 };
@@ -552,21 +573,20 @@ const superAdminSignup = async (req, res, next) => {
  * Activate super admin
  * @description - Activates super admin account
  * @route POST /api/v1/auth/activate/superadmin
- * 
+ *
  * @param {string} activation_code1 - First part of activation code
  * @param {string} activation_code2 - Second part of activation code
  * @param {string} activation_code3 - Third part of activation code
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
- * 
+ *
  * @throws {BadRequestError} - If user does not exist
  * @throws {BadRequestError} - If activation code is invalid
  * @throws {BadRequestError} - If all fields are not provided
  * */
 const activateSuperAdmin = async (req, res, next) => {
-    const { activation_code1, activation_code2, activation_code3 } =
-        req.body;
+    const { activation_code1, activation_code2, activation_code3 } = req.body;
 
     if (!activation_code1 || !activation_code2 || !activation_code3) {
         return next(new BadRequestError('All fields are required'));
@@ -575,17 +595,28 @@ const activateSuperAdmin = async (req, res, next) => {
     const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
 
     // Compare activation code
-    const auth_code = await AuthCode.findOne({ user: req.user.id, activation_code});
-    if (!auth_code) { return next(new BadRequestError('Invalid activation code')); }
+    const auth_code = await AuthCode.findOne({
+        user: req.user.id,
+        activation_code,
+    });
+    console.log(auth_code)
+    if (!auth_code) {
+        return next(new BadRequestError('Invalid activation code'));
+    }
 
     // Update user status
-    Status.findOneAndUpdate({ user: req.user.id }, { isVerified: true }, { isActive: true });
+    const stat = await Status.findOneAndUpdate(
+        { user: req.user.id },
+        { isVerified: true, isActive: true }, {new: true}
+    );
 
-    // Delete activation code
-    AuthCode.findOneAndUpdate({ user: req.user.id }, { activation_code: null });
+    console.log(stat)
 
-    // Blacklist jwt tokens
-    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
+    // // Delete activation code
+    // AuthCode.findOneAndUpdate({ user: req.user.id }, { activation_code: null });
+
+    // // Blacklist jwt tokens
+    // BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
 
     res.status(200).json({ success: true, data: {} });
 };
