@@ -122,15 +122,18 @@ const handleUnverifiedSuperAdmin = async function (user) {
  *
  * @throws {BadRequestError} - If user already exists
  * @throws {BadRequestError} - If user already exists and is verified
+ * @throws {BadRequestError} - If role is superadmin
  */
-const enduserSignup = async (req, res, next) => {
-    const { firstname, lastname, email, password } = req.body;
+const userSignup = async (req, res, next) => {
+    const { firstname, lastname, email, password, role } = req.body;
+
+    if (!role) role = 'enduser';
 
     const existing_user = await User.findOne({ email }).populate('status');
     // console.log(existing_user?.toJSON({ virtuals: true }))
 
     // Check if role is superadmin
-    if (role === 'superadmin') next(new BadRequestError('Invalid role'));
+    if (role === 'superadmin') return next(new BadRequestError('Invalid role'));
 
     // Check if user already exists
     if (existing_user) {
@@ -151,7 +154,7 @@ const enduserSignup = async (req, res, next) => {
         firstname,
         lastname,
         email,
-        role: 'enduser',
+        role,
     });
 
     Password.create({ password, user: user._id });
@@ -617,7 +620,7 @@ const activateSuperAdmin = async (req, res, next) => {
 };
 
 module.exports = {
-    enduserSignup,
+    enduserSignup: userSignup,
     riderSignup,
     superAdminSignup,
     activateSuperAdmin,
