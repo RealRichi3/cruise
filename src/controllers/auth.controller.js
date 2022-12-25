@@ -550,7 +550,7 @@ const superAdminSignup = async (req, res, next) => {
 
 /**
  * Activate super admin
- * @description - Activates super admin
+ * @description - Activates super admin account
  * @route POST /api/v1/auth/activate/superadmin
  * 
  * @param {string} activation_code1 - First part of activation code
