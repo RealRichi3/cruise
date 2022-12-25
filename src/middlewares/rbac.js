@@ -1,16 +1,15 @@
-function rbacMiddleware(requiredPrivileges) {
+function rbacMiddleware(allowed_roles) {
     return (req, res, next) => {
-        const userRole = req.user.role;
-        const userPrivileges = req.user.privileges;
-        if (
-            requiredPrivileges.some((privilege) =>
-                userPrivileges.includes(privilege)
+        const user_role = req.user.role;
+
+        // If user role is in allowed roles, grant access
+        if (allowed_roles.includes(user_role)) next();
+
+        return next(
+            new UnauthorizedError(
+                'You are not authorized to perform this action'
             )
-        ) {
-            next();
-        } else {
-            res.status(401).send({ message: 'Unauthorized' });
-        }
+        );
     };
 }
 
