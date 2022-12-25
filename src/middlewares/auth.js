@@ -62,7 +62,6 @@ const basicAuth = function (token_type = null) {
             secret = getRequiredConfigVars(token_type).secret;
         }
 
-        console.log(secret)
         // Verify the token
         const jwtToken = authHeader.split(' ')[1],
             payload = jwt.verify(jwtToken, secret);
@@ -76,7 +75,6 @@ const basicAuth = function (token_type = null) {
 
         // To get new access token
         if (req.method == 'GET' && req.path == '/authtoken') {
-            console.log('get new access token')
             const new_access_token = (await getAuthTokens(payload.id))
                 .access_token;
 
@@ -85,7 +83,7 @@ const basicAuth = function (token_type = null) {
                 .send({ message: 'success', access_token: new_access_token });
         }
 
-        if (!req.user.status.isActive) {
+        if (!req.user.status.isActive && !token_type) {
             return next(
                 new UnauthenticatedError(
                     'Unauthorized access, users account is not active'
