@@ -19,8 +19,11 @@ const {
 router
     .post('/signup/enduser', enduserSignup)
     .post('/signup/rider', riderSignup)
+
+    // SuperAdmin
     .post('/signup/superadmin', superAdminSignup)
     .post('/activate/superadmin', basicAuth('verification'), activateSuperAdmin)
+    
     .post('/login', login)
     .post('/logout', basicAuth(), logout)
     .post('/forgotpassword', forgotPassword)
