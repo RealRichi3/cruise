@@ -5,7 +5,7 @@ const router = express.Router()
 const {
     enduserSignup,
     riderSignup,
-    adminSignup,
+    superAdminSignup,
     login,
     logout,
     forgotPassword,
@@ -18,7 +18,7 @@ const {
 router
     .post('/signup/enduser', enduserSignup)
     .post('/signup/rider', riderSignup)
-    .post('/signup/admin', adminSignup)
+    .post('/signup/superadmin', superAdminSignup)
     .post('/login', login)
     .post('/logout', basicAuth(), logout)
     .post('/forgotpassword', forgotPassword)
