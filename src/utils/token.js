@@ -68,7 +68,6 @@ const getAuthTokens = async (user_id, token_type = null) => {
 
         // Get token secret and expiry
         let { secret, expiry } = getRequiredConfigVars(token_type);
-        console.log(expiry);
 
         // Set token expiry to 6 hours if in development
         if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -88,68 +87,74 @@ const getAuthTokens = async (user_id, token_type = null) => {
 };
 
 const getAuthCodes = async (user_id, code_type) => {
-    try {
-        let random_code = `${Math.floor(100000 + Math.random() * 900000)}`;
-        let verification_code,
-            password_reset_code,
-            activation_code1,
-            activation_code2,
-            activation_code3;
+    return new Promise(async (resolve, reject) => {
+        try {
+            let random_code = `${Math.floor(100000 + Math.random() * 900000)}`;
+            let verification_code,
+                password_reset_code,
+                activation_code1,
+                activation_code2,
+                activation_code3;
 
-        if (code_type == 'verification') {
-            verification_code = random_code;
-            AuthCode.findOneAndUpdate(
-                { user: user_id },
-                { verification_code },
-                { new: true, upsert: true }
-            );
-        }
+            if (code_type == 'verification') {
+                verification_code = random_code;
+                AuthCode.findOneAndUpdate(
+                    { user: user_id },
+                    { verification_code },
+                    { new: true, upsert: true }
+                );
+            }
 
-        if (code_type == 'password_reset') {
-            password_reset_code = random_code;
-            AuthCode.findOneAndUpdate(
-                { user: user_id },
-                { password_reset_code },
-                { new: true, upsert: true }
-            );
-        }
+            if (code_type == 'password_reset') {
+                password_reset_code = random_code;
+                const autho = await AuthCode.findOneAndUpdate(
+                    { user: user_id },
+                    { password_reset_code },
+                    { new: true, upsert: true }
+                );
 
-        // If code_type is 'su_activation', generate 3 codes - SuperAdminAccountActivation
-        if (code_type == 'su_activation') {
-            activation_code1 = UUID(); // Will be sent to user
-            activation_code2 = UUID(); // Will be sent to first admin
-            activation_code3 = UUID(); // Will be sent to second admin
+                console.log(autho);
+            }
 
-            const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
+            // If code_type is 'su_activation', generate 3 codes - SuperAdminAccountActivation
+            if (code_type == 'su_activation') {
+                activation_code1 = UUID(); // Will be sent to user
+                activation_code2 = UUID(); // Will be sent to first admin
+                activation_code3 = UUID(); // Will be sent to second admin
 
-            AuthCode.findOneAndUpdate(
-                { user: user_id },
-                { activation_code },
-                { new: true, upsert: true }
-            );
-        }
+                const activation_code = `${activation_code1}-${activation_code2}-${activation_code3}`;
 
-        if (process.env.NODE_ENV === 'development') {
-            console.log(
-                'getAuthCodes',
+                const autho = await AuthCode.findOneAndUpdate(
+                    { user: user_id },
+                    { activation_code },
+                    { new: true, upsert: true }
+                );
+
+                console.log(autho);
+            }
+
+            if (process.env.NODE_ENV === 'dev') {
+                console.log(
+                    'getAuthCodes',
+                    verification_code,
+                    password_reset_code,
+                    activation_code1,
+                    activation_code2,
+                    activation_code3
+                );
+            }
+
+            resolve({
                 verification_code,
                 password_reset_code,
                 activation_code1,
                 activation_code2,
-                activation_code3
-            );
+                activation_code3,
+            });
+        } catch (error) {
+            reject(error);
         }
-        
-        return {
-            verification_code,
-            password_reset_code,
-            activation_code1,
-            activation_code2,
-            activation_code3,
-        };
-    } catch (error) {
-        throw error;
-    }
+    });
 };
 
 const decodeJWT = (token) => {

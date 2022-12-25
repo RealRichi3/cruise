@@ -69,7 +69,6 @@ const handleUnverifiedSuperAdmin = async function (user) {
             const { activation_code1, activation_code2, activation_code3 } =
                 await getAuthCodes(user.id, 'su_activation');
 
-            console.log(activation_code1, activation_code2, activation_code3)
             // Send first activation code to new user
             sendEmail({
                 email: user.email,
@@ -196,10 +195,9 @@ const riderSignup = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
     const { email, verification_code } = req.body;
 
-    // Check if user exists
     const user = await User.findOne({ email }).populate('status');
-    // console.log(user.toJSON({ virtuals: true }));
-
+    
+    // Check if user exists
     if (!user) throw new BadRequestError('User does not exist');
 
     // Check if user is verified
@@ -211,7 +209,7 @@ const verifyEmail = async (req, res, next) => {
         user: user._id,
         verification_code,
     });
-    // console.log(auth_code);
+
     if (!auth_code) throw new BadRequestError('Invalid verification code');
 
     // Remove verification code
@@ -239,22 +237,15 @@ const verifyEmail = async (req, res, next) => {
  * @throws {BadRequestError} - If user is already verified
  */
 const resendVerificationEmail = async (req, res, next) => {
-    const email = req.params.email;
-    console.log(email);
-    const user = await User.findOne({ email }).populate('status');
+    const email = req.params.email,
+        user = await User.findOne({ email }).populate('status');
 
-    if (!user) {
-        throw new BadRequestError('User does not exist');
-    }
+    if (!user) return next(new BadRequestError('User does not exist'));
 
-    if (user.status.isVerified) {
-        throw new BadRequestError('User is already verified');
-    }
+    if (user.status.isVerified)
+        return next(new BadRequestError('User is already verified'));
 
-    const { access_token } = await handleUnverifiedUser(
-        user,
-        config.EMAIL_VERIFICATION_EXP
-    );
+    const { access_token } = await handleUnverifiedUser(user, 'verification');
 
     res.status(200).json({ success: true, data: { access_token } });
 };
@@ -283,7 +274,7 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({ email }).populate('status password');
 
-    console.log(user.toJSON({ virtuals: true }))
+    console.log(user.toJSON({ virtuals: true }));
 
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
@@ -342,10 +333,12 @@ const logout = async (req, res, next) => {
     const access_token = req.headers.authorization.split(' ')[1];
 
     // Check if refresh token exists
-    if (!refresh_token) throw new BadRequestError('Refresh token is required');
+    if (!refresh_token)
+        return next(new BadRequestError('Refresh token is required'));
 
     // Check if access token exists
-    if (!access_token) throw new BadRequestError('Access token is required');
+    if (!access_token)
+        return next(new BadRequestError('Access token is required'));
 
     // Blacklist jwt tokens
     BlacklistedToken.create({ token: access_token });
@@ -374,7 +367,7 @@ const forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email }).populate('status');
 
     // Check if user exists
-    if (!user) throw new BadRequestError('User does not exist');
+    if (!user) return next(new BadRequestError('User does not exist'));
 
     // Generate password reset code
     const password_reset_code = await getAuthCodes(user._id, 'password_reset');
@@ -425,7 +418,7 @@ const resetPassword = async (req, res, next) => {
         password_reset_code,
     });
     if (!password_reset_code_match)
-        return next(new BadRequestError('Invalid password reset code')) 
+        return next(new BadRequestError('Invalid password reset code'));
 
     // Hash new password
     const salt = await bcrypt.genSalt(10);
@@ -599,24 +592,22 @@ const activateSuperAdmin = async (req, res, next) => {
         user: req.user.id,
         activation_code,
     });
-    console.log(auth_code)
     if (!auth_code) {
         return next(new BadRequestError('Invalid activation code'));
     }
 
     // Update user status
-    const stat = await Status.findOneAndUpdate(
+    Status.findOneAndUpdate(
         { user: req.user.id },
-        { isVerified: true, isActive: true }, {new: true}
+        { isVerified: true, isActive: true },
+        { new: true }
     );
 
-    console.log(stat)
-
     // // Delete activation code
-    // AuthCode.findOneAndUpdate({ user: req.user.id }, { activation_code: null });
+    AuthCode.findOneAndUpdate({ user: req.user.id }, { activation_code: null });
 
     // // Blacklist jwt tokens
-    // BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
+    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
 
     res.status(200).json({ success: true, data: {} });
 };
