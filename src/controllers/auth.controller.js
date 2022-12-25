@@ -489,9 +489,14 @@ const getLoggedInUserData = async (req, res, next) => {
  * @returns {string} data.user.email - User email
  *
  * @throws {BadRequestError} - If user already exists
+ * @throws {BadRequestError} - If missing required fields
  */
 const superAdminSignup = async (req, res, next) => {
     const { firstname, lastname, email, password } = req.body;
+
+    if (!firstname || !lastname || !email || !password) {
+        next(new BadRequestError('All fields are required'));
+    }
 
     // Check if user exists
     const existing_user = await User.findOne({ email }).populate('status');
@@ -541,6 +546,11 @@ const superAdminSignup = async (req, res, next) => {
             },
         },
     });
+};
+
+const activateSuperAdmin = async (req, res, next) => {
+    const { email, activation_code1, activation_code2, activation_code3 } =
+        req.body;
 };
 
 module.exports = {
