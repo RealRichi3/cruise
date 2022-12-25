@@ -15,6 +15,7 @@ const authCodeSchema = new schema(
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
         verification_code: { type: String },
         password_reset_code: { type: String },
+        activation_code: { type: String },
         createdAt: { type: Date, default: Date.now },
     },
     { timestamps: true, expires: JWT_REFRESH_EXP }
