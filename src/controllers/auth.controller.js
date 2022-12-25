@@ -24,7 +24,7 @@ const { getAuthCodes, getAuthTokens } = require('../utils/token');
  * @param {MongooseObject} user - Mongoose user object
  * @returns {string} access_token, refresh_token - JWT tokens
  */
-const handleExistingUnverifiedUser = async function (user) {
+const handleUnverifiedUser = async function (user) {
     return new Promise(async (resolve, reject) => {
         try {
             // Get verification code
@@ -46,6 +46,49 @@ const handleExistingUnverifiedUser = async function (user) {
                 'verification'
             );
 
+            resolve({ access_token });
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+const handleUnverifiedSuperAdmin = async function (user) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Get verification code
+            const { activation_code1, activation_code2, activation_code3 } = await getAuthCodes(
+                user.id,
+                'su_activation'
+            );
+
+            // Send first activation code to new user
+            sendEmail({
+                email: user.email,
+                subject: 'Account Verification',
+                message: 'This is your activation code: ' + activation_code1,
+            });
+
+            // Send second activation code to first admin
+            sendEmail({
+                email: config.SUPER_ADMIN_EMAIL1,
+                subject: 'Account Verification for new superadmin',
+                message: `New superadmin account creation for ${user.email}. This is your activation code: ${activation_code2}`,
+            });
+
+            // Send third activation code to second admin
+            sendEmail({
+                email: config.SUPER_ADMIN_EMAIL2,
+                subject: 'Account Verification for new superadmin',
+                message: `New superadmin account creation for ${user.email}. This is your activation code: ${activation_code3}`,
+            });
+
+            // Get access token
+            const { access_token } = await getAuthTokens(
+                user._id,
+                'verification'
+            );
+                
             resolve({ access_token });
         } catch (error) {
             reject(error);
@@ -82,12 +125,12 @@ const enduserSignup = async (req, res, next) => {
     if (existing_user) {
         // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
-            const { access_token, refresh_token } =
-                await handleExistingUnverifiedUser(existing_user);
+            const { access_token } =
+                await handleUnverifiedUser(existing_user);
 
             return res
                 .status(200)
-                .json({ success: true, data: { access_token, refresh_token } });
+                .json({ success: true, data: { access_token} });
         }
 
         throw new BadRequestError('User already exists');
@@ -113,13 +156,12 @@ const enduserSignup = async (req, res, next) => {
     });
 
     // Get auth tokens
-    const { access_token, refresh_token } = await getAuthTokens(user._id);
+    const { access_token } = await getAuthTokens(user._id);
 
     res.status(201).json({
         success: true,
         data: {
             access_token,
-            refresh_token,
             user: {
                 id: user._id,
                 firstname: user.firstname,
@@ -135,8 +177,6 @@ const riderSignup = async (req, res, next) => {
 
     // Check if user already exists
 };
-
-const adminSignup = async (req, res, next) => {};
 
 /**
  * Email verification
@@ -212,7 +252,7 @@ const resendVerificationEmail = async (req, res, next) => {
         throw new BadRequestError('User is already verified');
     }
 
-    const { access_token } = await handleExistingUnverifiedUser(
+    const { access_token } = await handleUnverifiedUser(
         user,
         config.EMAIL_VERIFICATION_EXP
     );
@@ -428,6 +468,20 @@ const getLoggedInUserData = async (req, res, next) => {
             },
         },
     });
+};
+
+// Admin controllers
+
+const adminSignup = async (req, res, next) => {
+    const { firstname, lastname, email, password } = req.body;
+
+    // Check if user exists
+    const existing_user = await User.findOne({ email }).populate('status');
+
+    if (existing_user) {
+        if (!existing_user.status.isVerified) {
+            const { access_token } = await getAuthTokens(existing_user._id);
+        }
 };
 
 module.exports = {
