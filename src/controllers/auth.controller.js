@@ -2,7 +2,7 @@ const {
     BadRequestError,
     UnauthenticatedError,
     UnauthorizedError,
-} = require('../utils/custom_errors');
+} = require('../utils/errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('express-async-error');
@@ -122,13 +122,20 @@ const handleUnverifiedSuperAdmin = async function (user) {
  *
  * @throws {BadRequestError} - If user already exists
  * @throws {BadRequestError} - If user already exists and is verified
+ * @throws {BadRequestError} - If role is superadmin
  */
-const enduserSignup = async (req, res, next) => {
-    const { firstname, lastname, email, password } = req.body;
+const userSignup = async (req, res, next) => {
+    const { firstname, lastname, email, password, role } = req.body;
+
+    if (!role) role = 'enduser';
 
     const existing_user = await User.findOne({ email }).populate('status');
     // console.log(existing_user?.toJSON({ virtuals: true }))
 
+    // Check if role is superadmin
+    if (role === 'superadmin') return next(new BadRequestError('Invalid role'));
+
+    // Check if user already exists
     if (existing_user) {
         // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
@@ -147,7 +154,7 @@ const enduserSignup = async (req, res, next) => {
         firstname,
         lastname,
         email,
-        role: 'enduser',
+        role,
     });
 
     Password.create({ password, user: user._id });
@@ -196,7 +203,7 @@ const verifyEmail = async (req, res, next) => {
     const { email, verification_code } = req.body;
 
     const user = await User.findOne({ email }).populate('status');
-    
+
     // Check if user exists
     if (!user) throw new BadRequestError('User does not exist');
 
@@ -273,7 +280,7 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).populate('status password');
-
+    console.log(user);
     console.log(user.toJSON({ virtuals: true }));
 
     // Check if user exists
@@ -613,7 +620,7 @@ const activateSuperAdmin = async (req, res, next) => {
 };
 
 module.exports = {
-    enduserSignup,
+    enduserSignup: userSignup,
     riderSignup,
     superAdminSignup,
     activateSuperAdmin,

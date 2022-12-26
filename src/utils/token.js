@@ -1,7 +1,7 @@
 const { User } = require('../models/users.model');
 const { AuthCode } = require('../models/token.model');
 const asyncWrapper = require('./async_wrapper');
-const { NotFoundError } = require('./custom_errors');
+const { NotFoundError } = require('./errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const config = require('./config');

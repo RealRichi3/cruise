@@ -3,7 +3,7 @@ const {
     CustomAPIError,
     BadRequestError,
     UnauthenticatedError,
-} = require('../utils/custom_errors');
+} = require('../utils/errors');
 const jwt = require('jsonwebtoken');
 const { BlacklistedToken } = require('../models/token.model');
 const { getAuthTokens } = require('../utils/token');
@@ -48,7 +48,6 @@ const getRequiredConfigVars = (type) => {
  */
 const basicAuth = function (token_type = null) {
     return async (req, res, next) => {
-        console.log('basicAuth called')
         // Check if the request has a valid authorization header
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
