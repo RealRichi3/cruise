@@ -25,6 +25,7 @@ const config = require('../utils/config');
 const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
+const Vehicle = require('../models/vehicle.model');
 
 /**
  * Handle existing unverified user.
@@ -63,7 +64,7 @@ const handleUnverifiedUser = async function (user) {
 
 /**
  * Handle existing user
- * 
+ *
  * @param {MongooseObject} user - Mongoose user object
  * @returns {function} - Express middleware function
  * @throws {BadRequestError} - If user is already verified
@@ -211,14 +212,10 @@ const userSignup = async (req, res, next) => {
 
         await session.commitTransaction();
         session.endSession();
-
-        user = _user;
     });
 
     Password.create({ password, user: user._id });
     Status.create({ user: user._id, isActive: true });
-
-    console.log(user);
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);
@@ -250,6 +247,7 @@ const riderSignup = async (req, res, next) => {
         state,
         referral_code,
         hasVehicle,
+        driver_license,
     } = personal_details;
     const { manufacturer, model, name, color, plate_number, year } =
         vehicle_details;
@@ -259,19 +257,59 @@ const riderSignup = async (req, res, next) => {
     const existing_user = await User.findOne({ email }).populate('status');
 
     if (existing_user) {
-        // If user is not verified - send verification email
-        if (!existing_user.status.isVerified) {
-            const { access_token } = await handleUnverifiedUser(existing_user);
-
-            return res
-                .status(200)
-                .json({ success: true, data: { access_token } });
-        }
-
-        return next(new BadRequestError('User already exists'));
+        await handleExistingUser(existing_user)(req, res, next);
+        return;
     }
 
-    // Check if user already exists
+    // Use mongoose transaction
+    const session = await mongoose.startSession();
+    let user, vehicle, rider;
+    await session.withTransaction(async () => {
+        // Create user
+        user = await User.create([{ ...personal_details, role }], {
+            session,
+        }).then((user) => user[0]);
+
+        // Create Rider info
+        rider = await Rider.create([{ user: user._id, ...personal_details }], {
+            session,
+        }).then((rider) => rider[0]);
+
+        // Create Vehicle info
+        if (rider.hasVehicle) {
+            vehicle = await Vehicle.create([{ rider: rider._id, ...vehicle_details }], {
+                session,
+            }).then((vehicle) => { return vehicle[0]});
+
+            rider.updateOne({ vehicle });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+    });
+
+    console.log(user)
+    console.log(rider)
+    console.log(vehicle)
+    
+    Password.create({ password, user: user._id });
+    Status.create({ user: user._id });
+
+    // Get auth tokens
+    const { access_token } = await handleUnverifiedUser(user);
+
+    res.status(201).json({
+        success: true,
+        data: {
+            access_token,
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+            },
+        },
+    });
 };
 
 /**
