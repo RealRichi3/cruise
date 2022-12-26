@@ -64,11 +64,11 @@ const getUserAccountData = async (req, res, next) => {
 
 /**
  * Update user account
- * 
+ *
  * @param {string} email - User's email
- * 
+ *
  * @returns {string} - User's updated account data
- * 
+ *
  * @throws {BadRequestError} if email is not provided
  * @throws {BadRequestError} if user does not exist
  * */
@@ -110,11 +110,30 @@ const deactivateUserAccount = async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        data: user,
+        data: {},
     });
 };
 
-const activateUserAccount = async (req, res, next) => {};
+const activateUserAccount = async (req, res, next) => {
+    const { email } = req.params;
+
+    // Check if email is provided
+    if (!email) return next(new BadRequestError('Email is required'));
+
+    const user = await User.findOne({ email }).populate('status');
+
+    // Check if user exists
+    if (!user) return next(new BadRequestError('User does not exist'));
+
+    // Activate user account
+    user.status.isActive = true;
+    user.save();
+
+    res.status(200).json({
+        success: true,
+        data: {},
+    });
+};
 
 module.exports = {
     addUserAccount,
