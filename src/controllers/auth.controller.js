@@ -7,9 +7,17 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('express-async-error');
 
+const mongoose = require('mongoose');
+
 // Models
 const { BlacklistedToken, AuthCode } = require('../models/token.model');
-const { User, Status } = require('../models/users.model');
+const {
+    User,
+    Status,
+    Enduser,
+    Rider,
+    Admin,
+} = require('../models/users.model');
 const Password = require('../models/password.model');
 
 // Utils
@@ -125,7 +133,12 @@ const handleUnverifiedSuperAdmin = async function (user) {
  * @throws {BadRequestError} - If role is superadmin
  */
 const userSignup = async (req, res, next) => {
-    const { firstname, lastname, email, password, role } = req.body;
+    let {
+        firstname, lastname,
+        email, password,
+        role, phone,
+        address, city, state,
+    } = req.body;
 
     if (!role) role = 'enduser';
 
@@ -149,16 +162,35 @@ const userSignup = async (req, res, next) => {
         return next(new BadRequestError('User already exists'));
     }
 
-    // Create user
-    const user = await User.create({
-        firstname,
-        lastname,
-        email,
-        role,
+    // Use mongoose transaction
+    const session = await mongoose.startSession();
+    let user;
+    await session.withTransaction(async () => {
+        // Create user
+        let _user = await User.create([{
+            firstname,
+            lastname,
+            email,
+            role,
+        }], { session }).then((user) => user[0]);
+        
+        // Create user info
+        if (role === 'enduser')
+            await Enduser.create([{ user: _user._id, phone, city, address, state }], { session });
+        
+        // Create admin info
+        if (role === 'admin') await Admin.create([{ user: user._id }], { session });
+        
+        await session.commitTransaction();
+        session.endSession();
+
+        user = _user;
     });
 
     Password.create({ password, user: user._id });
     Status.create({ user: user._id, isActive: true });
+
+    console.log(user);
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);
@@ -200,16 +232,16 @@ const riderSignup = async (req, res, next) => {
  * @throws {BadRequestError} - If verification code is invalid
  */
 const verifyEmail = async (req, res, next) => {
-    const { email, verification_code } = req.body;
+    const { verification_code } = req.body;
 
-    const user = await User.findOne({ email }).populate('status');
+    const user = await User.findOne({ email: req.user.email }).populate('status');
 
     // Check if user exists
-    if (!user) throw new BadRequestError('User does not exist');
+    if (!user) return next(new BadRequestError('User does not exist'));
 
     // Check if user is verified
     if (user.status.isVerified)
-        throw new BadRequestError('User is already verified');
+        return next(new BadRequestError('User is already verified'));
 
     // Check if verification code is valid
     const auth_code = await AuthCode.findOne({
@@ -217,13 +249,16 @@ const verifyEmail = async (req, res, next) => {
         verification_code,
     });
 
-    if (!auth_code) throw new BadRequestError('Invalid verification code');
+    if (!auth_code) return next(new BadRequestError('Invalid verification code'));
 
     // Remove verification code
     auth_code.updateOne({ verification_code: null });
 
     // Verify user
-    await user.status.updateOne({ isVerified: true });
+    user.status.updateOne({ isVerified: true });
+
+    // Blacklist access token
+    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
 
     res.status(200).json({ success: true, data: {} });
 };
