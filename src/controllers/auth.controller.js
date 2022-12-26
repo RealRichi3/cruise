@@ -7,9 +7,17 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('express-async-error');
 
+const mongoose = require('mongoose');
+
 // Models
 const { BlacklistedToken, AuthCode } = require('../models/token.model');
-const { User, Status } = require('../models/users.model');
+const {
+    User,
+    Status,
+    Enduser,
+    Rider,
+    Admin,
+} = require('../models/users.model');
 const Password = require('../models/password.model');
 
 // Utils
@@ -17,6 +25,7 @@ const config = require('../utils/config');
 const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
+const Vehicle = require('../models/vehicle.model');
 
 /**
  * Handle existing unverified user.
@@ -51,6 +60,30 @@ const handleUnverifiedUser = async function (user) {
             reject(error);
         }
     });
+};
+
+/**
+ * Handle existing user
+ *
+ * @param {MongooseObject} user - Mongoose user object
+ * @returns {function} - Express middleware function
+ * @throws {BadRequestError} - If user is already verified
+ * */
+const handleExistingUser = function (user) {
+    return async function (req, res, next) {
+        const existing_user = user.toJSON({ virtuals: true });
+
+        console.log(existing_user)
+        // If user is not verified - send verification email
+        if (!existing_user.status.isVerified) {
+            const { access_token } = await handleUnverifiedUser(existing_user);
+
+            // Return access token
+            res.status(200).json({ success: true, data: { access_token } });
+        } else {
+            next(new BadRequestError('User already exists'));
+        }
+    };
 };
 
 /**
@@ -125,36 +158,61 @@ const handleUnverifiedSuperAdmin = async function (user) {
  * @throws {BadRequestError} - If role is superadmin
  */
 const userSignup = async (req, res, next) => {
-    const { firstname, lastname, email, password, role } = req.body;
+    let {
+        firstname,
+        lastname,
+        email,
+        password,
+        role,
+        phone,
+        address,
+        city,
+        state,
+    } = req.body;
 
     if (!role) role = 'enduser';
-
-    const existing_user = await User.findOne({ email }).populate('status');
-    // console.log(existing_user?.toJSON({ virtuals: true }))
 
     // Check if role is superadmin
     if (role === 'superadmin') return next(new BadRequestError('Invalid role'));
 
+    const existing_user = await User.findOne({ email }).populate('status');
+
     // Check if user already exists
     if (existing_user) {
-        // If user is not verified - send verification email
-        if (!existing_user.status.isVerified) {
-            const { access_token } = await handleUnverifiedUser(existing_user);
-
-            return res
-                .status(200)
-                .json({ success: true, data: { access_token } });
-        }
-
-        return next(new BadRequestError('User already exists'));
+        await handleExistingUser(existing_user)(req, res, next);
+        return;
     }
 
-    // Create user
-    const user = await User.create({
-        firstname,
-        lastname,
-        email,
-        role,
+    // Use mongoose transaction
+    const session = await mongoose.startSession();
+    let user;
+    await session.withTransaction(async () => {
+        // Create user
+        let _user = await User.create(
+            [
+                {
+                    firstname,
+                    lastname,
+                    email,
+                    role,
+                },
+            ],
+            { session }
+        ).then((user) => user[0]);
+
+        // Create user info
+        if (role === 'enduser')
+            await Enduser.create(
+                [{ user: _user._id, phone, city, address, state }],
+                { session }
+            );
+
+        // Create admin info
+        if (role === 'admin')
+            await Admin.create([{ user: user._id }], { session });
+
+        await session.commitTransaction();
+        session.endSession();
     });
 
     Password.create({ password, user: user._id });
@@ -178,9 +236,76 @@ const userSignup = async (req, res, next) => {
 };
 
 const riderSignup = async (req, res, next) => {
-    const { firstname, lastname, email, password } = req.body;
+    const { personal_details, vehicle_details} = req.body;
+    const {
+        email,
+        password,
+    } = personal_details;
 
-    // Check if user already exists
+    const role = 'rider';
+
+    const existing_user = await User.findOne({ email }).populate('status');
+
+    if (existing_user) {
+        await handleExistingUser(existing_user)(req, res, next);
+        return;
+    }
+
+    // Use mongoose transaction
+    const session = await mongoose.startSession();
+    let user, vehicle, rider;
+    await session.withTransaction(async () => {
+        // Create user
+        user = await User.create([{ ...personal_details, role }], {
+            session,
+        }).then((user) => user[0]);
+
+        console.log(user)
+        // Create Rider info
+        rider = await Rider.create([{ user: user._id, ...personal_details }], {
+            session,
+        }).then((rider) => rider[0]);
+
+        // Create Vehicle info
+        if (rider.hasVehicle) {
+            vehicle = await Vehicle.create(
+                [{ rider: rider._id, ...vehicle_details }],
+                {
+                    session,
+                }
+            ).then((vehicle) => {
+                return vehicle[0];
+            });
+
+            rider.updateOne({ vehicle });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+    });
+
+    console.log(user);
+    console.log(rider);
+    console.log(vehicle);
+
+    Password.create({ password, user: user._id });
+    Status.create({ user: user._id });
+
+    // Get auth tokens
+    const { access_token } = await handleUnverifiedUser(user);
+
+    res.status(201).json({
+        success: true,
+        data: {
+            access_token,
+            user: {
+                id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+            },
+        },
+    });
 };
 
 /**
@@ -200,30 +325,39 @@ const riderSignup = async (req, res, next) => {
  * @throws {BadRequestError} - If verification code is invalid
  */
 const verifyEmail = async (req, res, next) => {
-    const { email, verification_code } = req.body;
+    const { verification_code } = req.body;
 
-    const user = await User.findOne({ email }).populate('status');
-
+    const user = await User.findOne({ email: req.user.email }).populate(
+        'status'
+    );
+    
+    console.log(user)
     // Check if user exists
-    if (!user) throw new BadRequestError('User does not exist');
+    if (!user) return next(new BadRequestError('User does not exist'));
 
     // Check if user is verified
     if (user.status.isVerified)
-        throw new BadRequestError('User is already verified');
+        return next(new BadRequestError('User is already verified'));
 
     // Check if verification code is valid
     const auth_code = await AuthCode.findOne({
         user: user._id,
-        verification_code,
+        // verification_code,
     });
 
-    if (!auth_code) throw new BadRequestError('Invalid verification code');
+    console.log(auth_code)
+
+    if (!auth_code)
+        return next(new BadRequestError('Invalid verification code'));
 
     // Remove verification code
     auth_code.updateOne({ verification_code: null });
 
     // Verify user
     await user.status.updateOne({ isVerified: true });
+
+    // Blacklist access token
+    BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
 
     res.status(200).json({ success: true, data: {} });
 };

@@ -98,11 +98,12 @@ const getAuthCodes = async (user_id, code_type) => {
 
             if (code_type == 'verification') {
                 verification_code = random_code;
-                AuthCode.findOneAndUpdate(
+                await AuthCode.findOneAndUpdate(
                     { user: user_id },
                     { verification_code },
                     { new: true, upsert: true }
                 );
+                // console.log(autho);
             }
 
             if (code_type == 'password_reset') {
