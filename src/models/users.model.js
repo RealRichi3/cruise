@@ -58,7 +58,7 @@ const riderSchema = new schema(
         rider_status: {
             type: String,
             required: true,
-            default: 'active',
+            default: 'inactive',
             enum: ['active', 'inactive', 'suspended'],
         },
     },
