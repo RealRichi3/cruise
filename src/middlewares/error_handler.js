@@ -34,6 +34,10 @@ const errorHandler = (err, req, res, next) => {
     // Handle TokenExpiredError
     if (error.name == 'TokenExpiredError')
         return res.status(401).json({ message: 'Token Expired' });
+        
+    // Handle JsonWebTokenError
+    if (error.name == 'JsonWebTokenError')
+        return res.status(401).json({ message: 'Invalid Token' });
 
     if (error instanceof CustomAPIError || err instanceof CustomAPIError) {
         return res

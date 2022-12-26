@@ -354,7 +354,7 @@ const verifyEmail = async (req, res, next) => {
     auth_code.updateOne({ verification_code: null });
 
     // Verify user
-    user.status.updateOne({ isVerified: true });
+    await user.status.updateOne({ isVerified: true });
 
     // Blacklist access token
     BlacklistedToken.create({ token: req.headers.authorization.split(' ')[1] });
