@@ -18,6 +18,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/v1/auth', require('./routes/auth.route'));
+app.use('/api/v1/user', require('./routes/user.route'));
 
 // Error handler middleware
 app.use(errorHandler);
