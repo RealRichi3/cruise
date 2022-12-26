@@ -1,4 +1,8 @@
-const { CustomAPIError } = require('../utils/errors');
+const {
+    CustomAPIError,
+    BadRequestError,
+    UnauthorizedError,
+} = require('../utils/errors');
 
 const handleDuplicateKey = (err) => {
     const errKeyValue = err.keyValue.email;
@@ -16,16 +20,20 @@ const errorHandler = (err, req, res, next) => {
     if (process.env.NODE_ENV != 'test') {
         console.log(err);
     }
+
     //Send Operational Errors We Trust To Client
     let error = { ...err };
     if (error.code == 11000) error = handleDuplicateKey(error);
-    if (error._message == 'User validation failed')
+    if (error._message == 'User validation ')
         error = handleValidationErr(error);
 
+    // Handle Schema Validation Error
+    if (err.name == 'ValidationError')
+        return res.status(400).json({ message: err.message });
+
     // Handle TokenExpiredError
-    if (error.name == 'TokenExpiredError') {
-        return res.status(401).send({ message: 'Token Expired' });
-    }
+    if (error.name == 'TokenExpiredError')
+        return res.status(401).json({ message: 'Token Expired' });
 
     if (error instanceof CustomAPIError || err instanceof CustomAPIError) {
         return res
