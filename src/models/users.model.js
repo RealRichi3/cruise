@@ -1,5 +1,5 @@
-const { default: mongoose } = require('mongoose')
-const schema = mongoose.Schema
+const { default: mongoose } = require('mongoose');
+const schema = mongoose.Schema;
 
 const statusSchema = new schema(
     {
@@ -8,7 +8,7 @@ const statusSchema = new schema(
         isActive: { type: Boolean, default: false },
     },
     { timestamps: true }
-)
+);
 
 const userSchema = new schema(
     {
@@ -23,7 +23,7 @@ const userSchema = new schema(
         },
     },
     { timestamps: true }
-)
+);
 
 const enduserSchema = new schema(
     {
@@ -35,7 +35,7 @@ const enduserSchema = new schema(
         payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
     },
     { timestamps: true }
-)
+);
 
 const riderSchema = new schema(
     {
@@ -48,12 +48,13 @@ const riderSchema = new schema(
         vehicle: {
             type: schema.Types.ObjectId,
             ref: 'Vehicle',
-            required: true,
         },
         driver_license: {
-            type: schema.Types.ObjectId,
-            ref: 'DriverLicense',
+            type: String,
             required: true,
+        },
+        taxi_license: {
+            type: String,
         },
         rider_status: {
             type: String,
@@ -61,9 +62,10 @@ const riderSchema = new schema(
             default: 'inactive',
             enum: ['active', 'inactive', 'suspended'],
         },
+        hasVehicle: { type: Boolean, default: false },
     },
     { timestamps: true }
-)
+);
 
 const adminSchema = new schema(
     {
@@ -71,14 +73,14 @@ const adminSchema = new schema(
         state: { type: String, required: true },
     },
     { timestamps: true }
-)
+);
 
 const superadminSchema = new schema(
     {
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
     },
     { timestamps: true }
-)
+);
 
 // Virtuals
 userSchema.virtual('password', {
@@ -86,22 +88,21 @@ userSchema.virtual('password', {
     localField: '_id',
     foreignField: 'user',
     justOne: true,
-})
+});
 
 userSchema.virtual('status', {
     ref: 'Status',
     localField: '_id',
     foreignField: 'user',
     justOne: true,
-})
+});
 
-
-const Status = mongoose.model('Status', statusSchema)
-const User = mongoose.model('User', userSchema)
-const Enduser = mongoose.model('Enduser', enduserSchema)
-const Rider = mongoose.model('Rider', riderSchema)
-const Admin = mongoose.model('Admin', adminSchema)
-const Superadmin = mongoose.model('Superadmin', superadminSchema)
+const Status = mongoose.model('Status', statusSchema);
+const User = mongoose.model('User', userSchema);
+const Enduser = mongoose.model('Enduser', enduserSchema);
+const Rider = mongoose.model('Rider', riderSchema);
+const Admin = mongoose.model('Admin', adminSchema);
+const Superadmin = mongoose.model('Superadmin', superadminSchema);
 
 module.exports = {
     User,
@@ -109,5 +110,5 @@ module.exports = {
     Rider,
     Admin,
     Superadmin,
-    Status
-}
+    Status,
+};
