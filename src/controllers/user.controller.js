@@ -93,6 +93,15 @@ const updateUserAccount = async (req, res, next) => {
     });
 };
 
+/**
+ * Deactivate user account
+ *
+ * @param {string} email - User's email
+ *
+ * @throws {BadRequestError} if email is not provided
+ * @throws {BadRequestError} if user does not exist
+ *
+ * */
 const deactivateUserAccount = async (req, res, next) => {
     const { email } = req.params;
 
@@ -106,7 +115,7 @@ const deactivateUserAccount = async (req, res, next) => {
 
     // Deactivate user account
     user.status.isActive = false;
-    user.save();
+    user.status.save();
 
     res.status(200).json({
         success: true,
@@ -114,6 +123,15 @@ const deactivateUserAccount = async (req, res, next) => {
     });
 };
 
+/**
+ * Activate user account
+ *
+ * @param {string} email - User's email
+ *
+ * @throws {BadRequestError} if email is not provided
+ * @throws {BadRequestError} if user does not exist
+ *
+ * */
 const activateUserAccount = async (req, res, next) => {
     const { email } = req.params;
 
@@ -127,7 +145,7 @@ const activateUserAccount = async (req, res, next) => {
 
     // Activate user account
     user.status.isActive = true;
-    user.save();
+    user.status.save();
 
     res.status(200).json({
         success: true,

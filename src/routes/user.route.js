@@ -18,7 +18,7 @@ router
     .post('/add', addUserAccount)
     .get('/data/:email', getUserAccountData)
     .put('/update', updateUserAccount)
-    .put('/deactivate', deactivateUserAccount)
-    .put('/activate', activateUserAccount);
+    .put('/deactivate/:email', deactivateUserAccount)
+    .put('/activate/:email', activateUserAccount);
 
 module.exports = router;
