@@ -235,6 +235,35 @@ const userSignup = async (req, res, next) => {
     });
 };
 
+/**
+ * Rider signup
+ * @description - Creates a new rider
+ * @route POST /api/v1/auth/signup/rider
+ * 
+ * @param {string} firstname - Firstname of user
+ * @param {string} lastname - Lastname of user
+ * @param {string} email - Email of user
+ * @param {string} password - Password of user
+ * @param {string} phone - Phone number of user
+ * @param {string} address - Address of user
+ * @param {string} city - City of user
+ * @param {string} state - State of user
+ * @param {string} referral - Referral code of user
+ * 
+ * // Vehicle details
+ * @param {string} model - Model of vehicle
+ * @param {string} color - Color of vehicle
+ * @param {string} license - License of vehicle
+ * @param {string} year - Year of vehicle
+ * @param {string} manufacturer - Manufacturer of vehicle
+ * @param {string} plate_number - Plate number of vehicle
+ * 
+ * @returns {string} success - Success message
+ * @returns {string} data - Data object
+ * @returns {string} data.access_token - JWT access token
+ * 
+ * @throws {BadRequestError} - If user already exists and is verified
+ * */ 
 const riderSignup = async (req, res, next) => {
     const { personal_details, vehicle_details} = req.body;
     const {
@@ -342,7 +371,7 @@ const verifyEmail = async (req, res, next) => {
     // Check if verification code is valid
     const auth_code = await AuthCode.findOne({
         user: user._id,
-        // verification_code,
+        verification_code,
     });
 
     console.log(auth_code)
@@ -351,7 +380,7 @@ const verifyEmail = async (req, res, next) => {
         return next(new BadRequestError('Invalid verification code'));
 
     // Remove verification code
-    auth_code.updateOne({ verification_code: null });
+    await auth_code.updateOne({ verification_code: null });
 
     // Verify user
     await user.status.updateOne({ isVerified: true });
