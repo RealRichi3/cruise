@@ -6,7 +6,7 @@ const rbacMiddleware = require('../middlewares/rbac');
 
 const {
     addUserAccount,
-    getUserAccount,
+    getUserAccountData,
     updateUserAccount,
     deactivateUserAccount,
     activateUserAccount,
@@ -16,7 +16,7 @@ router.use(basicAuth(), rbacMiddleware('superadmin'));
 
 router
     .post('/add', addUserAccount)
-    .get('/get', getUserAccount)
+    .get('/data/:email', getUserAccountData)
     .put('/update', updateUserAccount)
     .put('/deactivate', deactivateUserAccount)
     .put('/activate', activateUserAccount);
