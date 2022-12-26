@@ -37,11 +37,11 @@ const addUserAccount = async (req, res, next) => {
 
 /**
  * Get user account data
- * 
+ *
  * @param {string} email - User's email
- * 
+ *
  * @returns {string} - User's account data
- * 
+ *
  * @throws {BadRequestError} if email is not provided
  * @throws {BadRequestError} if user does not exist
  */
@@ -52,7 +52,7 @@ const getUserAccountData = async (req, res, next) => {
     if (!email) return next(new BadRequestError('Email is required'));
 
     const user = await User.findOne({ email });
-    
+
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
 
@@ -62,7 +62,36 @@ const getUserAccountData = async (req, res, next) => {
     });
 };
 
-const updateUserAccount = async (req, res, next) => {};
+/**
+ * Update user account
+ * 
+ * @param {string} email - User's email
+ * 
+ * @returns {string} - User's updated account data
+ * 
+ * @throws {BadRequestError} if email is not provided
+ * @throws {BadRequestError} if user does not exist
+ * */
+const updateUserAccount = async (req, res, next) => {
+    const { email } = req.params;
+
+    // Check if email is provided
+    if (!email) return next(new BadRequestError('Email is required'));
+
+    const user = await User.findOne({ email });
+
+    // Check if user exists
+    if (!user) return next(new BadRequestError('User does not exist'));
+
+    const updated = await User.findOneAndUpdate({ email }, req.body, {
+        new: true,
+    });
+
+    res.status(200).json({
+        success: true,
+        data: updated,
+    });
+};
 
 const deactivateUserAccount = async (req, res, next) => {};
 
