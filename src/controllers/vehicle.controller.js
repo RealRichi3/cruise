@@ -49,8 +49,9 @@ const addVehicle = async (req, res, next) => {
     }
 
     vehicle.rider = rider._id;
+    await vehicle.validate();
     await vehicle.save();
-
+    
     res.status(200).send({
         success: true,
         message: 'Vehicle added successfully',
@@ -137,7 +138,6 @@ const updateVehicleData = async (req, res, next) => {
         },
         { new: true }
     );
-    updated_vehicle.isActive = undefined;
 
     res.status(200).send({
         success: true,
