@@ -13,15 +13,23 @@ const {
 const { basicAuth } = require('../middlewares/auth');
 const rbacMiddleware = require('../middlewares/rbac');
 
-router.use(basicAuth(), rbacMiddleware('rider'));
+router.use(basicAuth(), rbacMiddleware('rider admin superadmin'));
 
 router
     .post('/add', addVehicle)
-    .get('/:id', getVehicleData)
+    .get(
+        '/:id',
+        rbacMiddleware('enduser rider admin superadmin'),
+        getVehicleData
+    )
     .put('/:id', updateVehicleData)
     .delete('/:id', removeVehicle)
     .get('/riders-vehicles/:id', getRidersVehicles)
-    .put('/activate/:id', activateVehicle)
-    .put('/deactivate/:id', deactivateVehicle);
+    .put('/activate/:id', rbacMiddleware('admin superadmin'), activateVehicle)
+    .put(
+        '/deactivate/:id',
+        rbacMiddleware('admin superadmin'),
+        deactivateVehicle
+    );
 
 module.exports = router;
