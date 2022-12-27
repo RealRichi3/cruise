@@ -25,10 +25,10 @@ router
     .put('/update/:id', updateVehicleData)
     .get('/riders-vehicles', getRidersVehicles)
     .delete('/remove/:id', removeVehicle)
-    .put('/activate/:id', rbacMiddleware('admin superadmin'), activateVehicle)
+    .put('/activate/:id', rbacMiddleware('admin superadmin rider'), activateVehicle)
     .put(
         '/deactivate/:id',
-        rbacMiddleware('admin superadmin'),
+        rbacMiddleware('admin superadmin rider'),
         deactivateVehicle
     );
 

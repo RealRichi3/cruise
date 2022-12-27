@@ -1,6 +1,4 @@
-const {
-    BadRequestError,
-} = require('../utils/errors');
+const { BadRequestError } = require('../utils/errors');
 
 // Models
 const { Rider } = require('../models/users.model');
@@ -51,11 +49,11 @@ const addVehicle = async (req, res, next) => {
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();
-    
+
     res.status(200).send({
         success: true,
         message: 'Vehicle added successfully',
-        data: vehicle,
+        data: vehicle.depopulate('status'),
     });
 };
 
@@ -82,6 +80,8 @@ const getVehicleData = async (req, res, next) => {
         },
     });
 
+    const vehicle_data = await Vehicle.findById(vehicle_id).populate('status');
+    console.log(vehicle_data);
     // Check if vehicle exists
     if (!vehicle) {
         return next(new BadRequestError('Vehicle not found'));
@@ -161,7 +161,7 @@ const removeVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
     const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
 
-    console.log(vehicle)
+    console.log(vehicle);
 
     // Check if vehicle exists
     if (!vehicle) {
@@ -210,7 +210,9 @@ const getRidersVehicles = async (req, res, next) => {
         rider = await Rider.findById(req.params.id).populate('vehicles');
     } else {
         // If rider id is not provided (get current rider)
-        rider = await Rider.findOne({ user: req.user.id }).populate('vehicles removed_vehicles');
+        rider = await Rider.findOne({ user: req.user.id }).populate(
+            'vehicles removed_vehicles'
+        );
     }
 
     if (!rider) return next(new UnauthorizedError('User is not a rider'));
@@ -235,14 +237,14 @@ const getRidersVehicles = async (req, res, next) => {
 const activateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
 
-    const vehicle = await Vehicle.findById(vehicle_id);
+    let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
     if (!vehicle) {
         return next(new BadRequestError('Vehicle not found'));
     }
 
-    vehicle.isActive = true;
-    await vehicle.save();
+    vehicle.status.isActive = true;
+    await vehicle.status.save()
 
     res.status(200).send({
         success: true,
@@ -264,14 +266,14 @@ const activateVehicle = async (req, res, next) => {
 const deactivateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
 
-    const vehicle = await Vehicle.findById(vehicle_id);
+    let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
     if (!vehicle) {
         return next(new BadRequestError('Vehicle not found'));
     }
 
-    vehicle.isActive = false;
-    await vehicle.save();
+    vehicle.status.isActive = false;
+    await vehicle.status.save()
 
     res.status(200).send({
         success: true,
