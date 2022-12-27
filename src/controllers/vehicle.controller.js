@@ -161,6 +161,8 @@ const removeVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
     const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
 
+    console.log(vehicle)
+
     // Check if vehicle exists
     if (!vehicle) {
         return next(new BadRequestError('Vehicle not found'));
@@ -182,8 +184,8 @@ const removeVehicle = async (req, res, next) => {
         { $push: { removed_vehicles: vehicle._id } }
     );
 
-    // Remove vehicle
-    await vehicle.remove();
+    // // Remove vehicle
+    // await vehicle.remove();
 
     res.status(200).send({
         success: true,
@@ -204,12 +206,11 @@ const removeVehicle = async (req, res, next) => {
 const getRidersVehicles = async (req, res, next) => {
     let rider;
     if (req.params.id) {
-        console.log(req.params.id);
         // If rider id is provided
         rider = await Rider.findById(req.params.id).populate('vehicles');
     } else {
         // If rider id is not provided (get current rider)
-        rider = await Rider.findOne({ user: req.user.id }).populate('vehicles');
+        rider = await Rider.findOne({ user: req.user.id }).populate('vehicles removed_vehicles');
     }
 
     if (!rider) return next(new UnauthorizedError('User is not a rider'));
