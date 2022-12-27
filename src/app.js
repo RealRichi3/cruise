@@ -21,6 +21,7 @@ app.use(express.json());
 app.use('/api/v1/auth', require('./routes/auth.route'));
 app.use('/api/v1/user', require('./routes/user.route'));
 app.use('/api/v1/vehicle', require('./routes/vehicle.route'));
+app.use('/api/v1/bankaccount', require('./routes/bankaccount.route'));
 
 // Error handler middleware
 app.use(errorHandler);

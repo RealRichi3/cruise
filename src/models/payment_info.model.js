@@ -28,6 +28,7 @@ const walletSchema = new schema(
 
 const bankAccountSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+    rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true},
     account_name: { type: String, required: true },
     account_number: { type: String, required: true },
     bank_name: { type: String, required: true },
@@ -44,6 +45,7 @@ const cardSchema = new schema({
 const paymentInfoSchema = new schema(
     {
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
         cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
         bank_accounts: [{ type: schema.Types.ObjectId, ref: 'BankAccount' }],
         wallet: { type: schema.Types.ObjectId, ref: 'Wallet' },
