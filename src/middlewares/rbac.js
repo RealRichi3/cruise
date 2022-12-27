@@ -1,7 +1,8 @@
 const {UnauthorizedError} = require('../utils/errors');
 
-function rbacMiddleware(allowed_roles) {
+function rbacMiddleware(roles = ' ') {
     return (req, res, next) => {
+        const allowed_roles = roles.split(' ');
         const user_role = req.user.role;
 
         // If user role is in allowed roles, grant access
