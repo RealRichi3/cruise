@@ -75,7 +75,30 @@ const addVehicle = async (req, res, next) => {
     });
 };
 
-const getVehicleData = async (req, res, next) => {};
+const getVehicleData = async (req, res, next) => {
+    const vehicle_id = req.params.id;
+
+    // Get vehicle data
+    const vehicle = await Vehicle.findById(vehicle_id).populate({
+        model: 'rider',
+        select: 'phone address ',
+        populate: { 
+            model: 'user',
+            select: 'first_name last_name email'
+        }
+    });
+
+    // Check if vehicle exists
+    if (!vehicle) {
+        return next(new BadRequestError('Vehicle not found'));
+    }
+
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle data',
+        data: vehicle,
+    });
+};
 
 const updateVehicleData = async (req, res, next) => {
     const vehicle_id = req.params.id;
