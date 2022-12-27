@@ -75,7 +75,20 @@ const addVehicle = async (req, res, next) => {
 
 const getVehicleData = async (req, res, next) => {};
 
-const updateVehicleData = async (req, res, next) => {};
+const updateVehicleData = async (req, res, next) => {
+    const vehicle_id = req.params.id;
+    const vehicle = await Vehicle.findById(vehicle_id);
+
+    // Check if vehicle exists
+    if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
+
+    const { name, manufacturer, model, year, color, plate_number } = req.body;
+
+    // Update vehicle data
+    await vehicle.updateOne({ name, manufacturer, model, year, color, plate_number });
+
+    res.status(200).send({ success: true, message: 'Vehicle updated', data: vehicle });
+};
 
 const removeVehicle = async (req, res, next) => {};
 
