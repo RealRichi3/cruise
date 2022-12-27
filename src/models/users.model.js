@@ -45,10 +45,10 @@ const riderSchema = new schema(
         city: { type: String, required: true },
         state: { type: String, required: true },
         payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
-        vehicle: {
+        vehicles: [{
             type: schema.Types.ObjectId,
             ref: 'Vehicle',
-        },
+        }],
         driver_license: {
             type: String,
             required: true,

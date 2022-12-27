@@ -26,6 +26,22 @@ const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
 
+/**
+ * Add a new vehicle
+ * 
+ * @param {string} name - The name of the vehicle
+ * @param {string} manufacturer - The manufacturer of the vehicle
+ * @param {string} model - The model of the vehicle
+ * @param {number} year - The year of the vehicle
+ * @param {string} color - The color of the vehicle
+ * @param {string} plate_number - The plate number of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the request body is invalid
+ * @throws {UnauthorizedError} - If the user is not a rider
+ * @throws {InternalServerError} - If there is an error while saving the vehicle
+ * */
 const addVehicle = async (req, res, next) => {
     console.log(req.body);
     const { name, manufacturer, model, year, color, plate_number } = req.body;
@@ -44,6 +60,8 @@ const addVehicle = async (req, res, next) => {
         { $push: { vehicles: vehicle._id } },
         { new: true }
     ).populate('vehicles');
+
+    if (!rider) { return next(new UnauthorizedError('User is not a rider')); }
 
     vehicle.rider = rider._id;
     await vehicle.save();

@@ -73,7 +73,7 @@ const handleExistingUser = function (user) {
     return async function (req, res, next) {
         const existing_user = user.toJSON({ virtuals: true });
 
-        console.log(existing_user)
+        console.log(existing_user);
         // If user is not verified - send verification email
         if (!existing_user.status.isVerified) {
             const { access_token } = await handleUnverifiedUser(existing_user);
@@ -239,7 +239,7 @@ const userSignup = async (req, res, next) => {
  * Rider signup
  * @description - Creates a new rider
  * @route POST /api/v1/auth/signup/rider
- * 
+ *
  * @param {string} firstname - Firstname of user
  * @param {string} lastname - Lastname of user
  * @param {string} email - Email of user
@@ -249,7 +249,7 @@ const userSignup = async (req, res, next) => {
  * @param {string} city - City of user
  * @param {string} state - State of user
  * @param {string} referral - Referral code of user
- * 
+ *
  * // Vehicle details
  * @param {string} model - Model of vehicle
  * @param {string} color - Color of vehicle
@@ -257,19 +257,16 @@ const userSignup = async (req, res, next) => {
  * @param {string} year - Year of vehicle
  * @param {string} manufacturer - Manufacturer of vehicle
  * @param {string} plate_number - Plate number of vehicle
- * 
+ *
  * @returns {string} success - Success message
  * @returns {string} data - Data object
  * @returns {string} data.access_token - JWT access token
- * 
+ *
  * @throws {BadRequestError} - If user already exists and is verified
- * */ 
+ * */
 const riderSignup = async (req, res, next) => {
-    const { personal_details, vehicle_details} = req.body;
-    const {
-        email,
-        password,
-    } = personal_details;
+    const { personal_details, vehicle_details } = req.body;
+    const { email, password } = personal_details;
 
     const role = 'rider';
 
@@ -289,7 +286,7 @@ const riderSignup = async (req, res, next) => {
             session,
         }).then((user) => user[0]);
 
-        console.log(user)
+        console.log(user);
         // Create Rider info
         rider = await Rider.create([{ user: user._id, ...personal_details }], {
             session,
@@ -306,7 +303,7 @@ const riderSignup = async (req, res, next) => {
                 return vehicle[0];
             });
 
-            rider.updateOne({ vehicle });
+            await rider.updateOne({ $push: { vehicles: vehicle._id } }, { session });
         }
 
         await session.commitTransaction();
@@ -359,8 +356,8 @@ const verifyEmail = async (req, res, next) => {
     const user = await User.findOne({ email: req.user.email }).populate(
         'status'
     );
-    
-    console.log(user)
+
+    console.log(user);
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
 
@@ -374,7 +371,7 @@ const verifyEmail = async (req, res, next) => {
         verification_code,
     });
 
-    console.log(auth_code)
+    console.log(auth_code);
 
     if (!auth_code)
         return next(new BadRequestError('Invalid verification code'));
