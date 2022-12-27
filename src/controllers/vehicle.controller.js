@@ -1,29 +1,12 @@
 const {
     BadRequestError,
-    UnauthenticatedError,
-    UnauthorizedError,
 } = require('../utils/errors');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-
-const mongoose = require('mongoose');
 
 // Models
-const { BlacklistedToken, AuthCode } = require('../models/token.model');
-const {
-    User,
-    Status,
-    Enduser,
-    Rider,
-    Admin,
-} = require('../models/users.model');
+const { Rider } = require('../models/users.model');
 const Password = require('../models/password.model');
 
 // Utils
-const config = require('../utils/config');
-const asyncWrapper = require('../utils/async_wrapper');
-const sendEmail = require('../utils/email');
-const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
 
 /**
@@ -94,7 +77,7 @@ const getVehicleData = async (req, res, next) => {
         select: 'phone address ',
         populate: {
             path: 'user',
-            select: 'firstname lastname email'
+            select: 'firstname lastname email',
         },
     });
 
@@ -142,19 +125,24 @@ const updateVehicleData = async (req, res, next) => {
     const { name, manufacturer, model, year, color, plate_number } = req.body;
 
     // Update vehicle data
-    await vehicle.updateOne({
-        name,
-        manufacturer,
-        model,
-        year,
-        color,
-        plate_number,
-    });
+    const updated_vehicle = await Vehicle.findByIdAndUpdate(
+        vehicle_id,
+        {
+            name,
+            manufacturer,
+            model,
+            year,
+            color,
+            plate_number,
+        },
+        { new: true }
+    );
+    updated_vehicle.isActive = undefined;
 
     res.status(200).send({
         success: true,
         message: 'Vehicle updated',
-        data: vehicle,
+        data: updated_vehicle,
     });
 };
 
@@ -216,7 +204,7 @@ const removeVehicle = async (req, res, next) => {
 const getRidersVehicles = async (req, res, next) => {
     let rider;
     if (req.params.id) {
-        console.log(req.params.id)
+        console.log(req.params.id);
         // If rider id is provided
         rider = await Rider.findById(req.params.id).populate('vehicles');
     } else {
