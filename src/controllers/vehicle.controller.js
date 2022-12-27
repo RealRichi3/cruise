@@ -148,7 +148,19 @@ const removeVehicle = async (req, res, next) => {
     });
 };
 
-const getRidersVehicles = async (req, res, next) => {};
+const getRidersVehicles = async (req, res, next) => {
+    const rider = await Rider.findOne({ user: req.user.id }).populate(
+        'vehicles'
+    );
+
+    if (!rider) return next(new UnauthorizedError('User is not a rider'));
+
+    res.status(200).send({
+        success: true,
+        message: 'Vehicles retrieved',
+        data: rider.vehicles,
+    });
+};
 
 const activateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
