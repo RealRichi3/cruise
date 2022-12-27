@@ -28,16 +28,16 @@ const Vehicle = require('../models/vehicle.model');
 
 /**
  * Add a new vehicle
- * 
+ *
  * @param {string} name - The name of the vehicle
  * @param {string} manufacturer - The manufacturer of the vehicle
  * @param {string} model - The model of the vehicle
  * @param {number} year - The year of the vehicle
  * @param {string} color - The color of the vehicle
  * @param {string} plate_number - The plate number of the vehicle
- * 
+ *
  * @returns {Object} - The vehicle object
- * 
+ *
  * @throws {BadRequestError} - If the request body is invalid
  * @throws {UnauthorizedError} - If the user is not a rider
  * @throws {InternalServerError} - If there is an error while saving the vehicle
@@ -61,7 +61,9 @@ const addVehicle = async (req, res, next) => {
         { new: true }
     ).populate('vehicles');
 
-    if (!rider) { return next(new UnauthorizedError('User is not a rider')); }
+    if (!rider) {
+        return next(new UnauthorizedError('User is not a rider'));
+    }
 
     vehicle.rider = rider._id;
     await vehicle.save();
@@ -77,17 +79,39 @@ const getVehicleData = async (req, res, next) => {};
 
 const updateVehicleData = async (req, res, next) => {
     const vehicle_id = req.params.id;
-    const vehicle = await Vehicle.findById(vehicle_id);
+    const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
 
     // Check if vehicle exists
-    if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
+    if (!vehicle) {
+        return next(new BadRequestError('Vehicle not found'));
+    }
+
+    // Check if user is authorized to perform this action
+    if (vehicle.rider.user != req.user.id) {
+        return next(
+            new UnauthorizedError(
+                'You are not authorized to perform this action'
+            )
+        );
+    }
 
     const { name, manufacturer, model, year, color, plate_number } = req.body;
 
     // Update vehicle data
-    await vehicle.updateOne({ name, manufacturer, model, year, color, plate_number });
+    await vehicle.updateOne({
+        name,
+        manufacturer,
+        model,
+        year,
+        color,
+        plate_number,
+    });
 
-    res.status(200).send({ success: true, message: 'Vehicle updated', data: vehicle });
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle updated',
+        data: vehicle,
+    });
 };
 
 const removeVehicle = async (req, res, next) => {};
@@ -99,12 +123,18 @@ const activateVehicle = async (req, res, next) => {
 
     const vehicle = await Vehicle.findById(vehicle_id);
 
-    if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
+    if (!vehicle) {
+        return next(new BadRequestError('Vehicle not found'));
+    }
 
     vehicle.isActive = true;
     await vehicle.save();
 
-    res.status(200).send({ success: true, message: 'Vehicle activated', data: vehicle });
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle activated',
+        data: vehicle,
+    });
 };
 
 const deactivateVehicle = async (req, res, next) => {
@@ -112,12 +142,18 @@ const deactivateVehicle = async (req, res, next) => {
 
     const vehicle = await Vehicle.findById(vehicle_id);
 
-    if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
+    if (!vehicle) {
+        return next(new BadRequestError('Vehicle not found'));
+    }
 
     vehicle.isActive = false;
     await vehicle.save();
 
-    res.status(200).send({ success: true, message: 'Vehicle deactivated', data: vehicle });
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle deactivated',
+        data: vehicle,
+    });
 };
 
 module.exports = {
