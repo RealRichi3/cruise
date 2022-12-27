@@ -10,6 +10,7 @@ const vehicleSchema = new schema({
     plate_number: { type: String, required: true },
     rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true },
     createdAt: { type: Date, default: Date.now },
+    isActive: { type: Boolean, default: false },    
 })
 
 const Vehicle = mongoose.model('Vehicle', vehicleSchema)
