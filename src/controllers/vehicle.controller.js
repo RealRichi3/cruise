@@ -114,7 +114,39 @@ const updateVehicleData = async (req, res, next) => {
     });
 };
 
-const removeVehicle = async (req, res, next) => {};
+const removeVehicle = async (req, res, next) => {
+    const vehicle_id = req.params.id;
+    const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
+
+    // Check if vehicle exists
+    if (!vehicle) {
+        return next(new BadRequestError('Vehicle not found'));
+    }
+
+    // Check if user is authorized to perform this action
+    if (vehicle.rider.user != req.user.id) {
+        return next(
+            new UnauthorizedError(
+                'You are not authorized to perform this action'
+            )
+        );
+    }
+
+    // Remove vehicle from rider
+    await Rider.findOneAndUpdate(
+        { user: req.user.id },
+        { $pull: { vehicles: vehicle._id } },
+        { $push: { removed_vehicles: vehicle._id } }
+    );
+
+    // Remove vehicle
+    await vehicle.remove();
+
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle removed',
+    });
+};
 
 const getRidersVehicles = async (req, res, next) => {};
 
