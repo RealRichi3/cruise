@@ -86,7 +86,6 @@ const addVehicle = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while getting the vehicle data
  * */
 const getVehicleData = async (req, res, next) => {
-    console.log('dsljfal;ksjdf;laskjdf')
     const vehicle_id = req.params.id;
 
     // Get vehicle data
