@@ -24,9 +24,7 @@ const Vehicle = require('../models/vehicle.model');
  * @throws {InternalServerError} - If there is an error while saving the vehicle
  * */
 const addVehicle = async (req, res, next) => {
-    console.log(req.body);
     const { name, manufacturer, model, year, color, plate_number } = req.body;
-    console.log(req.user);
     const vehicle = new Vehicle({
         name,
         manufacturer,
@@ -236,7 +234,6 @@ const getRidersVehicles = async (req, res, next) => {
  * */
 const activateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
-    console.log(vehicle_id)
 
     let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
@@ -266,7 +263,6 @@ const activateVehicle = async (req, res, next) => {
  * */
 const deactivateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
-    console.log(vehicle_id)
 
     let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
