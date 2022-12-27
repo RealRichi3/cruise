@@ -75,6 +75,16 @@ const addVehicle = async (req, res, next) => {
     });
 };
 
+/**
+ * Get Vehicle data
+ * 
+ * @param {string} id - The id of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the vehicle id is invalid
+ * @throws {InternalServerError} - If there is an error while getting the vehicle data
+ * */
 const getVehicleData = async (req, res, next) => {
     const vehicle_id = req.params.id;
 
@@ -100,6 +110,17 @@ const getVehicleData = async (req, res, next) => {
     });
 };
 
+/**
+ * Update vehicle data
+ * 
+ * @param {string} id - The id of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the vehicle id is invalid
+ * @throws {UnauthorizedError} - If the user is not authorized to perform this action
+ * @throws {InternalServerError} - If there is an error while updating the vehicle data
+ * */
 const updateVehicleData = async (req, res, next) => {
     const vehicle_id = req.params.id;
     const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
@@ -137,6 +158,17 @@ const updateVehicleData = async (req, res, next) => {
     });
 };
 
+/**
+ * Remove vehicle
+ * 
+ * @param {string} id - The id of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the vehicle id is invalid
+ * @throws {UnauthorizedError} - If the user is not authorized to perform this action
+ * @throws {InternalServerError} - If there is an error while removing the vehicle
+ * */
 const removeVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
     const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
@@ -171,6 +203,16 @@ const removeVehicle = async (req, res, next) => {
     });
 };
 
+/**
+ * Get rider vehicles
+ * 
+ * @param {string} id - The id of the rider
+ * 
+ * @returns {Array} data - The rider vehicles
+ * 
+ * @throws {UnauthorizedError} - If the user is not a rider
+ * @throws {InternalServerError} - If there is an error while getting the vehicles
+ * */
 const getRidersVehicles = async (req, res, next) => {
     const rider = await Rider.findOne({ user: req.user.id }).populate(
         'vehicles'
@@ -185,6 +227,16 @@ const getRidersVehicles = async (req, res, next) => {
     });
 };
 
+/**
+ * Activate vehicle
+ * 
+ * @param {string} id - The id of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the vehicle id is invalid
+ * @throws {InternalServerError} - If there is an error while activating the vehicle
+ * */
 const activateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
 
@@ -204,6 +256,16 @@ const activateVehicle = async (req, res, next) => {
     });
 };
 
+/**
+ * Deactivate vehicle
+ * 
+ * @param {string} id - The id of the vehicle
+ * 
+ * @returns {Object} - The vehicle object
+ * 
+ * @throws {BadRequestError} - If the vehicle id is invalid
+ * @throws {InternalServerError} - If there is an error while deactivating the vehicle
+ * */
 const deactivateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
 
