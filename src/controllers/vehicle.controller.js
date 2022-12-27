@@ -86,15 +86,16 @@ const addVehicle = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while getting the vehicle data
  * */
 const getVehicleData = async (req, res, next) => {
+    console.log('dsljfal;ksjdf;laskjdf')
     const vehicle_id = req.params.id;
 
     // Get vehicle data
     const vehicle = await Vehicle.findById(vehicle_id).populate({
-        model: 'rider',
+        path: 'rider',
         select: 'phone address ',
         populate: {
-            model: 'user',
-            select: 'first_name last_name email'
+            path: 'user',
+            select: 'firstname lastname email'
         },
     });
 
