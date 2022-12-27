@@ -94,7 +94,7 @@ const getVehicleData = async (req, res, next) => {
         select: 'phone address ',
         populate: {
             model: 'user',
-            select: 'first_name last_name email',
+            select: 'first_name last_name email'
         },
     });
 
@@ -216,7 +216,7 @@ const removeVehicle = async (req, res, next) => {
 const getRidersVehicles = async (req, res, next) => {
     let rider;
     if (req.params.id) {
-        console.log(req.params.id);
+        console.log(req.params.id)
         // If rider id is provided
         rider = await Rider.findById(req.params.id).populate('vehicles');
     } else {
