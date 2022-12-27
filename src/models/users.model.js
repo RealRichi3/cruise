@@ -49,6 +49,7 @@ const riderSchema = new schema(
             type: schema.Types.ObjectId,
             ref: 'Vehicle',
         }],
+        removed_vehicles: [{ type: schema.Types.ObjectId, ref: 'Vehicle' }],
         driver_license: {
             type: String,
             required: true,
