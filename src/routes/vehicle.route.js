@@ -24,7 +24,7 @@ router
     )
     .put('/:id', updateVehicleData)
     .delete('/:id', removeVehicle)
-    .get('/riders-vehicles/:id', getRidersVehicles)
+    .get('/riders-vehicles', getRidersVehicles)
     .put('/activate/:id', rbacMiddleware('admin superadmin'), activateVehicle)
     .put(
         '/deactivate/:id',
