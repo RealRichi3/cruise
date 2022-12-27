@@ -236,6 +236,7 @@ const getRidersVehicles = async (req, res, next) => {
  * */
 const activateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
+    console.log(vehicle_id)
 
     let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
@@ -265,6 +266,7 @@ const activateVehicle = async (req, res, next) => {
  * */
 const deactivateVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
+    console.log(vehicle_id)
 
     let vehicle = await Vehicle.findById(vehicle_id).populate('status');
 
@@ -277,7 +279,7 @@ const deactivateVehicle = async (req, res, next) => {
 
     res.status(200).send({
         success: true,
-        message: 'Vehicle deactivated',
+        message: 'Vehicle activated',
         data: vehicle,
     });
 };
