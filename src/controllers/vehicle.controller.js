@@ -82,20 +82,30 @@ const removeVehicle = async (req, res, next) => {};
 const getRidersVehicles = async (req, res, next) => {};
 
 const activateVehicle = async (req, res, next) => {
-    const { vehicle_id } = req.params;
+    const vehicle_id = req.params.id;
 
     const vehicle = await Vehicle.findById(vehicle_id);
 
     if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
 
     vehicle.isActive = true;
-
     await vehicle.save();
 
     res.status(200).send({ success: true, message: 'Vehicle activated', data: vehicle });
 };
 
-const deactivateVehicle = async (req, res, next) => {};
+const deactivateVehicle = async (req, res, next) => {
+    const vehicle_id = req.params.id;
+
+    const vehicle = await Vehicle.findById(vehicle_id);
+
+    if (!vehicle) { return next(new BadRequestError('Vehicle not found')); }
+
+    vehicle.isActive = false;
+    await vehicle.save();
+
+    res.status(200).send({ success: true, message: 'Vehicle deactivated', data: vehicle });
+};
 
 module.exports = {
     addVehicle,
