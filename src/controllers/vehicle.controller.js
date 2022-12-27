@@ -1,17 +1,71 @@
+const {
+    BadRequestError,
+    UnauthenticatedError,
+    UnauthorizedError,
+} = require('../utils/errors');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-const addVehicle = async (req, res) => { }
+const mongoose = require('mongoose');
 
-const getVehicleData = async (req, res) => { }
+// Models
+const { BlacklistedToken, AuthCode } = require('../models/token.model');
+const {
+    User,
+    Status,
+    Enduser,
+    Rider,
+    Admin,
+} = require('../models/users.model');
+const Password = require('../models/password.model');
 
-const updateVehicleData = async (req, res) => { }
+// Utils
+const config = require('../utils/config');
+const asyncWrapper = require('../utils/async_wrapper');
+const sendEmail = require('../utils/email');
+const { getAuthCodes, getAuthTokens } = require('../utils/token');
+const Vehicle = require('../models/vehicle.model');
 
-const removeVehicle = async (req, res) => { }
+const addVehicle = async (req, res, next) => {
+    console.log(req.body);
+    const { name, manufacturer, model, year, color, plate_number } = req.body;
+    console.log(req.user);
+    const vehicle = new Vehicle({
+        name,
+        manufacturer,
+        model,
+        year,
+        color,
+        plate_number,
+    });
 
-const getRidersVehicles = async (req, res) => { }
+    const rider = await Rider.findOneAndUpdate(
+        { user: req.user.id },
+        { $push: { vehicles: vehicle._id } },
+        { new: true }
+    ).populate('vehicles');
 
-const activateVehicle = async (req, res) => { }
+    vehicle.rider = rider._id;
+    await vehicle.save();
 
-const deactivateVehicle = async (req, res) => { }
+    res.status(200).send({
+        success: true,
+        message: 'Vehicle added successfully',
+        data: vehicle,
+    });
+};
+
+const getVehicleData = async (req, res, next) => {};
+
+const updateVehicleData = async (req, res, next) => {};
+
+const removeVehicle = async (req, res, next) => {};
+
+const getRidersVehicles = async (req, res, next) => {};
+
+const activateVehicle = async (req, res, next) => {};
+
+const deactivateVehicle = async (req, res, next) => {};
 
 module.exports = {
     addVehicle,
@@ -21,4 +75,4 @@ module.exports = {
     getRidersVehicles,
     activateVehicle,
     deactivateVehicle,
-}
+};
