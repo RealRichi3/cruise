@@ -199,7 +199,7 @@ const userSignup = async (req, res, next) => {
                 },
             ],
             { session }
-        ).then((user) => user[0]);
+        ).then((data) => { user = data[0]; return user;});
 
         // Create user info
         if (role === 'enduser')
