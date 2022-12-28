@@ -65,9 +65,111 @@ const addNewCard = async (req, res, next) => {
     });
 };
 
-const removeCard = async (req, res, next) => {};
-const getCards = async (req, res, next) => {};
-const getCardData = async (req, res, next) => {};
+/**
+ * Remove a card
+ *
+ * @param {string} card_id - The id of the card to be removed
+ *
+ * @returns {Object} - The card object
+ *
+ * @throws {BadRequestError} - If the request body is invalid
+ * @throws {UnauthorizedError} - If the user is not an end user
+ * @throws {NotFoundError} - If the card is not found
+ * @throws {InternalServerError} - If there is an error while removing the card
+ * */
+const removeCard = async (req, res, next) => {
+    const { card_id } = req.params;
+    const enduser = await Enduser.findOne({ user: req.user.id });
+
+    // Check if user is an end user
+    if (!enduser) return next(new UnauthorizedError('User is not an end user'));
+
+    // Check if card exists
+    const card = await Card.findOne({ _id: card_id, enduser: enduser._id });
+
+    if (!card) return next(new NotFoundError('Card not found'));
+
+    // Remove card from user's payment info
+    await PaymentInfo.findOneAndUpdate(
+        { user: req.user.id },
+        { $pull: { cards: card._id } },
+        { new: true, upsert: true }
+    ).populate('cards user');
+
+    res.status(200).send({
+        success: true,
+        message: 'Card removed successfully',
+    });
+};
+
+/**
+ * Get all cards Belonging to the user
+ *
+ * @returns {Object} - The card object
+ *
+ * @throws {UnauthorizedError} - If the user is not an end user
+ * @throws {InternalServerError} - If there is an error while fetching the cards
+ * */
+const getCards = async (req, res, next) => {
+    const enduser = await Enduser.findOne({ user: req.user.id });
+
+    // Check if user is an end user
+    if (!enduser) return next(new UnauthorizedError('User is not an end user'));
+
+    // Get all cards
+    const cards = await Card.find({ enduser: enduser._id });
+
+    // Remove sensitive data
+    cards.forEach((card) => {
+        card.middle_numbers = '****';
+        card.cvv = '****';
+        card.user = undefined;
+        card.enduser = undefined;
+    });
+
+    res.status(200).send({
+        success: true,
+        message: 'Cards fetched successfully',
+        data: cards,
+    });
+};
+
+/**
+ * Get card data
+ *
+ * @param {string} card_id - The id of the card
+ *
+ * @returns {Object} - The card object
+ *
+ * @throws {BadRequestError} - If the request body is invalid
+ * @throws {UnauthorizedError} - If the user is not an end user
+ * @throws {NotFoundError} - If the card is not found
+ * @throws {InternalServerError} - If there is an error while fetching the card
+ * */
+const getCardData = async (req, res, next) => {
+    const { card_id } = req.params;
+    const enduser = await Enduser.findOne({ user: req.user.id });
+
+    // Check if user is an end user
+    if (!enduser) return next(new UnauthorizedError('User is not an end user'));
+
+    // Check if card exists
+    const card = await Card.findOne({ _id: card_id, enduser: enduser._id });
+
+    if (!card) return next(new NotFoundError('Card not found'));
+
+    // Remove sensitive data
+    card.middle_numbers = decrypt(card.middle_numbers);
+    card.cvv = '****';
+    card.user = undefined;
+    card.enduser = undefined;
+
+    res.status(200).send({
+        success: true,
+        message: 'Card fetched successfully',
+        data: card,
+    });
+};
 
 module.exports = {
     addNewCard,
