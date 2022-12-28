@@ -29,7 +29,8 @@ const EMAIL_HOST = process.env.EMAIL_HOST,
 
 /* CRYPTO */
 const CRYPTO_ALGORITHM = process.env.CRYPTO_ALGORITHM,
-    CRYPTO_PASSWORD = process.env.CRYPTO_PASSWORD;
+    CRYPTO_PASSWORD = process.env.CRYPTO_PASSWORD,
+    CRYPTO_IV = process.env.CRYPTO_IV;
 
 module.exports = {
     // DB
@@ -69,4 +70,5 @@ module.exports = {
     // CRYPTO
     CRYPTO_ALGORITHM,
     CRYPTO_PASSWORD,
+    CRYPTO_IV,
 };
