@@ -1,5 +1,3 @@
-const { BadRequestError } = require('../utils/custom_errors');
-
 const mongoose = require('mongoose'),
     bcrypt = require('bcryptjs'),
     schema = mongoose.Schema,
@@ -7,7 +5,7 @@ const mongoose = require('mongoose'),
 
 const invoiceSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    invoice_id: { type: String, required: true, default: new UU() },
+    invoice_id: { type: String, required: true, default: UU },
     amount: { type: Number, required: true },
     type: {
         type: String,
@@ -36,6 +34,7 @@ const receiptSchema = new schema({
     },
     reference: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
+    date: { type: Date, default: Date.now },
 });
 
 const transactionsSchema = new schema(
@@ -47,10 +46,11 @@ const transactionsSchema = new schema(
             enum: ['wallet_topup', 'book_ride', 'wallet_withdrawal'],
         },
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        // Receipt is only required if transaction status is success
         receipt: {
             type: schema.Types.ObjectId,
             ref: 'Receipt',
-            required: true,
+            // required: true,
         },
         ride: { type: schema.Types.ObjectId, ref: 'Ride' },
         invoice: {
@@ -74,7 +74,8 @@ const transactionsSchema = new schema(
             default: 'pending',
             enum: ['pending', 'success', 'failed'],
         },
-        reference: { type: String, default: new UU() },
+        reference: { type: String, default: UU },
+        date: { type: Date, default: Date.now },
     },
     { timestamps: true }
 );
@@ -121,12 +122,14 @@ transactionsSchema.pre('validate', async function (next) {
         if (this.status == 'success') {
             // There should be a receipt if status is success
             if (!this.receipt) {
-                return reject(new BadRequestError('Please specify receipt id'));
+                reject('Please specify receipt id');
             }
             if (!this.invoice) {
-                return reject(new BadRequestError('Please specify invoice id'));
+                reject(new 'Please specify invoice id');
             }
         }
+
+        resolve();
     });
 });
 

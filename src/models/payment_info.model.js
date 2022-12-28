@@ -18,6 +18,8 @@ const walletSchema = new schema(
     {
         balance: { type: Number, required: true, default: 0 },
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
         transactions: [{ type: schema.Types.ObjectId, ref: 'Transaction' }],
         withdrawal_requests: [
             { type: schema.Types.ObjectId, ref: 'WithdrawalRequest' },

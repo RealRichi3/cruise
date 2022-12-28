@@ -1,7 +1,7 @@
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 
 // Models
-const { EndUser, Rider } = require('../models/users.model');
+const { Enduser, Rider } = require('../models/users.model');
 const { PaymentInfo, BankAccount } = require('../models/payment_info.model');
 
 // Bank Controller
