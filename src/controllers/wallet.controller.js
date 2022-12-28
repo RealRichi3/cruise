@@ -11,12 +11,17 @@ const { PaymentInfo, BankAccount } = require('../models/payment_info.model');
 // Utils
 const { initiateTransaction } = require('../utils/transaction');
 const config = require('../utils/config');
+const { Invoice } = require('../models/transaction.model');
+const sendEmail = require('../utils/email');
+const { WalletTopupMessage } = require('../utils/mail_message');
 
 // Wallet Controller
 const getWallet = async (req, res, next) => {};
 const getWalletBalance = async (req, res, next) => {};
 const getWalletTransactions = async (req, res, next) => {};
-const getWalletTransactionData = async (req, res, next) => {};
+const getWalletTransactionData = async (req, res, next) => {
+    git;
+};
 
 /**
  * Top up wallet
@@ -60,6 +65,20 @@ const topUpWallet = async (req, res, next) => {
 
     // Add paystack public key to response
     result.public_key = config.PAYSTACK_PUBLIC_KEY;
+
+    // Get invoice
+    const invoice_id = result.invoice;
+    const invoice = await Invoice.findById(invoice_id).populate('transaction');
+
+    const topup_message = new WalletTopupMessage();
+    topup_message.setBody(invoice);
+
+    // Send Invoice to users email
+    sendEmail({
+        email: req.user.email,
+        subject: 'Invoice for Wallet Topup',
+        html: topup_message.getBody(),
+    });
 
     res.status(200).json({
         success: true,
