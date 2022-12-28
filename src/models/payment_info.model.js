@@ -1,5 +1,5 @@
-const mongoose = require('mongoose')
-const schema = mongoose.Schema
+const mongoose = require('mongoose');
+const schema = mongoose.Schema;
 
 const withdrawalRequestSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -12,7 +12,7 @@ const withdrawalRequestSchema = new schema({
     },
     transaction: { type: schema.Types.ObjectId, ref: 'Transaction' },
     createdAt: { type: Date, default: Date.now },
-})
+});
 
 const walletSchema = new schema(
     {
@@ -24,26 +24,26 @@ const walletSchema = new schema(
         ],
     },
     { timestamps: true }
-)
+);
 
 const bankAccountSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true},
+    rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true },
     account_name: { type: String, required: true },
     account_number: { type: String, required: true },
     bank_name: { type: String, required: true },
-})
+});
 
 const cardSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    enduser: {type: schema.Types.ObjectId, ref: 'EndUser', required: true},
-    first_four: { type: String, required: true },
-    middle: { type: String, required: true },   // Encrypted
-    last_four: { type: String, required: true },
+    enduser: { type: schema.Types.ObjectId, ref: 'EndUser', required: true },
+    first_four_numbers: { type: String, required: true },
+    middle_numbers: { type: String, required: true }, // Encrypted
+    last_four_numbers: { type: String, required: true },
     card_name: { type: String, required: true },
     expiry_date: { type: String, required: true },
     cvv: { type: String, required: true },
-})
+});
 
 const paymentInfoSchema = new schema(
     {
@@ -54,16 +54,16 @@ const paymentInfoSchema = new schema(
         wallet: { type: schema.Types.ObjectId, ref: 'Wallet' },
     },
     { timestamps: true }
-)
+);
 
-const Card = mongoose.model('Card', cardSchema)
-const BankAccount = mongoose.model('BankAccount', bankAccountSchema)
-const PaymentInfo = mongoose.model('PaymentInfo', paymentInfoSchema)
-const Wallet = mongoose.model('Wallet', walletSchema)
+const Card = mongoose.model('Card', cardSchema);
+const BankAccount = mongoose.model('BankAccount', bankAccountSchema);
+const PaymentInfo = mongoose.model('PaymentInfo', paymentInfoSchema);
+const Wallet = mongoose.model('Wallet', walletSchema);
 const WithdrawalRequest = mongoose.model(
     'WithdrawalRequest',
     withdrawalRequestSchema
-)
+);
 
 module.exports = {
     Card,
@@ -71,4 +71,4 @@ module.exports = {
     PaymentInfo,
     Wallet,
     WithdrawalRequest,
-}
+};
