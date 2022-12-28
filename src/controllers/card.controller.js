@@ -78,7 +78,7 @@ const addNewCard = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while removing the card
  * */
 const removeCard = async (req, res, next) => {
-    const { card_id } = req.params;
+    const card_id = req.params.id;
     const enduser = await Enduser.findOne({ user: req.user.id });
 
     // Check if user is an end user
@@ -90,12 +90,13 @@ const removeCard = async (req, res, next) => {
     if (!card) return next(new NotFoundError('Card not found'));
 
     // Remove card from user's payment info
-    await PaymentInfo.findOneAndUpdate(
+    const userp = await PaymentInfo.findOneAndUpdate(
         { user: req.user.id },
         { $pull: { cards: card._id } },
-        { new: true, upsert: true }
+        { new: true }
     ).populate('cards user');
 
+    console.log(userp);
     res.status(200).send({
         success: true,
         message: 'Card removed successfully',
@@ -117,7 +118,11 @@ const getCards = async (req, res, next) => {
     if (!enduser) return next(new UnauthorizedError('User is not an end user'));
 
     // Get all cards
-    const cards = await Card.find({ enduser: enduser._id });
+    const payment_info = await PaymentInfo.find({ user: req.user.id }).populate(
+        'cards user'
+    );
+
+    const cards = payment_info[0].cards;
 
     // Remove sensitive data
     cards.forEach((card) => {
@@ -147,7 +152,7 @@ const getCards = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while fetching the card
  * */
 const getCardData = async (req, res, next) => {
-    const { card_id } = req.params;
+    const card_id = req.params.id;
     const enduser = await Enduser.findOne({ user: req.user.id });
 
     // Check if user is an end user
@@ -159,7 +164,7 @@ const getCardData = async (req, res, next) => {
     if (!card) return next(new NotFoundError('Card not found'));
 
     // Remove sensitive data
-    card.middle_numbers = decrypt(card.middle_numbers);
+    card.middle_numbers = '****';
     card.cvv = '****';
     card.user = undefined;
     card.enduser = undefined;
