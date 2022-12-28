@@ -26,6 +26,7 @@ const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
+const { Wallet } = require('../models/payment_info.model');
 
 /**
  * Handle existing unverified user.
@@ -217,6 +218,7 @@ const userSignup = async (req, res, next) => {
 
     Password.create({ password, user: user._id });
     Status.create({ user: user._id, isActive: true });
+    Wallet.create({ user: user._id });
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);
@@ -316,6 +318,7 @@ const riderSignup = async (req, res, next) => {
 
     Password.create({ password, user: user._id });
     Status.create({ user: user._id });
+    Wallet.create({ user: user._id });
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);
