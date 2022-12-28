@@ -36,7 +36,10 @@ const bankAccountSchema = new schema({
 
 const cardSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    card_number: { type: String, required: true },
+    enduser: {type: schema.Types.ObjectId, ref: 'EndUser', required: true},
+    first_four: { type: String, required: true },
+    middle: { type: String, required: true },   // Encrypted
+    last_four: { type: String, required: true },
     card_name: { type: String, required: true },
     expiry_date: { type: String, required: true },
     cvv: { type: String, required: true },
