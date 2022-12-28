@@ -89,9 +89,28 @@ const verifyPaystackTransaction = function (reference) {
 const verifyTransactionStatus = function (reference) {
     return new Promise(async (resolve, reject) => {
         try {
-            // Verify transaction from Paystack API
-            const status = await verifyPaystackTransaction(reference);
+            const transaction = await Transaction.findOne({ reference });
 
+            if (!transaction) {
+                reject(new NotFoundError('Transaction not found'));
+            }
+
+            let status;
+            if (transaction.payment_method == 'paystack') {
+                // Verify transaction from Paystack API
+                status = await verifyPaystackTransaction(reference);
+            }
+
+            if (transaction.payment_method == 'flutterwave') {
+                // Verify transaction from Flutterwave API
+                // status = await verifyFlutterwaveTransaction(reference);
+            }
+
+            if (transaction.payment_method == 'bank_transfer') {
+                // Verify transaction from Bank Transfer
+                // status = await verifyBankTransferTransaction(reference);
+            }
+            
             if (status != 'success')
                 throw new Error('Transaction not successful');
 
