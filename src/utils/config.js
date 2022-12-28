@@ -32,6 +32,10 @@ const CRYPTO_ALGORITHM = process.env.CRYPTO_ALGORITHM,
     CRYPTO_PASSWORD = process.env.CRYPTO_PASSWORD,
     CRYPTO_IV = process.env.CRYPTO_IV;
 
+/* PAYSTACK */
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+    PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY;
+
 module.exports = {
     // DB
     MONGO_URI,
@@ -71,4 +75,8 @@ module.exports = {
     CRYPTO_ALGORITHM,
     CRYPTO_PASSWORD,
     CRYPTO_IV,
+
+    // PAYSTACK
+    PAYSTACK_SECRET_KEY,
+    PAYSTACK_PUBLIC_KEY
 };
