@@ -199,14 +199,19 @@ const userSignup = async (req, res, next) => {
                 },
             ],
             { session }
-        ).then((data) => { user = data[0]; return user;});
+        ).then((data) => {
+            user = data[0];
+            return user;
+        });
 
         // Create user info
-        if (role === 'enduser')
+        if (role === 'enduser') {
+            const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
             await Enduser.create(
-                [{ user: _user._id, phone, city, address, state }],
+                [{ user: _user._id, phone, city, address, state, wallet: user_wallet._id }],
                 { session }
             );
+        }
 
         // Create admin info
         if (role === 'admin')
@@ -305,7 +310,10 @@ const riderSignup = async (req, res, next) => {
                 return vehicle[0];
             });
 
-            await rider.updateOne({ $push: { vehicles: vehicle._id } }, { session });
+            await rider.updateOne(
+                { $push: { vehicles: vehicle._id } },
+                { session }
+            );
         }
 
         await session.commitTransaction();
