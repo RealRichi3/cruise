@@ -32,7 +32,11 @@ const receiptSchema = new schema({
         ref: 'Transaction',
         required: true,
     },
-    reference: { type: String, required: true },
+    type: {
+        type: String,
+        enum: ['wallet_topup', 'book_ride', 'wallet_withdrawal'],
+    },
+    reference: { type: String, required: true, default: UU },
     createdAt: { type: Date, default: Date.now },
     date: { type: Date, default: Date.now },
 });
@@ -46,6 +50,9 @@ const transactionsSchema = new schema(
             enum: ['wallet_topup', 'book_ride', 'wallet_withdrawal'],
         },
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
+        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
+        ride: { type: schema.Types.ObjectId, ref: 'Ride' },
         // Receipt is only required if transaction status is success
         receipt: {
             type: schema.Types.ObjectId,
@@ -80,43 +87,6 @@ const transactionsSchema = new schema(
     { timestamps: true }
 );
 
-receiptSchema.pre('save', async function (next) {
-    const receipt = await this.populate('transaction').execPopulate();
-
-    if (receipt.transaction.status != 'success') {
-        throw new BadRequestError('Receipt transaction is not successful');
-    }
-
-    if (receipt.transaction.type != receipt.type) {
-        throw new BadRequestError('Receipt transaction type does not match');
-    }
-
-    if (receipt.transaction.amount != receipt.amount) {
-        throw new BadRequestError('Receipt transaction amount does not match');
-    }
-
-    if (receipt.transaction.user != receipt.user) {
-        throw new BadRequestError('Receipt transaction user does not match');
-    }
-
-    if (receipt.type == 'wallet_topup') {
-        if (receipt.ride) {
-            throw new BadRequestError('Receipt type is wallet_topup');
-        }
-    }
-
-    if (receipt.type == 'book_ride') {
-        if (!receipt.ride) {
-            throw new BadRequestError('Please specify Ride id');
-        }
-        if (!receipt.rider) {
-            throw new BadRequestError('Please specify Rider id');
-        }
-    }
-
-    next();
-});
-
 transactionsSchema.pre('validate', async function (next) {
     return new Promise(async (resolve, reject) => {
         if (this.status == 'success') {
@@ -125,13 +95,42 @@ transactionsSchema.pre('validate', async function (next) {
                 reject('Please specify receipt id');
             }
             if (!this.invoice) {
-                reject(new 'Please specify invoice id');
+                reject(new 'Please specify invoice id'());
             }
         }
 
         resolve();
     });
 });
+
+transactionsSchema.methods.generateReceipt = async function () {
+    if (this.status != 'success')
+        throw new Error('Transaction is not successful');
+
+    const receipt = new Receipt({
+        user: this.user,
+        amount: this.amount,
+        transaction: this._id,
+        type: this.type,
+    });
+
+    if (this.type == 'book_ride') {
+        receipt.ride = this.ride;
+        receipt.rider = this.rider;
+    }
+
+    if (this.type == 'wallet_topup') {
+        receipt.enduser = this.enduser;
+    }
+
+    await receipt.save();
+
+    this.receipt = receipt._id;
+
+    await this.save();
+    
+    return receipt;
+};
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
 const Receipt = mongoose.model('Receipt', receiptSchema);
