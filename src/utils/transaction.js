@@ -7,7 +7,7 @@ const { Wallet } = require('../models/payment_info.model');
 // Transaction Controller
 const initiateTransaction = async function (data) {
     try {
-        const { amount, type, payment_method, user_id } = data;
+        const { amount, type, payment_method, user_id, enduser_id } = data;
 
         // Create Invoice for pending transaction
         const invoice = new Invoice({
@@ -18,6 +18,7 @@ const initiateTransaction = async function (data) {
 
         // Create transaction record in Database
         const transaction = new Transaction({
+            enduser: enduser_id,
             user: user_id,
             amount,
             type,
@@ -64,12 +65,12 @@ const initiateTransaction = async function (data) {
 };
 // initiate transaction
 // return transaction reference
-const verifyPaystackTransaction = function (reference) {
+const verifyPaystackTransaction = async function (reference) {
     try {
         const URL = `https://api.paystack.co/transaction/verify/${reference}`;
 
         // Verify transaction from Paystack API
-        const transaction = axios
+        const transaction = await axios
             .get(URL, {
                 headers: {
                     Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
@@ -88,13 +89,14 @@ const verifyPaystackTransaction = function (reference) {
                 return error;
             });
 
+        console.log(transaction.data);
         // Check if transaction is successful
         if (!transaction.data.status) throw transaction.data.message;
 
         if (transaction.data.status != 'success')
             throw 'Transaction not successful';
 
-        return 'success';
+        return transaction;
     } catch (error) {
         throw error;
     }
@@ -102,37 +104,27 @@ const verifyPaystackTransaction = function (reference) {
 
 const verifyTransactionStatus = async function (reference) {
     try {
-        const transaction = await Transaction.findOne({ reference });
+        let transaction = await Transaction.findOne({ reference });
 
-        if (!transaction) {
-            throw new Error('Transaction not found');
+        // Check if transaction exists
+        if (!transaction) throw new Error('Transaction not found');
+
+        let gateway_transaction_result;
+        gateway_transaction_result = await verifyPaystackTransaction(reference);
+
+        // Check for transaction amount mismatch
+        if (
+            transaction.amount !=
+            gateway_transaction_result.data.amount / 100
+        ) {
+            throw new Error('Transaction amount mismatch');
         }
 
-        let status;
-        if (transaction.payment_method == 'paystack') {
-            // Verify transaction from Paystack API
-            status = await verifyPaystackTransaction(reference);
-        }
+        // Check if transaction is successful
+        if (gateway_transaction_result.data.status != 'success')
+            throw new Error('Transaction not successful');
 
-        if (transaction.payment_method == 'flutterwave') {
-            // Verify transaction from Flutterwave API
-            // status = await verifyFlutterwaveTransaction(reference);
-        }
-
-        if (transaction.payment_method == 'bank_transfer') {
-            // Verify transaction from Bank Transfer
-            // status = await verifyBankTransferTransaction(reference);
-        }
-
-        if (status != 'success') throw new Error('Transaction not successful');
-
-        return await Transaction.findOneAndUpdate(
-            { reference },
-            { status: 'success' },
-            { new: true }
-        ).then((transaction) => {
-            return transaction;
-        });
+        return transaction;
     } catch (error) {
         throw error;
     }
