@@ -1,6 +1,6 @@
 const { default: mongoose } = require('mongoose');
 const schema = mongoose.Schema;
-const { PaymentInfo } = require('./payment_info.model');
+const { PaymentInfo, Wallet } = require('./payment_info.model');
 
 const statusSchema = new schema(
     {
@@ -16,6 +16,8 @@ const userSchema = new schema(
         firstname: { type: String, required: true },
         lastname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
+        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
         role: {
             type: String,
             required: true,
@@ -33,7 +35,13 @@ const enduserSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
+        payment_info: {
+            type: schema.Types.ObjectId,
+            ref: 'PaymentInfo',
+            required: true,
+        },
+        wallet: { type: schema.Types.ObjectId, ref: 'Wallet', required: true },
+        cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
     },
     { timestamps: true }
 );
@@ -45,7 +53,12 @@ const riderSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
+        payment_info: {
+            type: schema.Types.ObjectId,
+            ref: 'PaymentInfo',
+            required: true,
+        },
+        bank_accounts: [{ type: schema.Types.ObjectId, ref: 'BankAccount' }],
         vehicles: [
             {
                 type: schema.Types.ObjectId,
@@ -101,25 +114,43 @@ userSchema.virtual('status', {
     justOne: true,
 });
 
-enduserSchema.pre('save', async function (next) {
-    const user = this;
-    if (user.isNew()) {
-        const status = new Status({ user: user._id, isActive: true });
-        await status.save();
+userSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const status = new Status({ user: this._id });
+        this.status = status._id;
 
-        const payment_info = new PaymentInfo({ user: user._id, enduser: this._id });
-        await payment_info.save();
+        await status.save();
     }
+});
+
+enduserSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const wallet = new Wallet({ user: this.user._id });
+        this.wallet = wallet._id;
+
+        const payment_info = new PaymentInfo({
+            user: this.user._id,
+            enduser: this._id,
+            // wallet: wallet._id,
+        });
+
+        this.payment_info = payment_info._id;
+        console.log('here');
+        await payment_info.save();
+        await wallet.save();
+    }
+
+    const enduser = await this.populate('wallet payment_info');
+    console.log(enduser)
     next();
 });
 
-riderSchema.pre('save', async function (next) {
-    const user = this;
-    if (user.isNew()) {
-        const status = new Status({ user: user._id });
-        await status.save();
-
-        const payment_info = new PaymentInfo({ user: user._id, rider: this._id});
+riderSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const payment_info = new PaymentInfo({
+            user: this.user._id,
+            rider: this._id,
+        });
         await payment_info.save();
     }
 

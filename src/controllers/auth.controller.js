@@ -208,7 +208,7 @@ const userSignup = async (req, res, next) => {
         if (role === 'enduser') {
             // const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
             await Enduser.create(
-                [{ user: _user._id, phone, city, address, state, wallet: user_wallet._id }],
+                [{ user: _user._id, phone, city, address, state }],
                 { session }
             );
         }
@@ -325,8 +325,8 @@ const riderSignup = async (req, res, next) => {
     console.log(vehicle);
 
     Password.create({ password, user: user._id });
-    Status.create({ user: user._id });
-    Wallet.create({ user: user._id });
+    // Status.create({ user: user._id });
+    // Wallet.create({ user: user._id });
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);

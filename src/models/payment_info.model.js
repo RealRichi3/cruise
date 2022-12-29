@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
-const { Enduser, Rider } = require('./users.model');
+const { Enduser, Rider, User } = require('./users.model');
 
 const withdrawalRequestSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -61,32 +61,75 @@ const paymentInfoSchema = new schema(
 );
 
 paymentInfoSchema.pre('save', async function (next) {
-    const curr = this.populate('user');
+    console.log('here')
+    const curr = await this.model('PaymentInfo').findOne({ _id: this._id }).populate('user');
 
-    if (this.isNew()) {
-        if (curr.user.role === 'enduser') {
+    console.log(curr)
+
+    if (this.isNew) {
+        if (curr.user.role === 'enduser' && !this.enduser) {
+            throw new mongoose.MongooseError('Enduser is required');
+        }
+
+        if (curr.user.role === 'rider' && !this.rider) {
+            throw new mongoose.MongooseError('Rider is required');
+        }
+
+        if (curr.user.role === 'admin') {
+            throw new mongoose.MongooseError('Admin cannot have payment info');
+        }
+
+        if (curr.user.role === 'enduser' && this.rider) {
+            throw new mongoose.MongooseError('Enduser cannot have rider');
+        }
+
+        if (curr.user.role === 'rider' && this.enduser) {
+            throw new mongoose.MongooseError('Rider cannot have enduser');
+        }
+
+        if (curr.user.role === 'rider' && this.wallet) {
+            throw new mongoose.MongooseError('Enduser cannot have wallet');
+        }
+
+        if (curr.user.role === 'enduser' && !this.wallet) {
             // Link a wallet for the enduser
-
-            // Wallet only belongs to enduser
-            const wallet = new Wallet({ user: curr.user._id });
-            const enduser = await Enduser.findOne({ user: curr.user._id });
-
-            // Wallet enduser one to one relationship
-            enduser.wallet = wallet._id;
-            wallet.enduser = enduser._id;
-
-            // Payment info one to one relationship with wallet
-            this.wallet = wallet._id;
-            this.enduser = enduser._id;
-
-            await enduser.save();
-            await wallet.save();
+            if (curr.enduser) this.wallet = curr.enduser.wallet;
+            else throw new mongoose.MongooseError('Enduser must have wallet');
         }
 
-        if (curr.user.role === 'rider') {
-            this.rider = curr.user._id;
-        }
+        // this.save();
     }
+
+    next();
+});
+
+paymentInfoSchema.pre('save', async function (next) {
+    // const curr = this.populate('user');
+
+    // if (this.isNew()) {
+    //     if (curr.user.role === 'enduser') {
+    //         // Link a wallet for the enduser
+
+    //         // Wallet only belongs to enduser
+    //         const wallet = new Wallet({ user: curr.user._id });
+    //         const enduser = await Enduser.findOne({ user: curr.user._id });
+
+    //         // Wallet enduser one to one relationship
+    //         enduser.wallet = wallet._id;
+    //         wallet.enduser = enduser._id;
+
+    //         // Payment info one to one relationship with wallet
+    //         this.wallet = wallet._id;
+    //         this.enduser = enduser._id;
+
+    //         await enduser.save();
+    //         await wallet.save();
+    //     }
+
+    //     if (curr.user.role === 'rider') {
+    //         this.rider = curr.user._id;
+    //     }
+    // }
 
     next();
 });
