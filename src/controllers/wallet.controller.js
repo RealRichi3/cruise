@@ -141,6 +141,8 @@ const topUpWallet = async (req, res, next) => {
  * @throws {BadRequestError} - If the Validations fail
  * @throws {UnauthorizedError} - If the user is not an end user
  * @throws {InternalServerError} - If there is an error while verifying the transaction
+ * @throws {InternalServerError} - If there is an error while updating the wallet
+ * @throws {InternalServerError} - If there is an error while updating the transaction
  * */
 const confirmTopup = async (req, res, next) => {
     // Get transaction reference from request body
@@ -155,7 +157,7 @@ const confirmTopup = async (req, res, next) => {
             return err;
         });
 
-    const possible_error_msg = [
+    const possible_error_msgs = [
         'Transaction not found',
         'Transaction not successful',
         'Transaction amount mismatch',
@@ -167,7 +169,7 @@ const confirmTopup = async (req, res, next) => {
     */
     // If error occured while verifying transaction, return error
     if (result instanceof Error) {
-        if (possible_error_msg.includes(result.message))
+        if (possible_error_msgs.includes(result.message))
             return next(new BadRequestError(result.message));
 
         return next(result);
@@ -176,19 +178,13 @@ const confirmTopup = async (req, res, next) => {
 
     if (transaction instanceof Error) return next(transaction);
 
-    const users_wallet = await Wallet.findOne({ user: transaction.user });
 
-    console.log(users_wallet);
-    console.log(transaction);
     /* 
         If the transaction is successful
         and the transaction is not already in the users wallet,
         proceed to update wallet balance and transaction status 
     */
-    console.log(transaction.status != 'success');
-    console.log(!users_wallet.transactions.includes(transaction._id));
     if (!transaction.reflected) {
-        console.log('Updating wallet balance and transaction status');
         // Update wallet balance
         await Wallet.findOneAndUpdate(
             { user: transaction.user },
