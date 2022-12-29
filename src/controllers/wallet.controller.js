@@ -45,14 +45,15 @@ const getWallet = async (req, res, next) => {};
 const getWalletBalance = async (req, res, next) => {
     const id = req.user.id;
 
-    const user = await Enduser.findOne({ user }).populate('wallet');
+    const user = await Enduser.findOne({ user: req.user.id })
 
+    console.log(user)
     if (!user) return next(new NotFoundError('User not found'));
 
     res.status(200).json({
         success: true,
         data: {
-            balance: user.wallet.balance,
+            balance: user.payment_info.wallet.balance,
         },
     });
 };
@@ -178,7 +179,6 @@ const confirmTopup = async (req, res, next) => {
 
     if (transaction instanceof Error) return next(transaction);
 
-
     /* 
         If the transaction is successful
         and the transaction is not already in the users wallet,
@@ -204,7 +204,7 @@ const confirmTopup = async (req, res, next) => {
         ).populate('transaction');
 
         await transaction.save();
-        
+
         const confirm_topup_message = new WalletTopupReceiptMessage();
         confirm_topup_message.setBody(receipt);
 

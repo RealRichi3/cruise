@@ -17,9 +17,9 @@ router.use(basicAuth(), rbacMiddleware('enduser rider superadmin'));
 
 router
     .get('/get', getWallet)
-    .get('/get-balance', getWalletBalance)
-    .get('/get-transactions', getWalletTransactions)
-    .get('/get-transaction-data/:id', getWalletTransactionData)
+    .get('/balance', getWalletBalance)
+    .get('/transactions', getWalletTransactions)
+    .get('/transaction-data/:id', getWalletTransactionData)
     .post('/topup', topUpWallet)
     .post('/topup/confirm', confirmTopup);
 

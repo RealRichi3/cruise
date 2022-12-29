@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
+const { Enduser, Rider } = require('./users.model');
 
 const withdrawalRequestSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -50,6 +51,7 @@ const cardSchema = new schema({
 const paymentInfoSchema = new schema(
     {
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
         rider: { type: schema.Types.ObjectId, ref: 'Rider' },
         cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
         bank_accounts: [{ type: schema.Types.ObjectId, ref: 'BankAccount' }],
@@ -58,6 +60,36 @@ const paymentInfoSchema = new schema(
     { timestamps: true }
 );
 
+paymentInfoSchema.pre('save', async function (next) {
+    const curr = this.populate('user');
+
+    if (this.isNew()) {
+        if (curr.user.role === 'enduser') {
+            // Link a wallet for the enduser
+
+            // Wallet only belongs to enduser
+            const wallet = new Wallet({ user: curr.user._id });
+            const enduser = await Enduser.findOne({ user: curr.user._id });
+
+            // Wallet enduser one to one relationship
+            enduser.wallet = wallet._id;
+            wallet.enduser = enduser._id;
+
+            // Payment info one to one relationship with wallet
+            this.wallet = wallet._id;
+            this.enduser = enduser._id;
+
+            await enduser.save();
+            await wallet.save();
+        }
+
+        if (curr.user.role === 'rider') {
+            this.rider = curr.user._id;
+        }
+    }
+
+    next();
+});
 const Card = mongoose.model('Card', cardSchema);
 const BankAccount = mongoose.model('BankAccount', bankAccountSchema);
 const PaymentInfo = mongoose.model('PaymentInfo', paymentInfoSchema);

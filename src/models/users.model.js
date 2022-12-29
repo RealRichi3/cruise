@@ -1,5 +1,6 @@
 const { default: mongoose } = require('mongoose');
 const schema = mongoose.Schema;
+const { PaymentInfo } = require('./payment_info.model');
 
 const statusSchema = new schema(
     {
@@ -45,10 +46,12 @@ const riderSchema = new schema(
         city: { type: String, required: true },
         state: { type: String, required: true },
         payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
-        vehicles: [{
-            type: schema.Types.ObjectId,
-            ref: 'Vehicle',
-        }],
+        vehicles: [
+            {
+                type: schema.Types.ObjectId,
+                ref: 'Vehicle',
+            },
+        ],
         removed_vehicles: [{ type: schema.Types.ObjectId, ref: 'Vehicle' }],
         driver_license: {
             type: String,
@@ -98,6 +101,30 @@ userSchema.virtual('status', {
     justOne: true,
 });
 
+enduserSchema.pre('save', async function (next) {
+    const user = this;
+    if (user.isNew()) {
+        const status = new Status({ user: user._id, isActive: true });
+        await status.save();
+
+        const payment_info = new PaymentInfo({ user: user._id, enduser: this._id });
+        await payment_info.save();
+    }
+    next();
+});
+
+riderSchema.pre('save', async function (next) {
+    const user = this;
+    if (user.isNew()) {
+        const status = new Status({ user: user._id });
+        await status.save();
+
+        const payment_info = new PaymentInfo({ user: user._id, rider: this._id});
+        await payment_info.save();
+    }
+
+    next();
+});
 const Status = mongoose.model('Status', statusSchema);
 const User = mongoose.model('User', userSchema);
 const Enduser = mongoose.model('Enduser', enduserSchema);
