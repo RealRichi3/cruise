@@ -39,7 +39,7 @@ class MailMessage {
     }
 }
 
-class WalletTopupMessage extends MailMessage {
+class WalletTopupInvoiceMessage extends MailMessage {
     constructor() {
         super();
         this.setFrom(' ');
@@ -60,7 +60,29 @@ class WalletTopupMessage extends MailMessage {
     }
 }
 
+class WalletTopupReceiptMessage extends MailMessage {
+    constructor() {
+        super();
+        this.setFrom(' ');
+        this.setSubject('Receipt for Wallet Topup');
+    }
+
+    setBody(receipt) {
+        this.body = `
+            <h1>Receipt for Wallet Topup</h1>
+            <p>Amount: ${receipt.amount}</p>
+            <p>Date: ${receipt.date}</p>
+            <p>Transaction reference: ${receipt.reference}</p>
+            `;
+    }
+
+    getBody() {
+        return this.body;
+    }
+}
+
 module.exports = {
     MailMessage,
-    WalletTopupMessage,
-}
+    WalletTopupInvoiceMessage,
+    WalletTopupReceiptMessage,
+};
