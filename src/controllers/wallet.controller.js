@@ -102,6 +102,23 @@ const topUpWallet = async (req, res, next) => {
     });
 };
 
+/**
+ * Confirm topup
+ * 
+ * @param {string} reference - The reference of the transaction
+ * 
+ * @returns {object} data - The transaction object
+ * @returns {string} data.amount - The amount to be topped up
+ * @returns {string} data.payment_method - The payment method to be used
+ * @returns {string} data.type - The type of transaction
+ * @returns {string} data.user_id - The ID of the user
+ * @returns {string} data.status - The status of the transaction
+ * 
+ * @throws {BadRequestError} - If the request body is invalid
+ * @throws {BadRequestError} - If the Validations fail  
+ * @throws {UnauthorizedError} - If the user is not an end user
+ * @throws {InternalServerError} - If there is an error while verifying the transaction
+ * */
 const confirmTopup = async (req, res, next) => {
     const enduser = await Enduser.findOne({ user: req.user.id });
 
