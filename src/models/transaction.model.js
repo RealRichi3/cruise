@@ -82,6 +82,7 @@ const transactionsSchema = new schema(
             enum: ['pending', 'success', 'failed'],
         },
         reference: { type: String, default: UU },
+        reflected: { type: Boolean, default: false }, // If transaction has been reflected in user's wallet
         date: { type: Date, default: Date.now },
     },
     { timestamps: true }
