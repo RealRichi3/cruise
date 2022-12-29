@@ -6,21 +6,34 @@ const {
 
 // Models
 const { Enduser, Rider } = require('../models/users.model');
-const { PaymentInfo, BankAccount } = require('../models/payment_info.model');
+const {
+    PaymentInfo,
+    BankAccount,
+    Wallet,
+} = require('../models/payment_info.model');
+const {
+    Invoice,
+    Receipt,
+    Transaction,
+} = require('../models/transaction.model');
 
 // Utils
-const { initiateTransaction } = require('../utils/transaction');
+const {
+    initiateTransaction,
+    verifyTransactionStatus,
+} = require('../utils/transaction');
 const config = require('../utils/config');
-const { Invoice } = require('../models/transaction.model');
 const sendEmail = require('../utils/email');
-const { WalletTopupMessage } = require('../utils/mail_message');
+const {
+    WalletTopupInvoiceMessage,
+    WalletTopupReceiptMessage,
+} = require('../utils/mail_message');
 
 // Wallet Controller
 const getWallet = async (req, res, next) => {};
 const getWalletBalance = async (req, res, next) => {};
 const getWalletTransactions = async (req, res, next) => {};
 const getWalletTransactionData = async (req, res, next) => {
-    git;
 };
 
 /**
@@ -47,11 +60,14 @@ const topUpWallet = async (req, res, next) => {
     const { amount, payment_method, type } = req.body;
     const id = req.user.id;
 
+    const enduser = await Enduser.findOne({ user: id });
+
     const data = {
-        amount,
+        amount: amount / 100,
         payment_method,
         type,
         user_id: id,
+        enduser: enduser._id, // Add enduser ID to transaction object if it is made by an enduser
     };
 
     // Initiate transaction
@@ -70,7 +86,7 @@ const topUpWallet = async (req, res, next) => {
     const invoice_id = result.invoice;
     const invoice = await Invoice.findById(invoice_id).populate('transaction');
 
-    const topup_message = new WalletTopupMessage();
+    const topup_message = new WalletTopupInvoiceMessage();
     topup_message.setBody(invoice);
 
     // Send Invoice to users email
@@ -87,13 +103,50 @@ const topUpWallet = async (req, res, next) => {
 };
 
 const confirmTopup = async (req, res, next) => {
-    // Verify initial transaction status
-    // Verify transaction status
+    const enduser = await Enduser.findOne({ user: req.user.id });
+
+    // Get transaction reference from request body
+    const { reference } = req.body;
+
+    // Verify transaction
+    const result = await verifyTransactionStatus(reference);
+
+    // If error occured while verifying transaction, return error
+    if (result instanceof Error) return next(result);
+
+    // Get transaction
+    const transaction = result;
+
     // Update wallet balance
+    const wallet = await Wallet.findOneAndUpdate(
+        { user: transaction.user },
+        { $inc: { balance: transaction.amount } },
+        { new: true }
+    );
+
     // Update transaction status
-    // Send response
-    // Send notification to user
-    // Send notification to merchant
+    transaction.status = 'success';
+
+    // Generate receipt
+    const receipt = await (
+        await transaction.generateReceipt()
+    ).populate('transaction');
+
+    const confirm_topup_message = new WalletTopupReceiptMessage();
+    confirm_topup_message.setBody(receipt);
+    
+    // Send receipt to users email
+    sendEmail({
+        email: req.user.email,
+        subject: 'Receipt for Wallet Topup',
+        html: confirm_topup_message.getBody(),
+    });
+
+    res.status(200).json({
+        success: true,
+        data: transaction,
+    });
+
 };
 
 module.exports = {
@@ -102,4 +155,5 @@ module.exports = {
     getWalletTransactions,
     getWalletTransactionData,
     topUpWallet,
+    confirmTopup,
 };
