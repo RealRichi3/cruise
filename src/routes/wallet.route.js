@@ -7,6 +7,7 @@ const {
     getWalletTransactionData,
     getWallet,
     topUpWallet,
+    confirmTopup
 } = require('../controllers/wallet.controller');
 
 const { basicAuth } = require('../middlewares/auth');
@@ -19,6 +20,7 @@ router
     .get('/get-balance', getWalletBalance)
     .get('/get-transactions', getWalletTransactions)
     .get('/get-transaction-data/:id', getWalletTransactionData)
-    .post('/topup', topUpWallet);
+    .post('/topup', topUpWallet)
+    .post('/topup/confirm', confirmTopup);
 
 module.exports = router;
