@@ -7,7 +7,7 @@ const {
 } = require('../utils/errors');
 
 // Models
-const { Card, PaymentInfo } = require('../models/payment_info.model');
+const { Card } = require('../models/payment_info.model');
 const { Enduser } = require('../models/users.model');
 
 // Card Controller
@@ -46,11 +46,10 @@ const addNewCard = async (req, res, next) => {
     });
 
     // Add card to user's payment info
-    await PaymentInfo.findOneAndUpdate(
-        { user: req.user.id },
+    await enduser.updateOne(
         { $push: { cards: card._id } },
         { new: true, upsert: true }
-    ).populate('cards user');
+    );
 
     // Remove sensitive data
     card.middle_numbers = '****';
@@ -90,7 +89,7 @@ const removeCard = async (req, res, next) => {
     if (!card) return next(new NotFoundError('Card not found'));
 
     // Remove card from user's payment info
-    const userp = await PaymentInfo.findOneAndUpdate(
+    const userp = await Enduser.findOneAndUpdate(
         { user: req.user.id },
         { $pull: { cards: card._id } },
         { new: true }
@@ -112,17 +111,14 @@ const removeCard = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while fetching the cards
  * */
 const getCards = async (req, res, next) => {
-    const enduser = await Enduser.findOne({ user: req.user.id });
+    const enduser = await Enduser.findOne({ user: req.user.id }).populate(
+        'cards user'
+    );
 
     // Check if user is an end user
     if (!enduser) return next(new UnauthorizedError('User is not an end user'));
 
-    // Get all cards
-    const payment_info = await PaymentInfo.find({ user: req.user.id }).populate(
-        'cards user'
-    );
-
-    const cards = payment_info[0].cards;
+    const cards = enduser.cards;
 
     // Remove sensitive data
     cards.forEach((card) => {

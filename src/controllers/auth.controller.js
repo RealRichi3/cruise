@@ -26,7 +26,7 @@ const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
-const { Wallet } = require('../models/payment_info.model');
+const { Wallet, PaymentInfo } = require('../models/payment_info.model');
 
 /**
  * Handle existing unverified user.
@@ -207,10 +207,11 @@ const userSignup = async (req, res, next) => {
         // Create user info
         if (role === 'enduser') {
             // const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
-            await Enduser.create(
+            const enduser = await Enduser.create(
                 [{ user: _user._id, phone, city, address, state }],
                 { session }
-            );
+            ).then((data) => data[0]);
+            // await PaymentInfo.create(enduser, { session });
         }
 
         // Create admin info

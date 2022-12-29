@@ -7,7 +7,6 @@ const {
 // Models
 const { Enduser, Rider } = require('../models/users.model');
 const {
-    PaymentInfo,
     BankAccount,
     Wallet,
 } = require('../models/payment_info.model');
@@ -43,9 +42,7 @@ const getWallet = async (req, res, next) => {};
  * @throws {NotFoundError} - If the user is not found
  * */
 const getWalletBalance = async (req, res, next) => {
-    const id = req.user.id;
-
-    const user = await Enduser.findOne({ user: req.user.id })
+    const user = await Enduser.findOne({ user: req.user.id }).populate('wallet');
 
     console.log(user)
     if (!user) return next(new NotFoundError('User not found'));
@@ -53,7 +50,7 @@ const getWalletBalance = async (req, res, next) => {
     res.status(200).json({
         success: true,
         data: {
-            balance: user.payment_info.wallet.balance,
+            balance: user.wallet.balance,
         },
     });
 };
