@@ -26,7 +26,7 @@ const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
-const { Wallet } = require('../models/payment_info.model');
+const { Wallet, PaymentInfo } = require('../models/payment_info.model');
 
 /**
  * Handle existing unverified user.
@@ -206,11 +206,12 @@ const userSignup = async (req, res, next) => {
 
         // Create user info
         if (role === 'enduser') {
-            const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
-            await Enduser.create(
-                [{ user: _user._id, phone, city, address, state, wallet: user_wallet._id }],
+            // const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
+            const enduser = await Enduser.create(
+                [{ user: _user._id, phone, city, address, state }],
                 { session }
-            );
+            ).then((data) => data[0]);
+            // await PaymentInfo.create(enduser, { session });
         }
 
         // Create admin info
@@ -222,8 +223,8 @@ const userSignup = async (req, res, next) => {
     });
 
     Password.create({ password, user: user._id });
-    Status.create({ user: user._id, isActive: true });
-    Wallet.create({ user: user._id });
+    // Status.create({ user: user._id, isActive: true });
+    // Wallet.create({ user: user._id });
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);
@@ -325,8 +326,8 @@ const riderSignup = async (req, res, next) => {
     console.log(vehicle);
 
     Password.create({ password, user: user._id });
-    Status.create({ user: user._id });
-    Wallet.create({ user: user._id });
+    // Status.create({ user: user._id });
+    // Wallet.create({ user: user._id });
 
     // Get auth tokens
     const { access_token } = await handleUnverifiedUser(user);

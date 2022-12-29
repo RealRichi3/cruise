@@ -7,7 +7,6 @@ const {
 // Models
 const { Enduser, Rider } = require('../models/users.model');
 const {
-    PaymentInfo,
     BankAccount,
     Wallet,
 } = require('../models/payment_info.model');
@@ -43,10 +42,9 @@ const getWallet = async (req, res, next) => {};
  * @throws {NotFoundError} - If the user is not found
  * */
 const getWalletBalance = async (req, res, next) => {
-    const id = req.user.id;
+    const user = await Enduser.findOne({ user: req.user.id }).populate('wallet');
 
-    const user = await Enduser.findOne({ user }).populate('wallet');
-
+    console.log(user)
     if (!user) return next(new NotFoundError('User not found'));
 
     res.status(200).json({
@@ -178,7 +176,6 @@ const confirmTopup = async (req, res, next) => {
 
     if (transaction instanceof Error) return next(transaction);
 
-
     /* 
         If the transaction is successful
         and the transaction is not already in the users wallet,
@@ -204,7 +201,7 @@ const confirmTopup = async (req, res, next) => {
         ).populate('transaction');
 
         await transaction.save();
-        
+
         const confirm_topup_message = new WalletTopupReceiptMessage();
         confirm_topup_message.setBody(receipt);
 

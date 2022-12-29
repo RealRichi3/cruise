@@ -1,5 +1,6 @@
 const { default: mongoose } = require('mongoose');
 const schema = mongoose.Schema;
+const { Wallet } = require('./payment_info.model');
 
 const statusSchema = new schema(
     {
@@ -15,6 +16,8 @@ const userSchema = new schema(
         firstname: { type: String, required: true },
         lastname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
+        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
         role: {
             type: String,
             required: true,
@@ -32,7 +35,13 @@ const enduserSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
+        // payment_info: {
+        //     type: schema.Types.ObjectId,
+        //     ref: 'PaymentInfo',
+        //     required: true,
+        // },
+        wallet: { type: schema.Types.ObjectId, ref: 'Wallet', required: true },
+        cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
     },
     { timestamps: true }
 );
@@ -44,11 +53,18 @@ const riderSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        payment_info: { type: schema.Types.ObjectId, ref: 'PaymentInfo' },
-        vehicles: [{
-            type: schema.Types.ObjectId,
-            ref: 'Vehicle',
-        }],
+        // payment_info: {
+        //     type: schema.Types.ObjectId,
+        //     ref: 'PaymentInfo',
+        //     required: true,
+        // },
+        bank_accounts: [{ type: schema.Types.ObjectId, ref: 'BankAccount' }],
+        vehicles: [
+            {
+                type: schema.Types.ObjectId,
+                ref: 'Vehicle',
+            },
+        ],
         removed_vehicles: [{ type: schema.Types.ObjectId, ref: 'Vehicle' }],
         driver_license: {
             type: String,
@@ -96,6 +112,39 @@ userSchema.virtual('status', {
     localField: '_id',
     foreignField: 'user',
     justOne: true,
+});
+
+userSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const status = new Status({ user: this._id });
+        this.status = status._id;
+
+        if (this.role == 'enduser') status.isActive = true;
+
+        await status.save();
+    }
+});
+
+enduserSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const wallet = new Wallet({ user: this.user._id, enduser: this._id });
+        this.wallet = wallet._id;
+
+        await wallet.save();
+    }
+
+    next();
+});
+
+riderSchema.pre('validate', async function (next) {
+    if (this.isNew) {
+        const wallet = new Wallet({ user: this.user._id, rider: this._id });
+        this.wallet = wallet._id;
+
+        await wallet.save();
+    }
+
+    next();
 });
 
 const Status = mongoose.model('Status', statusSchema);

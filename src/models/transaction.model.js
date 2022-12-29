@@ -129,7 +129,7 @@ transactionsSchema.methods.generateReceipt = async function () {
     this.receipt = receipt._id;
 
     await this.save();
-    
+
     return receipt;
 };
 

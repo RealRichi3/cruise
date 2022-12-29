@@ -1,8 +1,12 @@
-const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
+const {
+    BadRequestError,
+    UnauthorizedError,
+    NotFoundError,
+} = require('../utils/errors');
 
 // Models
-const { Enduser, Rider } = require('../models/users.model');
-const { PaymentInfo, BankAccount } = require('../models/payment_info.model');
+const { Rider } = require('../models/users.model');
+const { BankAccount } = require('../models/payment_info.model');
 
 // Bank Controller
 /**
@@ -38,11 +42,10 @@ const addNewBankAccount = async (req, res, next) => {
     });
 
     // Add bank account to user's payment info
-    await PaymentInfo.findOneAndUpdate(
-        { user: req.user.id, rider: rider._id },
+    await rider.updateOne(
         { $push: { bank_accounts: bankaccount._id } },
         { new: true, upsert: true }
-    ).populate('bank_accounts user rider');
+    );
 
     res.status(200).send({
         success: true,
@@ -88,11 +91,10 @@ const removeBankAccount = async (req, res, next) => {
     }
 
     // Remove bank account from user's payment info
-    await PaymentInfo.findOneAndUpdate(
-        { user: req.user.id, rider: rider._id },
+    await rider.updateOne(
         { $pull: { bank_accounts: bankaccount._id } },
         { new: true, upsert: true }
-    ).populate('bank_accounts user rider');
+    );
 
     // await bankaccount.remove();
 
@@ -113,18 +115,17 @@ const removeBankAccount = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while saving the bank account
  * */
 const getBankAccounts = async (req, res, next) => {
-    const rider = await Rider.findOne({ user: req.user.id });
+    const rider = await Rider.findOne({ user: req.user.id }).populate(
+        'bank_accounts'
+    );
 
     // Get user's payment info
-    const users_payment_info = await PaymentInfo.findOne({
-        user: req.user.id,
-        rider: rider._id,
-    }).populate('bank_accounts');
+    const bank_accounts = rider.bank_accounts;
 
     res.status(200).send({
         success: true,
         message: 'Bank Accounts retrieved successfully',
-        data: users_payment_info,
+        data: bank_accounts,
     });
 };
 
