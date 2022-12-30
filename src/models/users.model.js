@@ -35,11 +35,6 @@ const enduserSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        // payment_info: {
-        //     type: schema.Types.ObjectId,
-        //     ref: 'PaymentInfo',
-        //     required: true,
-        // },
         wallet: { type: schema.Types.ObjectId, ref: 'Wallet', required: true },
         cards: [{ type: schema.Types.ObjectId, ref: 'Card' }],
     },
@@ -53,11 +48,6 @@ const riderSchema = new schema(
         address: { type: String, required: true },
         city: { type: String, required: true },
         state: { type: String, required: true },
-        // payment_info: {
-        //     type: schema.Types.ObjectId,
-        //     ref: 'PaymentInfo',
-        //     required: true,
-        // },
         bank_accounts: [{ type: schema.Types.ObjectId, ref: 'BankAccount' }],
         vehicles: [
             {
