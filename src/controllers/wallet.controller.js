@@ -6,10 +6,7 @@ const {
 
 // Models
 const { Enduser, Rider } = require('../models/users.model');
-const {
-    BankAccount,
-    Wallet,
-} = require('../models/payment_info.model');
+const { BankAccount, Wallet } = require('../models/payment_info.model');
 const {
     Invoice,
     Receipt,
@@ -29,7 +26,30 @@ const {
 } = require('../utils/mail_message');
 
 // Wallet Controller
-const getWallet = async (req, res, next) => {};
+/**
+ * Get wallet data
+ *
+ * @returns {Object} - The Wallet object
+ *
+ * @throws {NotFoundError} - If the user is not found
+ * */
+const getWalletData = async (req, res, next) => {
+    const user = await Enduser.findOne({ user: req.user.id }).populate({
+        path: 'wallet',
+        populate: {
+            path: 'transactions',
+            model: 'Transaction',
+        },
+    });
+
+    // Check if user exists
+    if (!user) return next(new NotFoundError('User not found'));
+
+    res.status(200).json({
+        success: true,
+        data: user.wallet,
+    });
+};
 
 /**
  * Get wallet balance
@@ -42,9 +62,11 @@ const getWallet = async (req, res, next) => {};
  * @throws {NotFoundError} - If the user is not found
  * */
 const getWalletBalance = async (req, res, next) => {
-    const user = await Enduser.findOne({ user: req.user.id }).populate('wallet');
+    const user = await Enduser.findOne({ user: req.user.id }).populate(
+        'wallet'
+    );
 
-    console.log(user)
+    console.log(user);
     if (!user) return next(new NotFoundError('User not found'));
 
     res.status(200).json({
@@ -54,8 +76,62 @@ const getWalletBalance = async (req, res, next) => {
         },
     });
 };
-const getWalletTransactions = async (req, res, next) => {};
-const getWalletTransactionData = async (req, res, next) => {};
+
+/**
+ * Get wallet transactions
+ *
+ * @param {string} id - The ID of the wallet
+ *
+ * @returns {array} data - The wallet transactions
+ *
+ * @throws {NotFoundError} - If the wallet is not found
+ * @throws {UnauthorizedError} - If the wallet does not belong to the user
+ * */
+const getWalletTransactions = async (req, res, next) => {
+    const { id } = req.params;
+
+    const wallet = await Wallet.findById(id).populate('transactions');
+
+    // Check if wallet exists
+    if (!wallet) return next(new NotFoundError('Wallet not found'));
+
+    // Check if the wallet belongs to the user
+    if (wallet.user.toString() !== req.user.id)
+        return next(new UnauthorizedError('Unauthorized'));
+
+    const transactions = wallet.transactions;
+
+    res.status(200).json({
+        success: true,
+        data: transactions,
+    });
+};
+
+/**
+ * Get wallet transaction data
+ * 
+ * @param {string} id - The ID of the transaction
+ * 
+ * @returns {object} data - The transaction object
+ */
+const getWalletTransactionData = async (req, res, next) => {
+    const { id } = req.params;
+
+    const transaction = await Transaction.findById(id).populate('invoice receipt');
+
+    // Check if transaction exists
+    if (!transaction)
+        return next(new NotFoundError('Transaction not found'));
+
+    // Check if the transaction belongs to the user
+    if (transaction.user.toString() !== req.user.id)
+        return next(new UnauthorizedError('Unauthorized'));
+
+    res.status(200).json({
+        success: true,
+        data: transaction,
+    });
+};
 
 /**
  * Top up wallet
@@ -220,7 +296,7 @@ const confirmTopup = async (req, res, next) => {
 };
 
 module.exports = {
-    getWallet,
+    getWalletData,
     getWalletBalance,
     getWalletTransactions,
     getWalletTransactionData,
