@@ -5,7 +5,7 @@ const {
     getWalletBalance,
     getWalletTransactions,
     getWalletTransactionData,
-    getWallet,
+    getWalletData,
     topUpWallet,
     confirmTopup
 } = require('../controllers/wallet.controller');
@@ -16,7 +16,7 @@ const rbacMiddleware = require('../middlewares/rbac');
 router.use(basicAuth(), rbacMiddleware('enduser rider superadmin'));
 
 router
-    .get('/get', getWallet)
+    .get('/', getWalletData)
     .get('/balance', getWalletBalance)
     .get('/transactions', getWalletTransactions)
     .get('/transaction-data/:id', getWalletTransactionData)
