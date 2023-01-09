@@ -3,7 +3,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 // const asyncError = require('./middlewares/async_error')
 const errorHandler = require('./middlewares/error_handler');
-require('express-async-errors')
+require('express-async-errors');
 
 const app = express();
 
@@ -11,7 +11,6 @@ const app = express();
 if (process.env.NODE_ENV == 'dev') {
     app.use(morgan('dev'));
 }
-
 
 // app.use(asyncError());
 app.use(cors());

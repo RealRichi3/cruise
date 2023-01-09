@@ -5,7 +5,6 @@ const bookRide = async (req, res) => {
 //    Send request to rider,
 //    If rider accepts, create a ride, and init map tracking for rider on user app and rider app
 //    If rider declines, send notification to user
-
 };
 
 const acceptRideRequest = async (req, res) => {};
@@ -33,7 +32,7 @@ const payForRide = async (req, res) => {};
 module.exports = {
     bookRide,
     acceptRideRequest,
-    declineRideRequest
+    declineRideRequest,
     cancelRide,
     startRide,
     completeRide,
