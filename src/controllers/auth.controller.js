@@ -5,7 +5,6 @@ const {
 } = require('../utils/errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-require('express-async-error');
 
 const mongoose = require('mongoose');
 

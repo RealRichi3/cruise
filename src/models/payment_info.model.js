@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
-const { Enduser, Rider, User } = require('./users.model');
-
 const withdrawalRequestSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'User', required: true },
     amount: { type: Number, required: true },
