@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const location = new Schema({
-    rider: { type: Schema.Types.ObjectId, ref: 'Rider', required: true },
+    vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle', required: true },
     location: {
         type: new Schema({
             type: { type: String, default: 'Point' },
@@ -18,3 +18,12 @@ const location = new Schema({
 
 location.index({ location: '2dsphere' });
 const Location = mongoose.model('Location', location);
+
+location.methods.updateCoordinates = async function (long, lat) {
+    this.location.coordinates = [long, lat];
+    await this.save();
+
+    return this
+};
+
+module.exports = Location;
