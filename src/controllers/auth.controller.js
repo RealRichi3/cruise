@@ -451,11 +451,11 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).populate('status password');
-    console.log(user);
-    console.log(user.toJSON({ virtuals: true }));
-
+    
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
+    console.log(user);
+    console.log(user.toJSON({ virtuals: true }));
 
     // Check if user is verified
     if (!user.status.isVerified)
