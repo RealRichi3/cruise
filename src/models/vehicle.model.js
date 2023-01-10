@@ -21,7 +21,15 @@ const vehicleSchema = new schema({
         ref: 'VehicleStatus',
         required: true
     },
+    actveRide: { type: schema.Types.ObjectId, ref: 'Ride' },
+    availableForBooking: { type: Boolean, default: false },
 });
+
+vehicleSchema.virtual('location', {
+    ref: 'Location',
+    localField: '_id',
+    foreignField: 'vehicle',
+})
 
 const VehicleStatus = mongoose.model('VehicleStatus', vehicle_statusSchema);
 
