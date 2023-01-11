@@ -1,7 +1,7 @@
-const { activateForBooking, deactivateForBooking } = require('../controllers/vehicle.controller');
+const { activateForBooking, deactivateForBooking } = require('../../controllers/vehicle.controller');
 
-const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../controllers/location');
-const { socketWrapper } = require("./socketWrapper");
+const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../utils/location');
+const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
 
 class VehicleSockets {
     constructor(client, sock) {
@@ -12,15 +12,17 @@ class VehicleSockets {
 
     init() {
         const self = this;
-        this.client.on('vehicle:goonline', socketWrapper(async (data) => {
+        this.client.on('vehicle:goonline', socketAsyncWrapper(async (data) => {
             console.log('Vehicle going online');
             console.log(this.name);
-            // const { vehicle_id } = data;
-            // const vehicle = await activateForBooking(vehicle_id);
+
+            const { vehicle_id, location } = data;
+
+            const vehicle = await activateForBooking(vehicle_id);
+            await saveNewLocation(vehicle_id, location);
             // self.socket.emit('error', 'Vehicle going online')
             // console.log(error);
             throw new Error('this is the test error');
-            // self.socket.emit('error', error)
         }, this.socket),
         );
 
