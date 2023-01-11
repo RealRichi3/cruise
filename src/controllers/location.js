@@ -12,7 +12,7 @@ const saveNewLocation = async (vehicleId, location) => {
     return new_location;
 };
 
-const updateLocation = async (location_id, long, lat) {
+const updateLocation = async (location_id, long, lat) => {
     const location = await Location.findById(location_id);
 
     if (!location) { return null; }

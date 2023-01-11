@@ -242,7 +242,7 @@ const activateVehicle = async (req, res, next) => {
     }
 
     vehicle.status.isActive = true;
-    await vehicle.status.save()
+    await vehicle.status.save();
 
     res.status(200).send({
         success: true,
@@ -271,13 +271,21 @@ const deactivateVehicle = async (req, res, next) => {
     }
 
     vehicle.status.isActive = false;
-    await vehicle.status.save()
+    await vehicle.status.save();
 
     res.status(200).send({
         success: true,
         message: 'Vehicle activated',
         data: vehicle,
     });
+};
+
+const activateForBooking =  function (vehicle_id) {
+    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: true });
+};
+
+const deactivateForBooking = function (vehicle_id) {
+    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: false });
 };
 
 module.exports = {
@@ -288,4 +296,6 @@ module.exports = {
     getRidersVehicles,
     activateVehicle,
     deactivateVehicle,
+    activateForBooking,
+    deactivateForBooking
 };

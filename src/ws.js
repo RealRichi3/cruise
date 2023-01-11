@@ -10,61 +10,95 @@ const express_server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer.Server({ server: express_server, path: '/ws' });
 
-function authenticate(socket, request) {
-    return new Promise((resolve, reject) => {
-        try {
-            const token = request.headers['sec-websocket-protocol'];
-            jwt.verify(token, config.JWT_ACCESS_SECRET, (error, decoded) => {
+// const wsVehicle = require('./ws/vehicle.ws');
+async function authenticate(socket, request) {
+    try {
+        const token = request.headers['sec-websocket-protocol'];
+        return await jwt.verify(
+            token,
+            config.JWT_ACCESS_SECRET,
+            (error, decoded) => {
                 if (error) {
-                    throw error;
+                    return error;
                 } else {
                     socket.user = decoded;
-                    resolve(socket);
+                    return socket;
                 }
-            });
-        } catch (error) {
-            console.log(error);
-            socket.close();
-
-            reject(error);
-        }
-    });
+            }
+        );
+    } catch (error) {
+        console.log(error);
+        return error;
+    }
 }
 
-wss.on('connection', async (ws, request) => {
-    ws = await authenticate(ws, request);
+const wsClients = [];
+function removeClient(connection) {
+    const index = wsClients.indexOf(connection);
+    if (index > -1) {
+        wsClients.splice(index, 1);
+    }
+}
 
+function parseData(data) {
+    try {
+        return JSON.parse(data);
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+            return data;
+        }
+        return error;
+    }
+}
+
+const vehicleSocks = require('./ws/vehicle.ws').vehicle
+
+wss.on('connection', async (ws, request) => {
+    let res = await authenticate(ws, request);
+    if (res instanceof Error) {
+        ws.send('Authentication failed');
+        ws.close();
+        
+        return;
+    } else {
+        ws = res;
+    }
+    
+    vehicleSocks(ws, request)
     console.log(`${ws.user.id} - Connected`);
     ws.send('Connection to server established');
 
-    ws.on('message', (data) => {
-        console.log(JSON.parse(data));
-        console.log(ws.id);
-        // request = JSON.parse(request);
-        // authenticate
-        // switch (request.event) {
-        //     case 'authenticate':
-        //         authenticate(ws);
-        //         break;
-        // }
-        ws.send('echo');
+    // ws.on('me', (data) => {
+    //     console.log(data);
+    // })
+
+    ws.on('message', (message) => {
+        console.log('received a message');
+        const parsed_message = parseData(message);
+        if (typeof parseData == 'string') {
+            console.log('Message is not a valid JSON');
+            // Send error to error handler
+            return;
+        }
+
+        if (parsed_message.event == 'ws:message') {
+            wss.emit(parsed_message.event, parsed_message.data);
+            return;
+        } else {
+            ws.emit(parsed_message.event, 'dsfasdf');
+            return;
+        }
     });
 
     ws.on('close', () => {
         console.log('Client disconnected');
-        const index = clients.indexOf(ws);
-        if (index !== -1) {
-            clients.splice(index, 1);
-        }
+        removeClient(ws);
     });
 });
 
-wss.on('echo', (data) => {
-    console.log(data);
+wss.on('ws:message', (message) => {
+    console.log(message);
+    // ws.send('Message received');
 });
-
-// wss.onmessage = (data) => {
-//     console.log(data);
-// };
 
 module.exports = wss;
