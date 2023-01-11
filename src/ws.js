@@ -1,9 +1,6 @@
 const WebSocketServer = require('ws');
 const app = require('./app');
 const PORT = process.env.PORT;
-const config = require('./utils/config');
-const jwt = require('jsonwebtoken');
-require('express-async-errors')
 
 const express_server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
@@ -11,52 +8,15 @@ const express_server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer.Server({ server: express_server, path: '/ws' });
 
-// const wsVehicle = require('./ws/vehicle.ws');
-async function authenticate(socket, request) {
-    try {
-        const token = request.headers['sec-websocket-protocol'];
-        return await jwt.verify(
-            token,
-            config.JWT_ACCESS_SECRET,
-            (error, decoded) => {
-                if (error) {
-                    return error;
-                } else {
-                    socket.user = decoded;
-                    return socket;
-                }
-            }
-        );
-    } catch (error) {
-        console.log(error);
-        return error;
-    }
-}
-
-const wsClients = [];
-function removeClient(connection) {
-    const index = wsClients.indexOf(connection);
-    if (index > -1) {
-        wsClients.splice(index, 1);
-    }
-}
-
-function parseData(data) {
-    try {
-        return JSON.parse(data);
-    } catch (error) {
-        if (error instanceof SyntaxError) {
-            return data;
-        }
-        return error;
-    }
-}
-
-const { VehicleSockets } = require('./ws/vehicle.ws');
+const { VehicleSockets } = require('./ws/event-handlers/vehicle.events');
+const { authMiddleware } = require("./ws/middlewares/auth.ws");
+const { toJSON, stringify } = require("./ws/utils/json");
+const { removeClient } = require('./ws/utils/clients');
+const wsWrapper = require('./ws/middlewares/wrapper.ws').socketAsyncWrapper;
 
 wss.on('connection', async (ws, request) => {
     try {
-        let res = await authenticate(ws, request);
+        let res = await authMiddleware(ws, request);
         if (res instanceof Error) {
             ws.send('Authentication failed');
             ws.close();
@@ -66,15 +26,30 @@ wss.on('connection', async (ws, request) => {
             ws = res;
         }
 
-        const vs =  new VehicleSockets(ws, wss)
-        vs.init()
+        // Init event handlers
+        new VehicleSockets(ws, wss).init()
 
-        ws.send('Connection to server established');
+        console.log('new client connected')
+        ws.send('Connection established');
 
+        /**
+         * For plain message from client
+         * message - string
+         * 
+         * For event message from client
+         * message - JSON string
+         * message = { event, data }
+         * event - string
+         * data - object
+         */
         ws.on('message', (message) => {
-            const parsed_message = parseData(message);
-            if (typeof parseData == 'string') {
-                wss.emmit('error', 'Message is not a valid JSON');
+            const parsed_message = toJSON(message);
+            if (parsed_message == null) {
+                // Plain message
+                wss.emit('ws:message', message.toString());
+
+                console.log(parsed_message)
+                wss.emit('error', 'Message is not a valid JSON');
                 // Send error to error handler
                 return;
             }
@@ -93,13 +68,15 @@ wss.on('connection', async (ws, request) => {
             removeClient(ws);
         });
     } catch (error) {
-        wss.emit('error', error);
+        ws.send('Error occured');
+        ws.close();
+        wss.emit('error', error)
     }
 });
 
 wss.on('ws:message', (message) => {
-    console.log(message);
-    // ws.send('Message received');
+    console.log('frontend: ' + message);
+    return
 });
 
 wss.on('error', (error) => {
