@@ -69,5 +69,8 @@
         "eslint-plugin-react-hooks": "^4.3.0",
         "mocha": "^10.1.0",
         "nodemon": "^2.0.20"
+    },
+    "prettier": {
+        "printWidth": 500
     }
 }

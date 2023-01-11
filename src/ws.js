@@ -66,7 +66,8 @@ wss.on('connection', async (ws, request) => {
             ws = res;
         }
 
-        new VehicleSockets(ws, wss).init();
+        const vs =  new VehicleSockets(ws, wss)
+        vs.init()
 
         ws.send('Connection to server established');
 
@@ -102,6 +103,7 @@ wss.on('ws:message', (message) => {
 });
 
 wss.on('error', (error) => {
+    console.log('Error occured')
     console.log(error);
 });
 
