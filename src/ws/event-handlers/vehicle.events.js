@@ -2,6 +2,8 @@ const { activateForBooking, deactivateForBooking } = require('../../controllers/
 
 const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../utils/location');
 const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
+const { stringify } = require('../utils/json');
+const Vehicle = require('../../models/vehicle.model');
 
 class VehicleSockets {
     constructor(client, sock) {
@@ -10,19 +12,37 @@ class VehicleSockets {
     }
 
     init() {
-        const self = this;
+        const self = this.client;
+
         this.client.on('vehicle:goonline', socketAsyncWrapper(async (data) => {
-            console.log('Vehicle going online')
             const { vehicle_id, location } = data;
 
-            console.log(data)
-            const vehicle = await activateForBooking(vehicle_id);
-            await saveNewLocation(vehicle_id, location);
-            // self.socket.emit('error', 'Vehicle going online')
-            // console.log(error);
-            throw new Error('this is the test error');
-        }, this.socket),
-        );
+            const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
+
+            if (!vehicle) throw new Error('BadRequest Error: Vehicle not found');
+
+            // Check if user owns the vehicle
+            if (vehicle.rider.user != self.user.id) {
+                throw new Error('Unauthorized Error: You are not the owner of this vehicle');
+            }
+            
+            if (vehicle.rider.is_online) return;
+
+            vehicle.rider.is_online = true;
+            vehicle.rider.save();
+            vehicle.updateOne({ booking_status: 'available' })
+
+            const vehicle_location = await saveNewLocation(vehicle_id, location);
+
+            self.send(stringify({
+                event: 'vehicle:goonline',
+                data: {
+                    vehicle,
+                    location: vehicle_location,
+                }
+            }))
+
+        }, this.socket));
 
         this.client.on('vehicle:gooffline', async function (data) {
             console.log('Vehicle going offline');
