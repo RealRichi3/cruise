@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <button class="ws"> Start socket</button>
+    <button class="login">Login</button>
+    <button class="start-ws">Start WebSocket</button>
+    <button class="send-mesage">Send Message</button>
+    <button class="go-online">Go online</button>
+    <!-- Web socket with ws-->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
+    <!-- Axios -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+
+    <!-- Buttons -->
+    <script>
+        const websocketButton = document.querySelector('.ws');
+        const loginButton = document.querySelector('.login');
+        const restartWsButton = document.querySelector('.start-ws');
+        const sendMessageButton = document.querySelector('.send-mesage');
+        const goOnlineButton = document.querySelector('.go-online');
+
+        websocketButton.addEventListener('click', () => {
+            wss.broadcast('ws:message', "Hi from the client")
+            // wss.send('Hello from client');
+        });
+
+        sendMessageButton.addEventListener('click', () => {
+            wss.broadcast('ws:message', "Hi from the client")
+        })
+
+        goOnlineButton.addEventListener('click', () => {
+            const data = {
+                vehicleId: "63be133f848bf086034c3462",
+                status: "online"
+            }
+            wss.broadcast('vehicle:goonline', "sdfj;ladjfk")
+        })
+    </script>
+
+    <!-- Utils -->
+    <script>
+        function parseData(data) {
+            try {
+                return JSON.parse(data);
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    return data;
+                }
+                throw new Error(error);
+            }
+        }
+    </script>
+
+    <!-- Websocket Custom Methods -->
+    <script>
+        // Send message back to server
+        WebSocket.prototype.broadcast = function (event, data) {
+            const message = JSON.stringify({ event, data });
+            this.send(message);
+        }
+
+        // Emit messages to be handled within
+        WebSocket.prototype.emit = function (event, data) {
+            let message = data
+
+            const dom_event = new CustomEvent(event, {
+                detail: message
+            })
+
+            this.dispatchEvent(dom_event)
+        }
+    </script>
+
+    <!-- Socket Event handlers -->
+    <script>
+        const access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzYWUxYTI0ZDcxMDc0MTg1NTBlMjFhOCIsImVtYWlsIjoiY3J1aXNlcmlkZXI4QGdtYWlsLmNvbSIsInJvbGUiOiJyaWRlciIsInN0YXR1cyI6eyJfaWQiOiI2M2FlMWEyNGQ3MTA3NDE4NTUwZTIxYTkiLCJ1c2VyIjoiNjNhZTFhMjRkNzEwNzQxODU1MGUyMWE4IiwiaXNWZXJpZmllZCI6dHJ1ZSwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTI6MjAuNzkwWiIsInVwZGF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTQ6MDEuMTk5WiIsIl9fdiI6MH0sImlhdCI6MTY3MzQzNDk3OSwiZXhwIjoxNjczNDU2NTc5fQ.MJJaE1LK7_O2Lq7d7toOAnayBC4j4DHjqdPXOrwQ3R8"
+        let wss = new WebSocket("ws://localhost:5000/ws", [access_token]);
+
+        wss.onopen = () => {
+            console.log('Connected to server');
+        }
+
+        wss.onmessage = (info) => {
+            try {
+                wss.send('Hello from client')
+                let event = 'backend:message',
+                    req_data = info.data
+
+                const parsed_data = parseData(info.data)
+
+                if (typeof parsed_data === 'object') {
+                    req_data = parsed_data
+                }
+
+                wss.emit(event, req_data)
+            } catch (error) {
+                console.log('an error occured')
+                wss.emit('error', error)
+            }
+        }
+
+        wss.addEventListener('error', (data) => {
+
+        })
+
+        wss.addEventListener('frontend:message', (data) => {
+            console.log('[msg] self: ' + data.detail);
+        })
+
+        wss.addEventListener('backend:message', (data) => {
+            console.log('[msg] backend: ' + data.detail);
+        })
+
+    </script>
+</body>
+
+</html>
