@@ -14,8 +14,10 @@ const { toJSON, stringify } = require("./ws/utils/json");
 const { removeClient } = require('./ws/utils/clients');
 const wsWrapper = require('./ws/middlewares/wrapper.ws').socketAsyncWrapper;
 
+let client = null;
 wss.on('connection', async (ws, request) => {
     try {
+        client = ws
         let res = await authMiddleware(ws, request);
         if (res instanceof Error) {
             ws.send('Authentication failed');
@@ -43,24 +45,32 @@ wss.on('connection', async (ws, request) => {
          * data - object
          */
         ws.on('message', (message) => {
+            console.log('--------')
             const parsed_message = toJSON(message);
+            console.log(parsed_message)
+
+            // If no event is specified - Assume it's a sevrer message
             if (parsed_message == null) {
                 // Plain message
                 wss.emit('ws:message', message.toString());
 
-                console.log(parsed_message)
-                wss.emit('error', 'Message is not a valid JSON');
-                // Send error to error handler
+                // console.log(parsed_message)
+                // wss.emit('error', 'Message is not a valid JSON');
+
+                // // Send error to error handler
                 return;
             }
 
+            // Server specific message
             if (parsed_message.event == 'ws:message') {
-                wss.emit(parsed_message.event, parsed_message.data);
-                return;
-            } else {
-                ws.emit(parsed_message.event, 'dsfasdf');
+                wss.emit('ws:message', parsed_message.data);
                 return;
             }
+
+            // Socket specific message
+            ws.emit(parsed_message.event, parsed_message.data);
+
+            return;
         });
 
         ws.on('close', () => {
@@ -68,8 +78,7 @@ wss.on('connection', async (ws, request) => {
             removeClient(ws);
         });
     } catch (error) {
-        ws.send('Error occured');
-        ws.close();
+        // ws.close();
         wss.emit('error', error)
     }
 });
@@ -80,8 +89,17 @@ wss.on('ws:message', (message) => {
 });
 
 wss.on('error', (error) => {
-    console.log('Error occured')
-    console.log(error);
+    if (client != null && client.readyState == WebSocketServer.OPEN) {
+        const data = stringify({
+            data: "Error occured",
+            event: "backend:message"
+        })
+
+        client.send(data)
+        client.close()
+    }
+
+    console.log('[err] ' + error);
 });
 
 module.exports = wss;

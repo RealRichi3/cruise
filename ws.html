@@ -14,6 +14,7 @@
     <button class="start-ws">Start WebSocket</button>
     <button class="send-mesage">Send Message</button>
     <button class="go-online">Go online</button>
+    <button class="get-location">Get Location</button>
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
     <!-- Axios -->
@@ -36,23 +37,19 @@
             wss.broadcast('ws:message', "Hi from the client")
         })
 
-        goOnlineButton.addEventListener('click', () => {
-            const data = {
-                vehicleId: "63be133f848bf086034c3462",
-                status: "online"
-            }
-            wss.broadcast('vehicle:goonline', "sdfj;ladjfk")
-        })
     </script>
 
     <!-- Utils -->
     <script>
         function parseData(data) {
             try {
-                return JSON.parse(data);
+                const res = JSON.parse(data);
+                res.message_type = 'server'
+
+                return res;
             } catch (error) {
                 if (error instanceof SyntaxError) {
-                    return data;
+                    return null;
                 }
                 throw new Error(error);
             }
@@ -92,35 +89,94 @@
             }
         }
     </script>
-    
-    <!-- Socket Event handlers -->
+
+    <!-- Location -->
     <script>
-        const access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzYWUxYTI0ZDcxMDc0MTg1NTBlMjFhOCIsImVtYWlsIjoiY3J1aXNlcmlkZXI4QGdtYWlsLmNvbSIsInJvbGUiOiJyaWRlciIsInN0YXR1cyI6eyJfaWQiOiI2M2FlMWEyNGQ3MTA3NDE4NTUwZTIxYTkiLCJ1c2VyIjoiNjNhZTFhMjRkNzEwNzQxODU1MGUyMWE4IiwiaXNWZXJpZmllZCI6dHJ1ZSwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTI6MjAuNzkwWiIsInVwZGF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTQ6MDEuMTk5WiIsIl9fdiI6MH0sImlhdCI6MTY3MzQzNDk3OSwiZXhwIjoxNjczNDU2NTc5fQ.MJJaE1LK7_O2Lq7d7toOAnayBC4j4DHjqdPXOrwQ3R8"
-        let wss = new WebSocket("ws://localhost:5000/ws", [access_token]);
+        const locationButton = document.querySelector('.get-location')
 
-        wss.onopen = () => {
-            console.log('Connected to server');
-        }
-
-        wss.onmessage = wsWrapper((info) => {
-            let req_data = info.data
-            const parsed_data = parseData(info.data)
-
-            if (typeof parsed_data === 'object') {
-                req_data = parsed_data
-            }
-
-            wss.emit('backend:message', req_data)
+        locationButton.addEventListener('click', () => {
+            getLocation().then((res) => {
+                console.log(res)
+            }).catch((err) => {
+                console.log(err)
+            })
         })
 
-        wss.addEventListener('frontend:message', wsWrapper((data) => {
-            console.log('[msg] self: ' + data.detail);
-        }))
+        function getLocation() {
+            return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))
+        }
+    </script>
 
-        wss.addEventListener('backend:message', wsWrapper((data) => {
-            console.log('[msg] backend: ' + data.detail);
-        }))
+    <!-- Socket Event handlers -->
+    <script>
+        const access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzYWUxYTI0ZDcxMDc0MTg1NTBlMjFhOCIsImVtYWlsIjoiY3J1aXNlcmlkZXI4QGdtYWlsLmNvbSIsInJvbGUiOiJyaWRlciIsInN0YXR1cyI6eyJfaWQiOiI2M2FlMWEyNGQ3MTA3NDE4NTUwZTIxYTkiLCJ1c2VyIjoiNjNhZTFhMjRkNzEwNzQxODU1MGUyMWE4IiwiaXNWZXJpZmllZCI6dHJ1ZSwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTI6MjAuNzkwWiIsInVwZGF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTQ6MDEuMTk5WiIsIl9fdiI6MH0sImlhdCI6MTY3MzQ2MTc1MCwiZXhwIjoxNjczNDgzMzUwfQ.-t4ahXlF8Rm6sn2tHjA1iFQLH6vqMySBGEtsoZdeeuM"
 
+        let wss;
+
+        function start() {
+            wss = new WebSocket("ws://localhost:5000/ws", [access_token]);
+            globalThis.wss = wss
+
+            wss.onopen = () => {
+                console.log('Connected to server');
+            }
+
+            wss.onmessage = wsWrapper((info) => {
+                let req_data = info.data
+                const parsed_data = parseData(info.data)
+                console.log(parsed_data)
+
+                // If stringified JSON, parseData will return an object with message_type = 'server'
+                if (parsed_data?.message_type === 'server') {
+                    // Check if event is specified
+                    if (parsed_data.event) {
+                        wss.emit(parsed_data.event, parsed_data.data)
+                        return
+                    }
+
+                    wss.emit('backend:message', parsed_data)
+                    return
+                }
+
+                wss.emit('backend:message', req_data)
+            })
+
+            wss.addEventListener('frontend:message', wsWrapper((data) => {
+                console.log('[msg] self: ' + data.detail);
+            }))
+
+            wss.addEventListener('backend:message', wsWrapper((data) => {
+                console.log('[msg] backend: ' + data.detail);
+            }))
+
+            wss.onclose = () => {
+                console.log('Connection closed');
+                setTimeout(start, 1000)
+            }
+        }
+
+        start()
+
+    </script>
+
+    <!-- Socket Controls -->
+    <script>
+        goOnlineButton.addEventListener('click', goOnline)
+
+        async function goOnline() {
+            const { longitude, latitude } = (await getLocation()).coords
+
+            console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
+            const data = {
+                vehicle_id: "63be133f848bf086034c3462",
+                location: {
+                    type: "Point",
+                    coordinates: [longitude, latitude]
+                },
+            }
+
+            wss.broadcast('vehicle:goonline', data)
+        }
     </script>
 
     <!-- Error handler -->

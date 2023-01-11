@@ -7,17 +7,15 @@ class VehicleSockets {
     constructor(client, sock) {
         this.client = client;
         this.socket = sock;
-        this.name = 'VehicleSockets';
     }
 
     init() {
         const self = this;
         this.client.on('vehicle:goonline', socketAsyncWrapper(async (data) => {
-            console.log('Vehicle going online');
-            console.log(this.name);
-
+            console.log('Vehicle going online')
             const { vehicle_id, location } = data;
 
+            console.log(data)
             const vehicle = await activateForBooking(vehicle_id);
             await saveNewLocation(vehicle_id, location);
             // self.socket.emit('error', 'Vehicle going online')
