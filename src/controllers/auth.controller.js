@@ -176,7 +176,7 @@ const userSignup = async (req, res, next) => {
     if (role === 'superadmin') return next(new BadRequestError('Invalid role'));
 
     const existing_user = await User.findOne({ email }).populate('status');
-
+    
     // Check if user already exists
     if (existing_user) {
         await handleExistingUser(existing_user)(req, res, next);

@@ -4,6 +4,7 @@ const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = 
 const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
 const { stringify } = require('../utils/json');
 const Vehicle = require('../../models/vehicle.model');
+const { Rider } = require('../../models/users.model');
 
 class RiderSockets {
     constructor(client, sock) {
@@ -17,22 +18,16 @@ class RiderSockets {
         // Make vehicle available for booking
         this.client.on('rider:goonline', socketAsyncWrapper(async (data) => {
             const { vehicle_id, location } = data;
-            const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
-            console.log(vehicle)
 
+            const rider = await Rider.findOne({ user: self.user.id })
+            if (!rider) throw new Error('Unauthorized Error: User is not a rider');
+
+            const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
             if (!vehicle) throw new Error('BadRequest Error: Vehicle not found');
 
+            await rider.goOnline(vehicle_id).catch(err => { throw err });
+
             // Check if user owns the vehicle
-            if (vehicle.rider.user != self.user.id) {
-                throw new Error('Unauthorized Error: You are not the owner of this vehicle');
-            }
-
-            if (vehicle.rider.is_online) return;
-
-            vehicle.rider.is_online = true;
-            vehicle.rider.save();
-            vehicle.updateOne({ booking_status: 'available' })
-
             const vehicle_location = await saveNewLocation(vehicle.rider, location);
 
             self.send(stringify({
