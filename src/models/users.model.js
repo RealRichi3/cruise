@@ -178,12 +178,24 @@ riderSchema.methods.goOnline = function (vehicle_id = null) {
             this.isOnline = true; // set rider to online
 
             // Set current vehicle
-            this.currentVehicle = vehicle_id || this.defaultVehicle;
+            this.currentVehicle = vehicle_id || this.currentVehicle || this.defaultVehicle;
 
             this.save()
                 .then((rider) => resolve(rider)).catch((error) => reject(error));
         } catch (error) {
             reject(error)
+        }
+    })
+}
+
+riderSchema.methods.goOffline = function () {
+    return new Promise((resolve, reject) => {
+        try {
+            this.isOnline = false; // set rider to offline
+
+            this.save()
+        } catch (error) {
+            throw error;
         }
     })
 }

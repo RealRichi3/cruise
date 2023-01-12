@@ -40,11 +40,21 @@ class RiderSockets {
 
         }, this.socket));
 
-        this.client.on('rider:gooffline', async function (data) {
-            console.log('Vehicle going offline');
-            const { vehicle_id } = data;
-            const vehicle = await deactivateForBooking(vehicle_id);
-        });
+        this.client.on('rider:gooffline', socketAsyncWrapper(async (data) => {
+            const rider = await Rider.findOne({ user: self.user.id })
+            if (!rider) throw new Error('Unauthorized Error: User is not a rider');
+
+            await rider.goOffline().catch(err => { throw err });
+
+            await deleteVehicleLocation(rider.currentVehicle);
+
+            self.send(stringify({
+                event: data.event,
+                data: {
+                    vehicle,
+                }
+            }))
+        }));
 
         this.client.on('rider:update-location', async function (data) {
             const { location } = data;

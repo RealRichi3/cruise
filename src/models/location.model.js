@@ -29,13 +29,13 @@ location.pre('validate', async function () {
     }
 })
 
-const Location = mongoose.model('Location', location);
-
 location.methods.updateCoordinates = async function (long, lat) {
     this.location.coordinates = [long, lat];
     await this.save();
 
     return this
 };
+
+const Location = mongoose.model('Location', location);
 
 module.exports = Location;
