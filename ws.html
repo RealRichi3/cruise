@@ -14,6 +14,7 @@
     <button class="start-ws">Start WebSocket</button>
     <button class="send-mesage">Send Message</button>
     <button class="go-online">Go online</button>
+    <button class="go-offline">Go offline</button>
     <button class="get-location">Get Location</button>
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
@@ -27,6 +28,7 @@
         const restartWsButton = document.querySelector('.start-ws');
         const sendMessageButton = document.querySelector('.send-mesage');
         const goOnlineButton = document.querySelector('.go-online');
+        const goOfflineButton = document.querySelector('.go-offline');
 
         websocketButton.addEventListener('click', () => {
             wss.broadcast('ws:message', "Hi from the client")
@@ -109,7 +111,7 @@
 
     <!-- Socket Event handlers -->
     <script>
-        const access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzYWUxYTI0ZDcxMDc0MTg1NTBlMjFhOCIsImVtYWlsIjoiY3J1aXNlcmlkZXI4QGdtYWlsLmNvbSIsInJvbGUiOiJyaWRlciIsInN0YXR1cyI6eyJfaWQiOiI2M2FlMWEyNGQ3MTA3NDE4NTUwZTIxYTkiLCJ1c2VyIjoiNjNhZTFhMjRkNzEwNzQxODU1MGUyMWE4IiwiaXNWZXJpZmllZCI6dHJ1ZSwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTI6MjAuNzkwWiIsInVwZGF0ZWRBdCI6IjIwMjItMTItMjlUMjI6NTQ6MDEuMTk5WiIsIl9fdiI6MH0sImlhdCI6MTY3MzQ2MTc1MCwiZXhwIjoxNjczNDgzMzUwfQ.-t4ahXlF8Rm6sn2tHjA1iFQLH6vqMySBGEtsoZdeeuM"
+        const access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzYmY1N2NkODRkZGE1MjZhN2JjMTM5MCIsImVtYWlsIjoiY3J1aXNlcmlkZXI5QGdtYWlsLmNvbSIsInJvbGUiOiJyaWRlciIsInN0YXR1cyI6eyJfaWQiOiI2M2JmNTdjZDg0ZGRhNTI2YTdiYzEzOTEiLCJ1c2VyIjoiNjNiZjU3Y2Q4NGRkYTUyNmE3YmMxMzkwIiwiaXNWZXJpZmllZCI6dHJ1ZSwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjMtMDEtMTJUMDA6NDM6NTcuNjIyWiIsInVwZGF0ZWRBdCI6IjIwMjMtMDEtMTJUMDA6NDQ6NTcuNzQzWiIsIl9fdiI6MH0sImlhdCI6MTY3MzQ4NDMxMCwiZXhwIjoxNjczNTA1OTEwfQ.vED3o7RiM7GmJsCHYhkFzysOyMe1b9oLNKUex1SgTU4"
 
         let wss;
 
@@ -122,9 +124,10 @@
             }
 
             wss.onmessage = wsWrapper((info) => {
+                console.log('----------------------')
                 let req_data = info.data
                 const parsed_data = parseData(info.data)
-                console.log(parsed_data)
+                // console.log(parsed_data)
 
                 // If stringified JSON, parseData will return an object with message_type = 'server'
                 if (parsed_data?.message_type === 'server') {
@@ -146,7 +149,8 @@
             }))
 
             wss.addEventListener('backend:message', wsWrapper((data) => {
-                console.log('[msg] backend: ' + data.detail);
+                console.log('[msg] backend: ')
+                console.log(data.detail);
             }))
 
             wss.onclose = () => {
@@ -159,23 +163,39 @@
 
     </script>
 
+    <script>
+        wss.addEventListener('vehicle:goonline', (data) => {
+            console.log(data)
+            console.log('[vehicle:goonline] ' + data.detail);
+        })
+    </script>
+
     <!-- Socket Controls -->
     <script>
         goOnlineButton.addEventListener('click', goOnline)
-
+        goOfflineButton.addEventListener('click', goOffline)
+        
         async function goOnline() {
             const { longitude, latitude } = (await getLocation()).coords
 
             console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
             const data = {
-                vehicle_id: "63be133f848bf086034c3462",
+                vehicle_id: "63bf5de1e73732712f4a364a",
                 location: {
                     type: "Point",
                     coordinates: [longitude, latitude]
                 },
             }
 
-            wss.broadcast('vehicle:goonline', data)
+            wss.broadcast('rider:goonline', data)
+        }
+
+        async function goOffline () {
+            const data = {
+                vehicle_id: "63bf5de1e73732712f4a364a",
+            }
+
+            wss.broadcast('rider:gooffline', data)
         }
     </script>
 

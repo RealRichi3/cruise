@@ -15,7 +15,7 @@ class RiderSockets {
     init() {
         const self = this.client;
 
-        // Make vehicle available for booking
+        // Change rider status to online
         this.client.on('rider:goonline', socketAsyncWrapper(async (data) => {
             const { vehicle_id, location } = data;
 
@@ -40,13 +40,14 @@ class RiderSockets {
 
         }, this.socket));
 
+        // Change rider status to offline
         this.client.on('rider:gooffline', socketAsyncWrapper(async (data) => {
             const rider = await Rider.findOne({ user: self.user.id })
             if (!rider) throw new Error('Unauthorized Error: User is not a rider');
 
             await rider.goOffline().catch(err => { throw err });
 
-            await deleteVehicleLocation(rider.currentVehicle);
+            const vehicle = await deleteVehicleLocation(rider.currentVehicle);
 
             self.send(stringify({
                 event: data.event,
@@ -54,7 +55,7 @@ class RiderSockets {
                     vehicle,
                 }
             }))
-        }));
+        }, this.socket));
 
         this.client.on('rider:update-location', async function (data) {
             const { location } = data;

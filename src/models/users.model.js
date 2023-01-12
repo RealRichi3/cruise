@@ -193,9 +193,9 @@ riderSchema.methods.goOffline = function () {
         try {
             this.isOnline = false; // set rider to offline
 
-            this.save()
+            this.save().then((rider) => resolve(rider)).catch((error) => reject(error));
         } catch (error) {
-            throw error;
+            reject(error)
         }
     })
 }
