@@ -131,14 +131,27 @@ enduserSchema.pre('validate', async function (next) {
 });
 
 riderSchema.pre('validate', async function (next) {
-    if (this.isNew) {
-        const wallet = new Wallet({ user: this.user._id, rider: this._id });
-        this.wallet = wallet._id;
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (this.isNew) {
+                const wallet = new Wallet({ user: this.user._id, rider: this._id });
+                this.wallet = wallet._id;
+                await wallet.save();
+            }
 
-        await wallet.save();
-    }
+            // Check if vehicle belongs to rider
+            if ((this.isModified('defaultVehicle') && this.defaultVehicle) ||
+                (this.isModified('currentVehicle') && this.currentVehicle)) {
+                if (!this.vehicles.includes(this.defaultVehicle) || !this.vehicles.includes(this.currentVehicle)) {
+                    throw new Error("Vehicle doesn't belong to rider");
+                }
+            }
 
-    next();
+            next();
+        } catch (error) {
+            reject(error);
+        }
+    });
 });
 
 // Methods
@@ -159,18 +172,13 @@ riderSchema.methods.addVehicle = function (vehicle) {
     })
 }
 
-riderSchema.methods.goOnline = function (vehicle = null) {
+riderSchema.methods.goOnline = function (vehicle_id = null) {
     return new Promise((resolve, reject) => {
         try {
             this.isOnline = true; // set rider to online
-            const vehicles = this.populate('vehicles currentVehicle defaultVehicle')
-                .then((rider) => {
-                    console.log(rider)
-                    this.currentVehicle = vehicle || this.defaultVehicle;
-                }).catch((error) => reject(error))
 
             // Set current vehicle
-            this.currentVehicle = vehicle || this.defaultVehicle;
+            this.currentVehicle = vehicle_id || this.defaultVehicle;
 
             this.save()
                 .then((rider) => resolve(rider)).catch((error) => reject(error));
