@@ -8,7 +8,7 @@ const express_server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer.Server({ server: express_server, path: '/ws' });
 
-const { VehicleSockets } = require('./ws/event-handlers/vehicle.events');
+const { RiderSockets } = require('./ws/event-handlers/rider.events');
 const { authMiddleware } = require("./ws/middlewares/auth.ws");
 const { toJSON, stringify } = require("./ws/utils/json");
 const { removeClient } = require('./ws/utils/clients');
@@ -29,7 +29,7 @@ wss.on('connection', async (ws, request) => {
         }
 
         // Init event handlers
-        new VehicleSockets(ws, wss).init()
+        new RiderSockets(ws, wss).init()
 
         console.log('new client connected')
         ws.send('Connection established');
@@ -83,11 +83,21 @@ wss.on('connection', async (ws, request) => {
     }
 });
 
+// Listen for server messages
 wss.on('ws:message', (message) => {
-    console.log('frontend: ' + message);
+    console.log('[msg] frontend: ' + message);
+
+    client.send(JSON.stringify({
+        event: 'backend:message',
+        data: "Message received"
+    }))
+
     return
 });
 
+/**
+ * @todo - Add cases for different error types
+ */
 wss.on('error', (error) => {
     if (client != null && client.readyState == WebSocketServer.OPEN) {
         const data = stringify({
@@ -96,10 +106,10 @@ wss.on('error', (error) => {
         })
 
         client.send(data)
-        client.close()
+        // client.close()
     }
 
-    console.log('[err] ' + error);
+    console.log(error);
 });
 
 module.exports = wss;
