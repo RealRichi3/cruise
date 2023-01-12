@@ -33,7 +33,7 @@ class RiderSockets {
             vehicle.rider.save();
             vehicle.updateOne({ booking_status: 'available' })
 
-            const vehicle_location = await saveNewLocation(vehicle_id, location);
+            const vehicle_location = await saveNewLocation(vehicle.rider, location);
 
             self.send(stringify({
                 event: data.event,
