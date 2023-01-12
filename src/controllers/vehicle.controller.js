@@ -34,16 +34,13 @@ const addVehicle = async (req, res, next) => {
         plate_number,
     });
 
-    const rider = await Rider.findOneAndUpdate(
-        { user: req.user.id },
-        { $push: { vehicles: vehicle._id } },
-        { new: true }
-    ).populate('vehicles');
-
+    const rider = await Rider.findOne({ user: req.user.id }).populate('vehicles');
     if (!rider) {
         return next(new UnauthorizedError('User is not a rider'));
     }
 
+    await rider.addVehicle(vehicle);
+    
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();
@@ -154,6 +151,8 @@ const updateVehicleData = async (req, res, next) => {
  * @throws {BadRequestError} - If the vehicle id is invalid
  * @throws {UnauthorizedError} - If the user is not authorized to perform this action
  * @throws {InternalServerError} - If there is an error while removing the vehicle
+ * 
+ * @todo - If vehicle is defaultVehicle or currentVehicle, set values to null
  * */
 const removeVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
@@ -281,7 +280,7 @@ const deactivateVehicle = async (req, res, next) => {
 };
 
 const activateForBooking =  function (vehicle_id) {
-    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: true });
+    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: true }, );
 };
 
 const deactivateForBooking = function (vehicle_id) {

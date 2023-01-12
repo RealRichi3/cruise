@@ -21,8 +21,7 @@ const vehicleSchema = new schema({
         ref: 'VehicleStatus',
         required: true
     },
-    actveRide: { type: schema.Types.ObjectId, ref: 'Ride' },
-    availableForBooking: { type: Boolean, default: false },
+    actve_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
 });
 
 vehicleSchema.virtual('location', {
@@ -42,6 +41,18 @@ vehicleSchema.pre('validate', async function (next) {
 
     next();
 });
+
+vehicleSchema.methods.updateBookingStatus = function (status) {
+    return new Promise((resolve, reject) => {
+        try {
+            this.booking_status = status;
+            this.save().then(() => { resolve(this) });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
 
 const Vehicle = mongoose.model('Vehicle', vehicleSchema);
 
