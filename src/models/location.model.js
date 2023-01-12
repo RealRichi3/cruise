@@ -22,19 +22,14 @@ location.index({ location: '2dsphere' });
 
 location.pre('validate', async function () {
     if (this.isNew) {
-        console.log('insidethe loc')
-        console.log('insidethe loc')
-        console.log(this)
         const rider = await Rider.findById(this.rider);
         if (!rider) { throw new Error('Rider not found') }
 
-        console.log(rider)
         this.vehicle = rider.currentVehicle;
     }
 })
 
 const Location = mongoose.model('Location', location);
-
 
 location.methods.updateCoordinates = async function (long, lat) {
     this.location.coordinates = [long, lat];
