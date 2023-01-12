@@ -55,6 +55,8 @@ const riderSchema = new schema(
                 ref: 'Vehicle',
             },
         ],
+        defaultVehicle: { type: schema.Types.ObjectId, ref: 'Vehicle' },
+        currentVehicle: { type: schema.Types.ObjectId, ref: 'Vehicle' },
         removed_vehicles: [{ type: schema.Types.ObjectId, ref: 'Vehicle' }],
         driver_license: {
             type: String,
@@ -70,6 +72,8 @@ const riderSchema = new schema(
             enum: ['active', 'inactive', 'suspended'],
         },
         hasVehicle: { type: Boolean, default: false },
+        isOnline: { type: Boolean, default: false },
+        rideStatus: { type: String, default: 'available', enum: ['available', 'unavailable'] },
     },
     { timestamps: true }
 );
@@ -136,6 +140,45 @@ riderSchema.pre('validate', async function (next) {
 
     next();
 });
+
+// Methods
+riderSchema.methods.addVehicle = function (vehicle) {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!this.defaultVehicle) {
+                this.defaultVehicle = vehicle;
+                this.currentVehicle = vehicle;
+            }
+
+            this.vehicles.push(vehicle);
+
+            this.save().then((rider) => resolve(rider)).catch((error) => reject(error));
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
+
+riderSchema.methods.goOnline = function (vehicle = null) {
+    return new Promise((resolve, reject) => {
+        try {
+            this.isOnline = true; // set rider to online
+            const vehicles = this.populate('vehicles currentVehicle defaultVehicle')
+                .then((rider) => {
+                    console.log(rider)
+                    this.currentVehicle = vehicle || this.defaultVehicle;
+                }).catch((error) => reject(error))
+
+            // Set current vehicle
+            this.currentVehicle = vehicle || this.defaultVehicle;
+
+            this.save()
+                .then((rider) => resolve(rider)).catch((error) => reject(error));
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
 
 const Status = mongoose.model('Status', statusSchema);
 const User = mongoose.model('User', userSchema);
