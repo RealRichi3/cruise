@@ -3,9 +3,9 @@ const Schema = mongoose.Schema;
 const { Rider } = require('./users.model')
 
 
-const departurOrArrivalLocationShema = new Schema({
-    name: { type: String },
-    type: { type: String, enum: ['departure', 'arrival'], required: true },
+const departurOrDestinationLocationShema = new Schema({
+    address: { type: String, required: true },
+    type: { type: String, enum: ['departure', 'destination'], required: true },
     location: {
         type: new Schema({
             name: { type: String },
@@ -19,11 +19,12 @@ const departurOrArrivalLocationShema = new Schema({
                 required: true,
             },
         }),
+        required: true,
     },
     createdAt: { type: Date, default: Date.now },
 });
 
-const location = new Schema({
+const riderLocationSchema = new Schema({
     vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
     rider: { type: Schema.Types.ObjectId, ref: 'Rider' },
     location: {
@@ -39,13 +40,14 @@ const location = new Schema({
                 required: true,
             },
         }),
+        required: true,
     },
     createdAt: { type: Date, default: Date.now },
 });
 
-location.index({ location: '2dsphere' });
+riderLocationSchema.index({ location: '2dsphere' });
 
-location.pre('validate', async function () {
+riderLocationSchema.pre('validate', async function () {
     if (this.isNew) {
         const rider = await Rider.findById(this.rider);
         if (!rider) { throw new Error('Rider not found') }
@@ -54,14 +56,14 @@ location.pre('validate', async function () {
     }
 })
 
-location.methods.updateCoordinates = async function (long, lat) {
+riderLocationSchema.methods.updateCoordinates = async function (long, lat) {
     this.location.coordinates = [long, lat];
     await this.save();
 
     return this
 };
 
-const Location = mongoose.model('Location', location);
-const DepartureOrArrivalLocation = mongoose.model('DepartureOrArrivalLocation', departurOrArrivalLocationShema);
+const RiderLocation = mongoose.model('RiderLocation', riderLocationSchema);
+const DepartureOrDestination = mongoose.model('DepartureOrDestination', departurOrDestinationLocationShema);
 
-module.exports = { Location, DepartureOrArrivalLocation };
+module.exports = { RiderLocation, DepartureOrDestination };
