@@ -1,4 +1,4 @@
-const { BadRequestError } = require('../utils/errors');
+const { BadRequestError, UnauthenticatedError, UnauthorizedError } = require('../utils/errors');
 const {
     enduserSignup,
     riderSignup,
@@ -140,6 +140,11 @@ const activateUserAccount = async (req, res, next) => {
 
     const user = await User.findOne({ email }).populate('status');
 
+    // Check if user is superadmin
+    const restricted_roles = ['superadmin'];
+    if (restricted_roles.includes(user.role)) {
+        return next(new UnauthorizedError('You cannot activate this user'));
+    }
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
 
