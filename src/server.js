@@ -1,10 +1,19 @@
-if (process.env.NODE_ENV) {
-    require('dotenv').config({
-        path: `${__dirname}/.env.${process.env.NODE_ENV}`,
-    });
-} else {
-    require('dotenv').config({ path: `${__dirname}/.env` });
+let path;
+
+switch (process.env.NODE_ENV) {
+    case 'prod':
+        path = `/etc/secrets/.env.prod`;
+        break;
+    case 'dev':
+        path = `${__dirname}/.env.dev`;
+        break;
+    case 'test':
+        path = `${__dirname}/.env.test`;
+    default:
+        path = `${__dirname}/.env`;
 }
+
+require('dotenv').config({ path });
 
 const { MONGO_URI, PORT } = require('./utils/config');
 const app = require('./app');
