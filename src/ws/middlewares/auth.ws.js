@@ -14,6 +14,7 @@ async function authMiddleware(socket, request) {
                     return error;
                 } else {
                     socket.user = decoded;
+                    socket.id = decoded.email.split('@')[0];
                     return socket;
                 }
             }

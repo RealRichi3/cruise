@@ -1,12 +1,19 @@
-wsClients = []
+wsClients = {
+    // email: connection
+}
 
 function removeClient(connection) {
-    const index = wsClients.indexOf(connection);
-    if (index > -1) {
-        wsClients.splice(index, 1);
-    }
+    console.log('Removing client: ', connection.id);
+    delete wsClients[connection.userid]
+}
+
+function addClient(connection) {
+    console.log('Adding client: ', connection.id);
+    wsClients[connection.id] = connection;
 }
 
 module.exports = {
-    removeClient
+    removeClient,
+    addClient,
+    wsClients
 }
