@@ -289,7 +289,7 @@ const riderSignup = async (req, res, next) => {
     let user, vehicle, rider;
     await session.withTransaction(async () => {
         // Create user
-        user = await User.create([{ ...personal_details, role }], {
+        user = await User.create([{ ...personal_details, role: "rider"}], {
             session,
         }).then((user) => user[0]);
 
@@ -309,6 +309,8 @@ const riderSignup = async (req, res, next) => {
             ).then((vehicle) => {
                 return vehicle[0];
             });
+            
+            await rider.addVehicle(vehicle, session);
 
             await rider.updateOne(
                 { $push: { vehicles: vehicle._id } },
