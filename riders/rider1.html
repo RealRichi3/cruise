@@ -15,6 +15,7 @@
     <button class="send-mesage">Send Message</button>
     <button class="go-online">Go online</button>
     <button class="go-offline">Go offline</button>
+    <button class="add-vehicle">Add Vehicle</button>
     <button class="get-location">Get Location</button>
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
@@ -29,6 +30,26 @@
         const sendMessageButton = document.querySelector('.send-mesage');
         const goOnlineButton = document.querySelector('.go-online');
         const goOfflineButton = document.querySelector('.go-offline');
+        const addVehicleButton = document.querySelector('.add-vehicle');
+
+        addVehicleButton.addEventListener('click', () => {
+            axios.post('http://localhost:5000/api/v1/vehicle/add', {
+                name: 'Toyota',
+                model: 'Corolla',
+                year: 2010,
+                color: 'Black',
+                manufacturer: 'Toyota',
+                plate_number: 'KCK 123',
+            }, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem(`access_token:${email}`)}`
+                }
+            }).then((res) => {
+                console.log(res.data)
+            }).catch((err) => {
+                console.log(err)
+            })
+        })
 
         websocketButton.addEventListener('click', () => {
             wss.broadcast('ws:message', "Hi from the client")
@@ -168,6 +189,22 @@
             wss.addEventListener('backend:message', wsWrapper((data) => {
                 console.log('[msg] backend: ')
                 console.log(data.detail);
+            }))
+
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
             }))
 
             wss.onclose = () => {
