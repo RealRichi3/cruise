@@ -1,9 +1,9 @@
-const Location = require('../models/location.model')
+const { RiderLocation } = require('../models/location.model')
 
 const saveNewLocation = async (rider_id, location) => {
     const [longitude, latitude] = location.coordinates
-    
-    const new_location = await Location.create({
+
+    const new_location = await RiderLocation.create({
         rider: rider_id,
         location: {
             type: 'Point',
@@ -17,7 +17,7 @@ const saveNewLocation = async (rider_id, location) => {
 };
 
 const updateLocation = async (location_id, long, lat) => {
-    const location = await Location.findById(location_id);
+    const location = await RiderLocation.findById(location_id);
 
     if (!location) { return null; }
 
@@ -27,7 +27,7 @@ const updateLocation = async (location_id, long, lat) => {
 }
 
 const getLocation = async (vehicleId) => {
-    const location = await Location.findOne({ vehicle: vehicleId })
+    const location = await RiderLocation.findOne({ vehicle: vehicleId })
 
     if (!location) { return null; }
 
@@ -35,7 +35,7 @@ const getLocation = async (vehicleId) => {
 }
 
 const deleteVehicleLocation = async (vehicle_id) => {
-    const location = await Location.findOneAndDelete({ vehicle: vehicle_id })
+    const location = await RiderLocation.findOneAndDelete({ vehicle: vehicle_id })
 
     if (!location) { return null; }
 
