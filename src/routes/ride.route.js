@@ -20,6 +20,6 @@ const { basicAuth } = require('../middlewares/auth');
 const rbacMiddleware = require('../middlewares/rbac');
 
 router
-    .post('/book', basicAuth, rbacMiddleware(['rider']), bookRide)
+    .post('/book', basicAuth(), rbacMiddleware('rider'), bookRide)
 
 module.exports = router;
