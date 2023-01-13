@@ -2,7 +2,7 @@ const { activateForBooking, deactivateForBooking } = require('../../controllers/
 
 const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../utils/location');
 const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
-const { stringify } = require('../utils/json');
+const { stringify } = require('../../utils/json');
 const Vehicle = require('../../models/vehicle.model');
 const { Rider } = require('../../models/users.model');
 
