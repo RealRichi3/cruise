@@ -17,18 +17,20 @@ class RiderSockets {
 
         // Change rider status to online
         this.client.on('rider:goonline', socketAsyncWrapper(async (data) => {
+            console.log(data)
             const { vehicle_id, location } = data;
 
             const rider = await Rider.findOne({ user: self.user.id })
             if (!rider) throw new Error('Unauthorized Error: User is not a rider');
-
+            console.log(rider)
             const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
-            if (!vehicle) throw new Error('BadRequest Error: Vehicle not found');
+            if (!vehicle) {// use defaultVehicle;
+                await rider.goOnline().catch(err => { throw err });
+            } else {
+                await rider.goOnline(vehicle_id).catch(err => { throw err });
+            }
 
-            await rider.goOnline(vehicle_id).catch(err => { throw err });
-
-            // Check if user owns the vehicle
-            const vehicle_location = await saveNewLocation(vehicle.rider, location);
+            const vehicle_location = await saveNewLocation(rider._id, location);
 
             self.send(stringify({
                 event: data.event,

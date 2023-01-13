@@ -113,7 +113,9 @@ userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
         // status.isVerified = this.role == 'enduser' ? true : false;
-        status.isVerified = true; status.isActive = true;
+        if (process.env.NODE_ENV == 'dev') {
+            status.isVerified = true; status.isActive = true;
+        }
 
         this.status = status._id;
 
@@ -157,7 +159,7 @@ riderSchema.pre('validate', async function (next) {
 
             if (this.vehicle && this.vehicle.length > 0) this.hasVehicle = true;
             else this.hasVehicle = false;
-            
+
             next();
         } catch (error) {
             reject(error);
@@ -223,14 +225,31 @@ riderSchema.methods.goOnline = function (vehicle_id = null) {
             console.log(this)
             this.isOnline = true; // set rider to online
 
+            //  bind this
+            const setCurrVehicle = (vehicle_id) => {
+                this.depopulate('currentVehicle defaultVehicle');
+                this.currentVehicle = vehicle_id || this.currentVehicle || this.defaultVehicle;
+            }
             // Check if rider owns vehicle
             this.populate('vehicles')
             const vehicle = this.vehicles.find((vehicle) => vehicle._id == vehicle_id);
-            if (!vehicle) throw new Error("Vehicle doesn't belong to rider");
+            if (!vehicle && vehicle_id) throw new Error("Vehicle doesn't belong to rider");
 
-            // Set current vehicle
-            this.depopulate('currentVehicle defaultVehicle');
-            this.currentVehicle = vehicle_id || this.currentVehicle || this.defaultVehicle;
+            if (!vehicle_id) {
+                if (!this.currentVehicle) {
+                    if (!this.defaultVehicle) {
+                        if (this.vehicles.length > 0) {
+                            setCurrVehicle(this.vehicles[0]._id);
+                        } else {
+                            throw new Error("Rider has no vehicle");
+                        }
+                    } else {
+                        setCurrVehicle(this.defaultVehicle);
+                    }
+                } else {
+                    setCurrVehicle(this.currentVehicle);
+                }
+            }
 
             this.save()
                 .then((rider) => resolve(rider)).catch((error) => reject(error));
