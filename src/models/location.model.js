@@ -2,12 +2,37 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const { Rider } = require('./users.model')
 
-const location = new Schema({
-    vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle', required: true },
-    rider: { type: Schema.Types.ObjectId, ref: 'Rider', required: true },
+
+const departurOrArrivalLocationShema = new Schema({
+    name: { type: String },
+    type: { type: String, enum: ['departure', 'arrival'], required: true },
     location: {
         type: new Schema({
-            type: { type: String, default: 'Point' },
+            name: { type: String },
+            type: {
+                type: String,
+                default: 'Point',
+            },
+            coordinates: {
+                type: [Number],
+                default: [0, 0],    // [longitude, latitude]
+                required: true,
+            },
+        }),
+    },
+    createdAt: { type: Date, default: Date.now },
+});
+
+const location = new Schema({
+    vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
+    rider: { type: Schema.Types.ObjectId, ref: 'Rider' },
+    location: {
+        type: new Schema({
+            name: { type: String },
+            type: {
+                type: String,
+                default: 'Point',
+            },
             coordinates: {
                 type: [Number],
                 default: [0, 0],    // [longitude, latitude]
@@ -37,5 +62,6 @@ location.methods.updateCoordinates = async function (long, lat) {
 };
 
 const Location = mongoose.model('Location', location);
+const DepartureOrArrivalLocation = mongoose.model('DepartureOrArrivalLocation', departurOrArrivalLocationShema);
 
-module.exports = Location;
+module.exports = { Location, DepartureOrArrivalLocation };
