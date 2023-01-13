@@ -155,6 +155,9 @@ riderSchema.pre('validate', async function (next) {
                 }
             }
 
+            if (this.vehicle && this.vehicle.length > 0) this.hasVehicle = true;
+            else this.hasVehicle = false;
+            
             next();
         } catch (error) {
             reject(error);
@@ -184,11 +187,13 @@ riderSchema.methods.addVehicle = function (vehicle, session = null) {
             console.log(this)
             // Check if vehicle belongs to rider
             if (typeof vehicle == 'object') vehicle = vehicle._id;
+            console.log(vehicle)
 
             let vehicleExists;
             if (session) vehicleExists = await Vehicle.findOne({ _id: vehicle, rider: this._id }).session(session);
             else vehicleExists = await Vehicle.findOne({ _id: vehicle, rider: this._id });
 
+            console.log(vehicleExists)
             if (!vehicleExists) throw new Error("Vehicle doesn't belong to rider");
 
             if (!this.defaultVehicle) {
@@ -196,7 +201,10 @@ riderSchema.methods.addVehicle = function (vehicle, session = null) {
                 this.currentVehicle = vehicle;
             }
 
-            this.vehicles.push(vehicle);
+            this.vehicles = this.vehicles.concat([vehicle]);
+            this.hasVehicle = true;
+
+            console.log(this)
 
             if (session) {
                 await this.save({ session }).then((rider) => resolve(rider)).catch((error) => reject(error));
