@@ -113,6 +113,7 @@ userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
         // status.isVerified = this.role == 'enduser' ? true : false;
+        // status.isVerified = true; status.isActive = true;
         if (process.env.NODE_ENV == 'dev') {
             status.isVerified = true; status.isActive = true;
         }
@@ -157,8 +158,6 @@ riderSchema.pre('validate', async function (next) {
                 }
             }
 
-            if (this.vehicle && this.vehicle.length > 0) this.hasVehicle = true;
-            else this.hasVehicle = false;
 
             next();
         } catch (error) {
@@ -171,15 +170,15 @@ riderSchema.pre('save', async function (next) {
     if (this.isModified('vehicles')) {
         if (this.vehicles.length > 0) {
             this.hasVehicle = true;
-        } else {
-            this.hasVehicle = false;
-        }
+        } 
     }
 
     if (!this.defaultVehicle && this.vehicles.length > 0) {
         this.defaultVehicle = this.vehicles[0];
         this.currentVehicle = this.vehicles[0];
     }
+
+    if (this.vehicles && this.vehicles.length > 0) this.hasVehicle = true;
 });
 
 // Methods
@@ -195,7 +194,6 @@ riderSchema.methods.addVehicle = function (vehicle, session = null) {
             if (session) vehicleExists = await Vehicle.findOne({ _id: vehicle, rider: this._id }).session(session);
             else vehicleExists = await Vehicle.findOne({ _id: vehicle, rider: this._id });
 
-            console.log(vehicleExists)
             if (!vehicleExists) throw new Error("Vehicle doesn't belong to rider");
 
             if (!this.defaultVehicle) {
@@ -205,8 +203,6 @@ riderSchema.methods.addVehicle = function (vehicle, session = null) {
 
             this.vehicles = this.vehicles.concat([vehicle]);
             this.hasVehicle = true;
-
-            console.log(this)
 
             if (session) {
                 await this.save({ session }).then((rider) => resolve(rider)).catch((error) => reject(error));
@@ -225,11 +221,11 @@ riderSchema.methods.goOnline = function (vehicle_id = null) {
             console.log(this)
             this.isOnline = true; // set rider to online
 
-            //  bind this
             const setCurrVehicle = (vehicle_id) => {
                 this.depopulate('currentVehicle defaultVehicle');
                 this.currentVehicle = vehicle_id || this.currentVehicle || this.defaultVehicle;
             }
+
             // Check if rider owns vehicle
             this.populate('vehicles')
             const vehicle = this.vehicles.find((vehicle) => vehicle._id == vehicle_id);
