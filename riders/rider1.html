@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
@@ -17,6 +18,15 @@
     <button class="go-offline">Go offline</button>
     <button class="add-vehicle">Add Vehicle</button>
     <button class="get-location">Get Location</button>
+    <!-- confirmation alert window -->
+    <div class="alert show" role="alert">
+        <strong>Success!</strong>
+        <button class="yes">Yes</button>
+        <button class="no">No</button>
+        <button type="button" class="btn-close">X</button>
+    </div>
+    
+    
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
     <!-- Axios -->
@@ -234,7 +244,7 @@
 
             console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
             const data = {
-                vehicle_id: "63bf5de1e73732712f4a364a",
+                // vehicle_id: "63bf5de1e73732712f4a364a",
                 location: {
                     type: "Point",
                     coordinates: [longitude, latitude]
@@ -259,6 +269,9 @@
             console.log('[error] ' + data.detail);
         })
     </script>
+
+    <!-- JS script -->
+    <script src="./js/script.js"></script>
 </body>
 
 </html>
