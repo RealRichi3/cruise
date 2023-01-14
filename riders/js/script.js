@@ -4,10 +4,10 @@ const alert_close = document.querySelector('.btn-close');
 window.onload = () => {
     alert_window.classList.add('hide');
     alert_window.classList.remove('show');
-
 }    
 
 function show_alert() {
+    console.log('show alert')
     alert_window.classList.remove('hide')
     alert_window.classList.add('show');
 

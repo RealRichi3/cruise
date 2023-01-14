@@ -201,6 +201,13 @@
                 console.log(data.detail);
             }))
 
+            wss.addEventListener('ride:request', wsWrapper((data) => {
+                console.log('[ride:request] ')
+                console.log(data.detail);
+
+                show_alert()
+            }))
+
             wss.addEventListener('', wsWrapper((data) => {
 
             }))
