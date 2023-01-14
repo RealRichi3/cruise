@@ -1,5 +1,5 @@
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
-const { wsClients, clientIndexes, clients } = require('../ws/utils/clients');
+const { clients } = require('../ws/utils/clients');
 const { stringify } = require('../utils/json');
 const { BadRequestError } = require('../utils/errors');
 const { Rider } = require('../models/users.model');
@@ -121,7 +121,7 @@ const bookRide = async (req, res, next) => {
     });
 
     //    Get users socket connection
-    const user_client = clients[clientIndexes[req.user.email]];
+    const user_client = clients.get(req.user.email);
 
     //    Send request to rider,
     let curr_rider = null;
@@ -130,7 +130,7 @@ const bookRide = async (req, res, next) => {
             try {
                 //  Get riders socket connections
                 const rider = riders[0].rider;
-                const rider_client = clients[clientIndexes[rider.user.email]];
+                const rider_client = clients.get(rider.user.email);
 
                 curr_rider = await Rider.findOne({
                     user: rider.user._id,
