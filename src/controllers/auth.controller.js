@@ -39,7 +39,7 @@ const handleUnverifiedUser = async function (user) {
             // Get verification code
             const { verification_code } = await getAuthCodes(
                 user.id,
-                'verification'
+                'verification',
             );
 
             // Send verification email
@@ -52,7 +52,7 @@ const handleUnverifiedUser = async function (user) {
             // Get access token
             const { access_token } = await getAuthTokens(
                 user._id,
-                'verification'
+                'verification',
             );
 
             resolve({ access_token });
@@ -126,7 +126,7 @@ const handleUnverifiedSuperAdmin = async function (user) {
             // Get access token
             const { access_token } = await getAuthTokens(
                 user._id,
-                'verification'
+                'verification',
             );
 
             resolve({ access_token });
@@ -176,7 +176,7 @@ const userSignup = async (req, res, next) => {
     if (role === 'superadmin') return next(new BadRequestError('Invalid role'));
 
     const existing_user = await User.findOne({ email }).populate('status');
-    
+
     // Check if user already exists
     if (existing_user) {
         await handleExistingUser(existing_user)(req, res, next);
@@ -197,7 +197,7 @@ const userSignup = async (req, res, next) => {
                     role,
                 },
             ],
-            { session }
+            { session },
         ).then((data) => {
             user = data[0];
             return user;
@@ -208,7 +208,7 @@ const userSignup = async (req, res, next) => {
             // const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
             const enduser = await Enduser.create(
                 [{ user: _user._id, phone, city, address, state }],
-                { session }
+                { session },
             ).then((data) => data[0]);
             // await PaymentInfo.create(enduser, { session });
         }
@@ -289,7 +289,7 @@ const riderSignup = async (req, res, next) => {
     let user, vehicle, rider;
     await session.withTransaction(async () => {
         // Create user
-        user = await User.create([{ ...personal_details, role: "rider"}], {
+        user = await User.create([{ ...personal_details, role: 'rider' }], {
             session,
         }).then((user) => user[0]);
 
@@ -305,16 +305,16 @@ const riderSignup = async (req, res, next) => {
                 [{ rider: rider._id, ...vehicle_details }],
                 {
                     session,
-                }
+                },
             ).then((vehicle) => {
                 return vehicle[0];
             });
-            
+
             await rider.addVehicle(vehicle, session);
 
             await rider.updateOne(
                 { $push: { vehicles: vehicle._id } },
-                { session }
+                { session },
             );
         }
 
@@ -367,7 +367,7 @@ const verifyEmail = async (req, res, next) => {
     const { verification_code } = req.body;
 
     const user = await User.findOne({ email: req.user.email }).populate(
-        'status'
+        'status',
     );
 
     console.log(user);
@@ -453,7 +453,7 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).populate('status password');
-    
+
     // Check if user exists
     if (!user) return next(new BadRequestError('User does not exist'));
     console.log(user);
@@ -470,7 +470,7 @@ const login = async (req, res, next) => {
     // Check if password is correct
     const password_match = await bcrypt.compare(
         password,
-        user.password.password
+        user.password.password,
     );
     if (!password_match) return next(new BadRequestError('Invalid password'));
 
@@ -589,7 +589,7 @@ const resetPassword = async (req, res, next) => {
     const { password_reset_code, new_password } = req.body;
 
     const user = await User.findOne({ email: req.user.email }).populate(
-        'status password'
+        'status password',
     );
 
     // Check if password reset code is valid
@@ -607,7 +607,7 @@ const resetPassword = async (req, res, next) => {
     // Update password
     await Password.findOneAndUpdate(
         { user: user._id },
-        { password: hashed_password }
+        { password: hashed_password },
     );
 
     if (user.role === 'superadmin') {
@@ -699,7 +699,7 @@ const superAdminSignup = async (req, res, next) => {
         // If Admin exists and is not verified
         if (!existing_user.status.isVerified) {
             const { access_token } = await handleUnverifiedSuperAdmin(
-                existing_user
+                existing_user,
             );
 
             return res.status(200).json({
@@ -780,7 +780,7 @@ const activateSuperAdmin = async (req, res, next) => {
     Status.findOneAndUpdate(
         { user: req.user.id },
         { isVerified: true, isActive: true },
-        { new: true }
+        { new: true },
     );
 
     // // Delete activation code
