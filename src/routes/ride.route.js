@@ -1,4 +1,4 @@
-const espress  = require('express');
+const espress = require('express');
 const router = espress.Router();
 
 const {
@@ -20,6 +20,6 @@ const { basicAuth } = require('../middlewares/auth');
 const rbacMiddleware = require('../middlewares/rbac');
 
 router
-    .post('/book', basicAuth(), rbacMiddleware('rider'), bookRide)
+    .post('/book', basicAuth(), bookRide)
 
 module.exports = router;
