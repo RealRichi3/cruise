@@ -10,13 +10,20 @@ const wss = new WebSocketServer.Server({ server: express_server, path: '/ws' });
 
 const { RiderSockets } = require('./ws/event-handlers/rider.events');
 const { authMiddleware } = require("./ws/middlewares/auth.ws");
-const { toJSON, stringify } = require("./ws/utils/json");
-const { removeClient, addClient, clients: wsClients } = require('./ws/utils/clients');
+const { toJSON, stringify } = require("./utils/json");
+const { removeClient, addClient } = require('./ws/utils/clients');
 const wsWrapper = require('./ws/middlewares/wrapper.ws').socketAsyncWrapper;
 
-const clients = require('./ws/utils/clients').wsClients;
-
 let curr_client = null;
+
+/**
+ * Start socket major event listeners for curr_client
+ * Major events: connection, message, close, error
+ * 
+ * @name startSocketEventListeners
+ * @param {WebSocket} client
+ * @returns {void}
+ */
 function startSocketEventListeners(client) {
     // Init event handlers
     new RiderSockets(client, wss).init()
@@ -36,11 +43,14 @@ function startSocketEventListeners(client) {
         curr_client = client;
         console.log('--------')
         const parsed_message = toJSON(message);
+        console.log(parsed_message)
 
         // If no event is specified - Assume it's a server message
         if (parsed_message == null || parsed_message.event == 'ws:message') {
+            let msg_data = parsed_message == null ? message : parsed_message.data;
+
             // Plain message
-            wss.emit('ws:message', message.toString());
+            wss.emit('ws:message', msg_data);
             return;
         }
 
@@ -51,7 +61,7 @@ function startSocketEventListeners(client) {
 
     client.on('close', () => {
         curr_client = client;
-        console.log(`${clients[curr_client.user.email]}  disconnected`)
+        console.log(`${client.id}  disconnected`)
         removeClient(client);
     });
 }
