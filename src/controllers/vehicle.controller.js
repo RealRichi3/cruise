@@ -34,19 +34,15 @@ const addVehicle = async (req, res, next) => {
         plate_number,
     });
 
-    const rider = await Rider.findOneAndUpdate(
-        { user: req.user.id },
-        { $push: { vehicles: vehicle._id } },
-        { new: true }
-    ).populate('vehicles');
-
-    if (!rider) {
-        return next(new UnauthorizedError('User is not a rider'));
-    }
+    const rider = await Rider.findOne({ user: req.user.id }).populate('vehicles');
+    if (!rider) return next(new UnauthorizedError('User is not a rider'));
 
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();
+
+    // console.log(rider)
+    await rider.addVehicle(vehicle);
 
     res.status(200).send({
         success: true,
@@ -154,6 +150,8 @@ const updateVehicleData = async (req, res, next) => {
  * @throws {BadRequestError} - If the vehicle id is invalid
  * @throws {UnauthorizedError} - If the user is not authorized to perform this action
  * @throws {InternalServerError} - If there is an error while removing the vehicle
+ * 
+ * @todo - If vehicle is defaultVehicle or currentVehicle, set values to null
  * */
 const removeVehicle = async (req, res, next) => {
     const vehicle_id = req.params.id;
@@ -242,7 +240,7 @@ const activateVehicle = async (req, res, next) => {
     }
 
     vehicle.status.isActive = true;
-    await vehicle.status.save()
+    await vehicle.status.save();
 
     res.status(200).send({
         success: true,
@@ -271,13 +269,21 @@ const deactivateVehicle = async (req, res, next) => {
     }
 
     vehicle.status.isActive = false;
-    await vehicle.status.save()
+    await vehicle.status.save();
 
     res.status(200).send({
         success: true,
         message: 'Vehicle activated',
         data: vehicle,
     });
+};
+
+const activateForBooking = function (vehicle_id) {
+    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: true },);
+};
+
+const deactivateForBooking = function (vehicle_id) {
+    return Vehicle.findByIdAndUpdate(vehicle_id, { availableForBooking: false });
 };
 
 module.exports = {
@@ -288,4 +294,6 @@ module.exports = {
     getRidersVehicles,
     activateVehicle,
     deactivateVehicle,
+    activateForBooking,
+    deactivateForBooking
 };
