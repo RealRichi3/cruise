@@ -1,7 +1,10 @@
-const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
+// Utils
+const { calcCordDistance, getCost, sendRideRequestToRiders } = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
-const { stringify } = require('../utils/json');
 const { BadRequestError } = require('../utils/errors');
+
+// Models
+const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
 const { Rider } = require('../models/users.model');
 const Ride = require('../models/ride.model');
 
@@ -36,13 +39,13 @@ const bookRide = async (req, res, next) => {
     }
 
     const departure_location = await DepartureOrDestination.create({
-            address: departure.address,
-            type: 'departure',
-            location: {
-                type: 'Point',
-                coordinates: departure.coordinates,
-            },
-        }),
+        address: departure.address,
+        type: 'departure',
+        location: {
+            type: 'Point',
+            coordinates: departure.coordinates,
+        },
+    }),
         destination_location = await DepartureOrDestination.create({
             address: destination.address,
             type: 'destination',
@@ -64,6 +67,7 @@ const bookRide = async (req, res, next) => {
                 $maxDistance: 100000000000000000,
             },
         },
+        isOnline: true,
     })
         .populate({
             path: 'rider',
@@ -73,27 +77,7 @@ const bookRide = async (req, res, next) => {
         })
         .populate('vehicle');
 
-    function calcCordDistance(cord1, cord2) {
-        const R = 6371e3; // metres
 
-        const φ1 = (cord1[0] * Math.PI) / 180; // φ, λ in radians
-        const φ2 = (cord2[0] * Math.PI) / 180;
-        const Δφ = ((cord2[0] - cord1[0]) * Math.PI) / 180;
-        const Δλ = ((cord2[1] - cord1[1]) * Math.PI) / 180;
-
-        const a =
-            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        const d = R * c; // in metres
-        return d;
-    }
-
-    function getCost(distance, vehicle_rating) {
-        //  Calculate cost of ride - based on distance, and vehicle rating
-        const cost = distance * vehicle_rating;
-        return cost;
-    }
 
     // Calculate distance between departure and destination
     const ride_distance = calcCordDistance(
@@ -125,54 +109,9 @@ const bookRide = async (req, res, next) => {
 
     //    Send request to rider,
     let curr_rider = null;
-    function sendRideRequestToRiders(riders) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                //  Get riders socket connections
-                const rider = riders[0].rider;
-                const rider_client = clients.get(rider.user.email);
 
-                curr_rider = await Rider.findOne({
-                    user: rider.user._id,
-                });
-
-                //  If rider is connected, send notification to rider
-                if (rider_client) {
-                    rider_client.send(
-                        stringify({
-                            event: 'ride:request',
-                            data: {
-                                departure: departure_location,
-                                destination: destination_location,
-                            },
-                        }),
-                    );
-                }
-
-                // Wait for rider to accept or decline - limit time to 20 seconds
-                rider_client.on('ride:request_response', (data) => {
-                    if (data.accepted) {
-                        resolve(data);
-                        //  If rider accepts, create a ride, and init map tracking for rider on user app and rider app
-                    } else {
-                        //  If rider declines, try next rider - limit to 3 riders
-                        resolve(null);
-                    }
-                    resolve(data);
-                });
-
-                setTimeout(() => {
-                    //  If no rider accepts, send notification to user
-
-                    resolve(null);
-                }, 20000);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
-
-    const response = await sendRideRequestToRiders(available_riders);
+    const location = { departure: departure_location, destination: destination_location }
+    const response = await sendRideRequestToRiders(available_riders, location);
     if (!response) {
         //  If no rider accepts, send notification to user
         return res.status(200).json({
@@ -217,27 +156,27 @@ const bookRide = async (req, res, next) => {
     });
 };
 
-const acceptRideRequest = async (req, res, next) => {};
+const acceptRideRequest = async (req, res, next) => { };
 
-const declineRideRequest = async (req, res, next) => {};
+const declineRideRequest = async (req, res, next) => { };
 
-const cancelRide = async (req, res, next) => {};
+const cancelRide = async (req, res, next) => { };
 
-const startRide = async (req, res, next) => {};
+const startRide = async (req, res, next) => { };
 
-const completeRide = async (req, res, next) => {};
+const completeRide = async (req, res, next) => { };
 
-const reviewRide = async (req, res, next) => {};
+const reviewRide = async (req, res, next) => { };
 
-const getRides = async (req, res, next) => {};
+const getRides = async (req, res, next) => { };
 
-const getRideData = async (req, res, next) => {};
+const getRideData = async (req, res, next) => { };
 
-const getRideReviews = async (req, res, next) => {};
+const getRideReviews = async (req, res, next) => { };
 
-const getRideReviewData = async (req, res, next) => {};
+const getRideReviewData = async (req, res, next) => { };
 
-const payForRide = async (req, res, next) => {};
+const payForRide = async (req, res, next) => { };
 
 module.exports = {
     bookRide,
