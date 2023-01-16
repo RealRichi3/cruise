@@ -11,7 +11,7 @@ const connectDatabase = require('./db/connectDB');
 
 async function start() {
     try {
-        connectDatabase(MONGO_URI);
+        await connectDatabase(MONGO_URI);
 
         require('./ws')
     } catch (error) {
