@@ -70,7 +70,7 @@ const getAuthTokens = async (user_id, token_type = null) => {
         let { secret, expiry } = getRequiredConfigVars(token_type);
 
         // Set token expiry to 6 hours if in development
-        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'dev') {
             expiry = '6h';
         }
 
