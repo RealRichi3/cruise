@@ -161,6 +161,46 @@ const completeRideRequest = async (req, res, next) => {
 };
 
 /**
+ * Cancel Ride Request
+ * 
+ * @param {String} ride_request_id
+ * 
+ * @returns {Object} rideRequest
+ * @returns {Object} rideRequest.departure
+ * @returns {Object} rideRequest.destination
+ * @returns {Object} rideRequest.ride_route
+ * @returns {Object} rideRequest.user
+ * @returns {Object} rideRequest.ride
+ * @returns {Object} rideRequest.rider
+ * @returns {Number} rideRequest.urban_cost
+ * @returns {Number} rideRequest.standard_cost
+ * @returns {Number} rideRequest.elite_cost
+ *  
+ * @todo Implement ride request cancellation fee
+ * 
+ * @throws {BadRequestError} Invalid ride request
+ */
+const cancelRideRequest = async (req, res, next) => {
+    const { ride_request_id } = req.body;
+
+    // Check if ride request exists
+    const ride_request = await RideRequest.findOne({ _id: ride_request_id, status: 'pending' });
+
+    if (!ride_request) return next(new BadRequestError('Invalid ride request'));
+
+    // Update ride request status
+    ride_request.status = 'cancelled';
+
+    // Save ride request
+    await ride_request.save();
+
+    return res.status(200).json({
+        success: true,
+        data: ride_request,
+    });
+};
+
+/**
  *
  * @param {*} req
  * @param {*} res
@@ -339,6 +379,7 @@ const payForRide = async (req, res, next) => { };
 module.exports = {
     initRideRequest,
     completeRideRequest,
+    cancelRideRequest,
     bookRide,
     acceptRideRequest,
     declineRideRequest,

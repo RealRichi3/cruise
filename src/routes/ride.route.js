@@ -8,6 +8,7 @@ const {
     getRides,
     initRideRequest,
     completeRideRequest,
+    cancelRideRequest,
     bookRide,
     acceptRideRequest,
     declineRideRequest,
@@ -26,6 +27,7 @@ router.use(basicAuth());
 router
     .post('/init', initRideRequest)
     .post('/complete', completeRideRequest)
+    .post('/cancel', cancelRideRequest)
     .post('/book', bookRide)
 
 module.exports = router;
