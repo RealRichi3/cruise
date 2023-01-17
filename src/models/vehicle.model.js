@@ -21,8 +21,9 @@ const vehicleSchema = new schema({
         ref: 'VehicleStatus',
         required: true
     },
-    active_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
     rating : { type: Number, default: 1 },
+    actve_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
+    images: [{ type: String, required: true }],
 });
 
 vehicleSchema.virtual('location', {
