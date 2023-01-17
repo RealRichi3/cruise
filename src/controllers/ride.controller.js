@@ -338,6 +338,7 @@ const payForRide = async (req, res, next) => { };
 
 module.exports = {
     initRideRequest,
+    completeRideRequest,
     bookRide,
     acceptRideRequest,
     declineRideRequest,
