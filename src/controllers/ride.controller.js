@@ -6,7 +6,77 @@ const { BadRequestError } = require('../utils/errors');
 // Models
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
 const { Rider } = require('../models/users.model');
-const Ride = require('../models/ride.model');
+const { Ride, RideRequest } = require('../models/ride.model');
+
+
+const initRideRequest = async (req, res, next) => {
+    // console.log(req.body)
+
+    //  Get the ride info
+    const { departure, destination } = req.body;
+
+    if (
+        !departure ||
+        !destination ||
+        !departure.coordinates ||
+        !destination.coordinates ||
+        !departure.address ||
+        !destination.address
+    ) {
+        return next(new BadRequestError('Invalid ride info'));
+    }
+
+    const departure_location = await DepartureOrDestination.create({
+        address: departure.address,
+        type: 'departure',
+        location: {
+            type: 'Point',
+            coordinates: departure.coordinates,
+        },
+    }),
+        destination_location = await DepartureOrDestination.create({
+            address: destination.address,
+            type: 'destination',
+            location: {
+                type: 'Point',
+                coordinates: destination.coordinates,
+            },
+        });
+
+    // Calculate distance between departure and destination
+    // Distance should be for route, not straight line - Use google maps API
+    // const distance_in_km = calcCordDistance(
+    //     departure_location.location.coordinates,
+    //     destination_location.location.coordinates,
+    // );
+    const distance_in_km = 20;
+
+    // Calculate cost of ride - based on cost per km and distance in km
+    const ride_cost = config.COST_PER_KM * distance_in_km // Distance in km from googleMap * multiplier
+
+    // Effect cost multiplier for available packages, (elite, urban, standard)
+    const cost = {
+        urban: ride_cost * config.URBAN_MULTIPLIER,
+        standard: ride_cost * config.STANDARD_MULTIPLIER,
+        elite: ride_cost * config.ELITE_MULTIPLIER
+    }
+
+    // Create ride request
+    const ride_request = await RideRequest.create({
+        departure: departure_location._id,
+        destination: destination_location._id,
+        user: req.user.id,
+        urban_cost : cost.urban,
+        standard_cost : cost.standard,
+        elite_cost : cost.elite,
+        ride_route: route_distance,
+    });
+
+    return res.status(200).json({
+        success: true,
+        data: ride_request,
+    })
+}
 
 /**
  *
@@ -56,7 +126,7 @@ const bookRide = async (req, res, next) => {
         });
 
     //    Check riders within the current users location
-    //    Get the nearest rider
+    //    Get the closest rider based on shortest distance 
     const closest_riders = await RiderLocation.find({
         location: {
             $near: {
@@ -78,16 +148,22 @@ const bookRide = async (req, res, next) => {
         .populate('vehicle');
 
 
-
     // Calculate distance between departure and destination
-    const ride_distance = calcCordDistance(
-        departure_location.location.coordinates,
-        destination_location.location.coordinates,
-    );
+    // Distance should be for route, not straight line - Use google maps API
+    // const route_distance = calcCordDistance(
+    //     departure_location.location.coordinates,
+    //     destination_location.location.coordinates,
+    // );
 
-    // Calculate cost of ride - based on distance, and vehicle rating
+    // Calculate cost of ride - based on route distance, use multiplier (urban, standard, elite)
+    // const ride_cost = // Distance in km from googleMap * multiplier
 
     // Effect cost multiplier for available packages, (elite, urban, standard)
+    // const final_cost = {
+    // urban: ride_cost * config.URBAN_MULTIPLIER
+    // standard: ride_cost * config.STANDARD_MULTIPLIER
+    // elite: ride_cost * config.ELITE_MULTIPLIER 
+    // }
 
     //   Calculate distance between rider and user
     closest_riders.forEach((rider) => {
@@ -179,6 +255,7 @@ const getRideReviewData = async (req, res, next) => { };
 const payForRide = async (req, res, next) => { };
 
 module.exports = {
+    initRideRequest,
     bookRide,
     acceptRideRequest,
     declineRideRequest,
