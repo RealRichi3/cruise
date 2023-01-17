@@ -6,6 +6,9 @@ const {
     getRideReviews,
     getRideReviewData,
     getRides,
+    initRideRequest,
+    completeRideRequest,
+    cancelRideRequest,
     bookRide,
     acceptRideRequest,
     declineRideRequest,
@@ -19,7 +22,12 @@ const {
 const { basicAuth } = require('../middlewares/auth');
 const rbacMiddleware = require('../middlewares/rbac');
 
+router.use(basicAuth());
+
 router
-    .post('/book', basicAuth(), bookRide)
+    .post('/init', initRideRequest)
+    .post('/complete', completeRideRequest)
+    .post('/cancel', cancelRideRequest)
+    .post('/book', bookRide)
 
 module.exports = router;
