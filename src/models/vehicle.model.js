@@ -22,6 +22,7 @@ const vehicleSchema = new schema({
         required: true
     },
     actve_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
+    images: [{ type: String, required: true }],
 });
 
 vehicleSchema.virtual('location', {
