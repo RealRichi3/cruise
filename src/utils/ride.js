@@ -74,8 +74,11 @@ function sendRideRequestToRiders(riders, location) {
     });
 }
 
+async function getRideRouteInKm() { }
+
 module.exports = {
     calcCordDistance,
     getCost,
     sendRideRequestToRiders,
+    getRideRouteInKm,
 };
