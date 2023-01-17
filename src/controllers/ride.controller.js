@@ -1,5 +1,5 @@
 // Utils
-const { calcCordDistance, getCost, sendRideRequestToRiders } = require('../utils/ride');
+const { calcCordDistance, getCost, sendRideRequestToRiders, getRideRouteInKm } = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
 const { BadRequestError } = require('../utils/errors');
 
@@ -9,6 +9,29 @@ const { Rider } = require('../models/users.model');
 const { Ride, RideRequest } = require('../models/ride.model');
 
 
+/**
+ * Initiate Ride Request
+ * 
+ * @param {Object} departure
+ * @param {Object} destination
+ * @param {String} departure.address
+ * @param {String} destination.address
+ * @param {Array} departure.coordinates
+ * @param {Array} destination.coordinates
+ * 
+ * @returns {Object} rideRequest
+ * @returns {Object} rideRequest.departure
+ * @returns {Object} rideRequest.destination
+ * @returns {Object} rideRequest.ride_route
+ * @returns {Object} rideRequest.user
+ * @returns {Object} rideRequest.ride
+ * @returns {Number} rideRequest.urban_cost
+ * @returns {Number} rideRequest.standard_cost
+ * @returns {Number} rideRequest.elite_cost
+ * 
+ * @throws {BadRequestError} Invalid ride info
+ * @throws {BadRequestError} Invalid ride route
+ */
 const initRideRequest = async (req, res, next) => {
     // console.log(req.body)
 
@@ -26,6 +49,7 @@ const initRideRequest = async (req, res, next) => {
         return next(new BadRequestError('Invalid ride info'));
     }
 
+    // Create departure and destination locations
     const departure_location = await DepartureOrDestination.create({
         address: departure.address,
         type: 'departure',
@@ -43,12 +67,10 @@ const initRideRequest = async (req, res, next) => {
             },
         });
 
-    // Calculate distance between departure and destination
-    // Distance should be for route, not straight line - Use google maps API
-    // const distance_in_km = calcCordDistance(
-    //     departure_location.location.coordinates,
-    //     destination_location.location.coordinates,
-    // );
+    /* Calculate distance between departure and destination 
+       Distance should be for route, not straight line - Use google maps API */
+    // const distance_in_km = getRideRouteInKm(departure_location, destination_location);
+
     const distance_in_km = 20;
 
     // Calculate cost of ride - based on cost per km and distance in km
@@ -66,9 +88,9 @@ const initRideRequest = async (req, res, next) => {
         departure: departure_location._id,
         destination: destination_location._id,
         user: req.user.id,
-        urban_cost : cost.urban,
-        standard_cost : cost.standard,
-        elite_cost : cost.elite,
+        urban_cost: cost.urban,
+        standard_cost: cost.standard,
+        elite_cost: cost.elite,
         ride_route: route_distance,
     });
 
@@ -108,6 +130,7 @@ const bookRide = async (req, res, next) => {
         return next(new BadRequestError('Invalid ride info'));
     }
 
+    // Create location for departure and destination
     const departure_location = await DepartureOrDestination.create({
         address: departure.address,
         type: 'departure',
@@ -125,8 +148,8 @@ const bookRide = async (req, res, next) => {
             },
         });
 
-    //    Check riders within the current users location
-    //    Get the closest rider based on shortest distance 
+    //   Check riders within the current users location
+    //   Get the closest rider based on shortest distance 
     const closest_riders = await RiderLocation.find({
         location: {
             $near: {
