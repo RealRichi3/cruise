@@ -38,7 +38,8 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 const URBAN_MULTIPLIER = process.env.URBAN_MULTIPLIER,
     RURAL_MULTIPLIER = process.env.RURAL_MULTIPLIER,
-    ELITE_MULTIPLIER = process.env.ELITE_MULTIPLIER;
+    ELITE_MULTIPLIER = process.env.ELITE_MULTIPLIER,
+    COST_PER_KM = process.env.COST_PER_KM;
 
 module.exports = {
     // DB
@@ -88,4 +89,5 @@ module.exports = {
     URBAN_MULTIPLIER,
     RURAL_MULTIPLIER,
     ELITE_MULTIPLIER,
+    COST_PER_KM
 };
