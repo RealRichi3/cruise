@@ -1,5 +1,5 @@
 // Utils
-const { calcCordDistance, getCost, sendRideRequestToRiders, getRideRouteInKm } = require('../utils/ride');
+const { calcCordDistance, getCost, sendRideRequestToRiders, getRideRouteInKm, vehicle_rating, getClosestRiders } = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
 const { BadRequestError } = require('../utils/errors');
 
@@ -8,17 +8,16 @@ const { DepartureOrDestination, RiderLocation } = require('../models/location.mo
 const { Rider } = require('../models/users.model');
 const { Ride, RideRequest } = require('../models/ride.model');
 
-
 /**
  * Initiate Ride Request
- * 
+ *
  * @param {Object} departure
  * @param {Object} destination
  * @param {String} departure.address
  * @param {String} destination.address
  * @param {Array} departure.coordinates
  * @param {Array} destination.coordinates
- * 
+ *
  * @returns {Object} rideRequest
  * @returns {Object} rideRequest.departure
  * @returns {Object} rideRequest.destination
@@ -28,7 +27,7 @@ const { Ride, RideRequest } = require('../models/ride.model');
  * @returns {Number} rideRequest.urban_cost
  * @returns {Number} rideRequest.standard_cost
  * @returns {Number} rideRequest.elite_cost
- * 
+ *
  * @throws {BadRequestError} Invalid ride info
  * @throws {BadRequestError} Invalid ride route
  */
@@ -70,18 +69,17 @@ const initRideRequest = async (req, res, next) => {
     /* Calculate distance between departure and destination 
        Distance should be for route, not straight line - Use google maps API */
     // const distance_in_km = getRideRouteInKm(departure_location, destination_location);
-
     const distance_in_km = 20;
 
     // Calculate cost of ride - based on cost per km and distance in km
-    const ride_cost = config.COST_PER_KM * distance_in_km // Distance in km from googleMap * multiplier
+    const ride_cost = config.COST_PER_KM * distance_in_km; // Distance in km from googleMap * multiplier
 
     // Effect cost multiplier for available packages, (elite, urban, standard)
     const cost = {
         urban: ride_cost * config.URBAN_MULTIPLIER,
         standard: ride_cost * config.STANDARD_MULTIPLIER,
-        elite: ride_cost * config.ELITE_MULTIPLIER
-    }
+        elite: ride_cost * config.ELITE_MULTIPLIER,
+    };
 
     // Create ride request
     const ride_request = await RideRequest.create({
@@ -91,14 +89,76 @@ const initRideRequest = async (req, res, next) => {
         urban_cost: cost.urban,
         standard_cost: cost.standard,
         elite_cost: cost.elite,
-        ride_route: route_distance,
+        distance: route_distance,
     });
 
     return res.status(200).json({
         success: true,
-        data: ride_request,
-    })
-}
+        data: ride_request.populate('departure destination user'),
+    });
+};
+
+/**
+ * Complete Ride Request
+ * 
+ * @param {String} ride_class
+ * @param {String} payment_method
+ * @param {String} ride_request_id
+ * 
+ * @returns {Object} rideRequest 
+ * @returns {Object} rideRequest.departure
+ * @returns {Object} rideRequest.destination
+ * @returns {Object} rideRequest.ride_route
+ * @returns {Object} rideRequest.user
+ * @returns {Object} rideRequest.ride
+ * @returns {Object} rideRequest.rider
+ * @returns {Number} rideRequest.urban_cost
+ * @returns {Number} rideRequest.standard_cost
+ * @returns {Number} rideRequest.elite_cost
+ * 
+ */
+const completeRideRequest = async (req, res, next) => {
+    // Get the selected ride class
+    const { ride_class, payment_method, ride_request_id } = req.body;
+
+    // Check if ride request exists
+    const ride_request = await RideRequest.findOne({ _id: ride_request_id, ride_class, status: 'pending' });
+    if (!ride_request) return next(new BadRequestError('Invalid ride request'));
+
+    // Update ride request payment method
+    ride_request.payment_method = payment_method;
+
+    // Search for riders within the current users location
+    const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
+
+    // Filter closest riders based on vehicle class and online status
+    const filtered_riders = closest_riders.filter(
+        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline == true,
+    );
+
+    // Check if matching riders are available
+    if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
+
+    // Send ride request to riders
+    const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
+    if (!rider_response) {
+        ride_request.status = 'cancelled';
+        await ride_request.save();
+
+        return next(new BadRequestError('No riders available'))
+    };
+
+    // Update ride request status
+    ride_request.status = 'accepted';
+
+    // Save ride request
+    await ride_request.save();
+
+    return res.status(200).json({
+        success: true,
+        data: rider_response
+    });
+};
 
 /**
  *
@@ -149,7 +209,7 @@ const bookRide = async (req, res, next) => {
         });
 
     //   Check riders within the current users location
-    //   Get the closest rider based on shortest distance 
+    //   Get the closest rider based on shortest distance
     const closest_riders = await RiderLocation.find({
         location: {
             $near: {
@@ -170,7 +230,6 @@ const bookRide = async (req, res, next) => {
         })
         .populate('vehicle');
 
-
     // Calculate distance between departure and destination
     // Distance should be for route, not straight line - Use google maps API
     // const route_distance = calcCordDistance(
@@ -185,7 +244,7 @@ const bookRide = async (req, res, next) => {
     // const final_cost = {
     // urban: ride_cost * config.URBAN_MULTIPLIER
     // standard: ride_cost * config.STANDARD_MULTIPLIER
-    // elite: ride_cost * config.ELITE_MULTIPLIER 
+    // elite: ride_cost * config.ELITE_MULTIPLIER
     // }
 
     //   Calculate distance between rider and user
@@ -209,7 +268,7 @@ const bookRide = async (req, res, next) => {
     //    Send request to rider,
     let curr_rider = null;
 
-    const location = { departure: departure_location, destination: destination_location }
+    const location = { departure: departure_location, destination: destination_location };
     const response = await sendRideRequestToRiders(available_riders, location);
     if (!response) {
         //  If no rider accepts, send notification to user
