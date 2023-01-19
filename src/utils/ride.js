@@ -31,66 +31,91 @@ function getCost(distance, vehicle_rating) {
     return cost;
 }
 
+function sendRideRequestToRider(client, ride_request) {
+    console.log('Sending ride request to rider: ', client.user.email)
+    client.send(
+        stringify({
+            event: 'ride:request',
+            data: {
+                ride_request,
+            },
+        }),
+    );
+}
+
+/**
+ * Handle Rider Response for Ride Request
+ * 
+ * @description - handles rider response to ride request
+ * 
+ * @param {Object} client - rider's socket connection
+ * @param {Object} ride_request - ride request object
+ * @returns {Promise} - resolves to rider response
+ */
+function handleRidersResponse(client, ride_request) {
+    return new Promise((resolve, reject) => {
+        client.on('ride:request_response', (data) => {
+            console.log('Rider response received: ')
+            console.log(data)
+            //  If rider declines, try next rider - limit to 3 riders
+            if (!data.accepted) resolve(null);
+
+            // If rider accepts, create a ride, and init map tracking for rider on user app and rider app
+
+            // Add rider info to data object 
+            data.rider = curr_rider;
+            client.removeAllListeners('ride:request_response');
+            resolve(data);
+        });
+        
+        // return null if no response from rider after 20 seconds
+        setTimeout(() => {
+            if (client) client.removeAllListeners('ride:request_response');
+            resolve(null)
+        }, 20000);
+    });
+}
+
 async function sendRideRequestToRiders(riders, ride_request) {
-    try {
+    for (let i = 0; i < 4; i++) {
+        const rider = await riders[i].rider.populate('user');
+        if (i == 0) { rider.user.email = 'cruiserider9@gmail.com' }
+
         //  Get riders socket connections
-        const rider = riders[0].rider;
         const rider_client = clients.get(rider.user.email);
 
         curr_rider = await Rider.findOne({
             user: rider.user._id,
         });
 
-        //  If rider is connected, send notification to rider
-        if (rider_client) {
-            rider_client.send(
-                stringify({
-                    event: 'ride:request',
-                    data: {
-                        ride_request,
-                    },
-                }),
-            );
-        } else {
-            //  Try next rider
-            return null;
+        // If rider isn't connected, Try next rider
+        if (!rider_client) {
+            console.log(rider.user.email + 'is not connected')
+            continue;
         }
 
-        // Wait for rider to accept or decline - limit time to 20 seconds
-        rider_client.on('ride:request_response', (data) => {
-            //  If rider declines, try next rider - limit to 3 riders
-            if (!data.accepted) return null;
+        //  If rider is connected, send ride request to rider
+        sendRideRequestToRider(rider_client, ride_request);
 
-            // If rider accepts, create a ride, and init map tracking for rider on user app and rider app
-            
-            // Add rider info to data object 
-            data.rider = curr_rider;
-            
-            return data;
-        });
-
-        setTimeout(() => {
-            //  If no rider accepts, send notification to user
-
-            return null;
-        }, 20000);
-    } catch (error) {
-        return error;
+        //  Listen for riders response
+        const riders_response = await handleRidersResponse(rider_client, ride_request);
+        if (riders_response) { return riders_response }
+        console.log(riders_response)
     }
 }
 
 async function getClosestRiders(coordinates) {
-    return RiderLocation.find({
+    return await RiderLocation.find({
         location: {
             $near: {
                 $geometry: {
                     type: 'Point',
                     coordinates,
                 },
-                $maxDistance: 1000,
+                $maxDistance: 10000000000000,
             },
         },
-    }).populate('rider vehicle departure destination');
+    }).populate('rider vehicle');
 }
 async function getRideRouteInKm() { }
 
