@@ -1,6 +1,7 @@
 const { stringify } = require('./json');
 const { Rider } = require('../models/users.model');
 const { clients } = require('../ws/utils/clients');
+const { Ride, RideRequest } = require('../models/ride.model');
 const { RiderLocation } = require('../models/location.model');
 
 const vehicle_rating = {
@@ -49,25 +50,22 @@ function sendRideRequestToRider(client, ride_request) {
  * @description - handles rider response to ride request
  * 
  * @param {Object} client - rider's socket connection
- * @param {Object} ride_request - ride request object
+ * @param {MongooseObject} ride_request - ride request object
  * @returns {Promise} - resolves to rider response
  */
-function handleRidersResponse(client, ride_request) {
+function getRideResponseFromRider(client, ride_req) {
     return new Promise((resolve, reject) => {
-        client.on('ride:request_response', (data) => {
+        client.on('ride:request_response', async (data) => {
             console.log('Rider response received: ')
             console.log(data)
-            //  If rider declines, try next rider - limit to 3 riders
+            //  If rider declines
             if (!data.accepted) resolve(null);
 
-            // If rider accepts, create a ride, and init map tracking for rider on user app and rider app
-
-            // Add rider info to data object 
-            data.rider = curr_rider;
+            // Remove listener
             client.removeAllListeners('ride:request_response');
             resolve(data);
         });
-        
+
         // return null if no response from rider after 20 seconds
         setTimeout(() => {
             if (client) client.removeAllListeners('ride:request_response');
@@ -76,39 +74,56 @@ function handleRidersResponse(client, ride_request) {
     });
 }
 
+/**
+ * Send Ride Request to Riders
+ * 
+ * @description - sends ride request to riders
+ * 
+ * @param {Array} riders - array of rider objects
+ * @param {MongooseObject} ride_request - ride request object
+ * 
+ * @returns {Promise} - resolves to rider response
+ * 
+ * // TODO: - Implement realtime location tracking for rider on user app and rider app
+ * // TODO: - Add ride tracking link to be used from any browser
+ * */
 async function sendRideRequestToRiders(riders, ride_request) {
-    clients.forEach((client) => {
-        console.log(client.user.email)
-    })
-    for (let i = 0; i < 4; i++) {
+    let ride;
+    // const test_riders = [
+    //     'cruiserider9@gmail.com',
+    //     'cruiserider13@gmail.com',
+    //     'cruiserider14@gmail.com',
+    //     'cruiserider15@gmail.com',
+    //     'cruiserider16@gmail.com',
+    // ]
+    for (let i = 0; i < 5; i++) {
         const rider = await riders[i].rider.populate('user');
-        if (i == 0) { rider.user.email = 'cruiserider9@gmail.com' }
-        if (i == 1) { rider.user.email = 'cruiserider16@gmail.com' }
-        if (i == 1) { rider.user.email = 'cruiserider15@gmail.com' }
-        if (i == 2) { rider.user.email = 'cruiserider14@gmail.com' }
-        if (i == 3) { rider.user.email = 'cruiserider13@gmail.com' }
+        // rider.user.email = test_riders[i]
 
         //  Get riders socket connections
         const rider_client = clients.get(rider.user.email);
 
-        curr_rider = await Rider.findOne({
-            user: rider.user._id,
-        });
-
         // If rider isn't connected, Try next rider
         if (!rider_client) {
-            console.log(rider.user.email + 'is not connected')
+            console.log(rider.user.email + ' is not connected')
             continue;
         }
 
         //  If rider is connected, send ride request to rider
         sendRideRequestToRider(rider_client, ride_request);
 
-        //  Listen for riders response
-        const riders_response = await handleRidersResponse(rider_client, ride_request);
-        if (riders_response) { return riders_response }
-        console.log(riders_response)
+        //  Get response from rider
+        const riders_response = await getRideResponseFromRider(rider_client, ride_request);
+        if (riders_response) { 
+            // Create a ride
+            ride = ride_request.createNewRide(rider._id);
+            
+            // Start realtime location tracking for rider on user app and rider ap
+            
+            break;
+         }
     }
+    return ride
 }
 
 async function getClosestRiders(coordinates) {
@@ -124,6 +139,7 @@ async function getClosestRiders(coordinates) {
         },
     }).populate('rider vehicle');
 }
+
 async function getRideRouteInKm() { }
 
 module.exports = {
