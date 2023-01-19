@@ -134,34 +134,36 @@ const completeRideRequest = async (req, res, next) => {
     const { ride_class, payment_method, ride_request_id } = req.body;
 
     // Check if ride request exists
-    const ride_request = await RideRequest.findOne({ _id: ride_request_id, ride_class, status: 'pending' });
+    const ride_request = await RideRequest.findOne({ _id: ride_request_id, status: 'pending' }).populate('departure destination user');
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
-
+    // console.log(ride_request)
     // Update ride request payment method
     ride_request.payment_method = payment_method;
 
     // Search for riders within the current users location
     const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
 
-    // Filter closest riders based on vehicle class and online status
-    const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline == true,
-    );
+    console.log(closest_riders[0])
+    // Filter closest riders based on vehicle rating and online status
+    const filtered_riders = closest_riders.filter((rider) => (rider.vehicle.rating >= vehicle_rating[ride_class]) && (rider.rider.isOnline));
 
+    console.log(filtered_riders.length)
+    console.log(closest_riders.length)
     // Check if matching riders are available
     if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
 
     // Send ride request to riders
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
-    if (!rider_response) {
-        ride_request.status = 'cancelled';
+    if (!rider_response || rider_response == false) {
+        console.log('No riders available')
+        // ride_request.status = 'cancelled';
         await ride_request.save();
 
         return next(new BadRequestError('No riders available'));
     }
 
     // Update ride request status
-    ride_request.status = 'accepted';
+    // ride_request.status = 'accepted';
 
     // Save ride request
     await ride_request.save();
