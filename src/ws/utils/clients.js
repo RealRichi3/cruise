@@ -6,7 +6,7 @@ async function removeClient(connection) {
     clients.delete(connection.id);
     console.log(connection.id)
 
-    const user = await User.findOne({ email: connection.user.email })
+    const user = await User.findOne({ email: connection.user.email }).populate('rider');
     console.log(user)
     user.rider.isOnline = false;
     

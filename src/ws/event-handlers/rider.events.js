@@ -22,7 +22,7 @@ class RiderSockets {
 
             const rider = await Rider.findOne({ user: self.user.id })
             if (!rider) throw new Error('Unauthorized Error: User is not a rider');
-            console.log(rider)
+            // console.log(rider)
             const vehicle = await Vehicle.findById(vehicle_id).populate('rider');
             if (!vehicle) {// use defaultVehicle;
                 await rider.goOnline().catch(err => { throw err });
