@@ -53,19 +53,18 @@ const addVehicle = async (req, res, next) => {
         return next(new BadRequestError('Vehicle image upload failed'));
     }
 
-    vehicle.images = vehicle_images;
+    vehicle.images = vehicle_images; */
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();
 
-
-    // console.log(rider)
-    await rider.addVehicle(vehicle);
+    // const new_riders_vehicle = await (await rider.addVehicle(vehicle)).populate('rider');
+    const new_riders_vehicle = await rider.addVehicle(vehicle)
 
     res.status(200).send({
         success: true,
         message: 'Vehicle added successfully',
-        data: vehicle.depopulate('status'),
+        data: new_riders_vehicle,
     });
 };
 
