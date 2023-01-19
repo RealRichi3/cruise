@@ -11,7 +11,7 @@ const saveNewLocation = async (rider_id, location) => {
         },
     });
 
-    console.log(new_location)
+    // console.log(new_location)
 
     return new_location;
 };

@@ -4,10 +4,8 @@ const { User } = require('../../models/users.model');
 async function removeClient(connection) {
     console.log("Removing client: ", connection.id);
     clients.delete(connection.id);
-    console.log(connection.id)
 
-    const user = await User.findOne({ email: connection.user.email })
-    console.log(user)
+    const user = await User.findOne({ email: connection.user.email }).populate('rider');
     user.rider.isOnline = false;
     
     await user.rider.save();

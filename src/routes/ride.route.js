@@ -25,8 +25,8 @@ const rbacMiddleware = require('../middlewares/rbac');
 router.use(basicAuth());
 
 router
-    .post('/init', initRideRequest)
-    .post('/complete', completeRideRequest)
+    .post('/request/init', initRideRequest)
+    .post('/request/complete', completeRideRequest)
     .post('/cancel', cancelRideRequest)
     .post('/book', bookRide)
 

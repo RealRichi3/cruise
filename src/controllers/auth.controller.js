@@ -207,7 +207,7 @@ const userSignup = async (req, res, next) => {
         if (role === 'enduser') {
             // const user_wallet = await Wallet.create([{ user: _user._id }], { session }).then((data) => data[0]);
             const enduser = await Enduser.create(
-                [{ user: _user._id, phone, city, address, state }],
+                [{ user: user._id, phone, city, address, state }],
                 { session },
             ).then((data) => data[0]);
             // await PaymentInfo.create(enduser, { session });

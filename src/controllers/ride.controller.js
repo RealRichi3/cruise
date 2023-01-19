@@ -1,7 +1,15 @@
 // Utils
-const { calcCordDistance, getCost, sendRideRequestToRiders, getRideRouteInKm, vehicle_rating, getClosestRiders } = require('../utils/ride');
+const {
+    calcCordDistance,
+    getCost,
+    sendRideRequestToRiders,
+    getRideRouteInKm,
+    vehicle_rating,
+    getClosestRiders,
+} = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
 const { BadRequestError } = require('../utils/errors');
+const config = require('../utils/config');
 
 // Models
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
@@ -50,13 +58,13 @@ const initRideRequest = async (req, res, next) => {
 
     // Create departure and destination locations
     const departure_location = await DepartureOrDestination.create({
-        address: departure.address,
-        type: 'departure',
-        location: {
-            type: 'Point',
-            coordinates: departure.coordinates,
-        },
-    }),
+            address: departure.address,
+            type: 'departure',
+            location: {
+                type: 'Point',
+                coordinates: departure.coordinates,
+            },
+        }),
         destination_location = await DepartureOrDestination.create({
             address: destination.address,
             type: 'destination',
@@ -81,6 +89,8 @@ const initRideRequest = async (req, res, next) => {
         elite: ride_cost * config.ELITE_MULTIPLIER,
     };
 
+    console.log(ride_cost);
+    console.log(cost);
     // Create ride request
     const ride_request = await RideRequest.create({
         departure: departure_location._id,
@@ -89,82 +99,24 @@ const initRideRequest = async (req, res, next) => {
         urban_cost: cost.urban,
         standard_cost: cost.standard,
         elite_cost: cost.elite,
-        distance: route_distance,
+        distance: distance_in_km,
     });
 
+    const ride_request_populated = await ride_request.populate('departure destination user');
+    console.log(ride_request_populated);
     return res.status(200).json({
         success: true,
-        data: ride_request.populate('departure destination user'),
+        data: ride_request_populated,
     });
 };
 
 /**
  * Complete Ride Request
- * 
+ *
  * @param {String} ride_class
  * @param {String} payment_method
  * @param {String} ride_request_id
- * 
- * @returns {Object} rideRequest 
- * @returns {Object} rideRequest.departure
- * @returns {Object} rideRequest.destination
- * @returns {Object} rideRequest.ride_route
- * @returns {Object} rideRequest.user
- * @returns {Object} rideRequest.ride
- * @returns {Object} rideRequest.rider
- * @returns {Number} rideRequest.urban_cost
- * @returns {Number} rideRequest.standard_cost
- * @returns {Number} rideRequest.elite_cost
- * 
- */
-const completeRideRequest = async (req, res, next) => {
-    // Get the selected ride class
-    const { ride_class, payment_method, ride_request_id } = req.body;
-
-    // Check if ride request exists
-    const ride_request = await RideRequest.findOne({ _id: ride_request_id, ride_class, status: 'pending' });
-    if (!ride_request) return next(new BadRequestError('Invalid ride request'));
-
-    // Update ride request payment method
-    ride_request.payment_method = payment_method;
-
-    // Search for riders within the current users location
-    const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
-
-    // Filter closest riders based on vehicle class and online status
-    const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline == true,
-    );
-
-    // Check if matching riders are available
-    if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
-
-    // Send ride request to riders
-    const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
-    if (!rider_response) {
-        ride_request.status = 'cancelled';
-        await ride_request.save();
-
-        return next(new BadRequestError('No riders available'))
-    };
-
-    // Update ride request status
-    ride_request.status = 'accepted';
-
-    // Save ride request
-    await ride_request.save();
-
-    return res.status(200).json({
-        success: true,
-        data: rider_response
-    });
-};
-
-/**
- * Cancel Ride Request
- * 
- * @param {String} ride_request_id
- * 
+ *
  * @returns {Object} rideRequest
  * @returns {Object} rideRequest.departure
  * @returns {Object} rideRequest.destination
@@ -175,9 +127,73 @@ const completeRideRequest = async (req, res, next) => {
  * @returns {Number} rideRequest.urban_cost
  * @returns {Number} rideRequest.standard_cost
  * @returns {Number} rideRequest.elite_cost
- *  
+ *
+ */
+const completeRideRequest = async (req, res, next) => {
+    // Get the selected ride class
+    const { ride_class, payment_method, ride_request_id } = req.body;
+
+    // Check if ride request exists
+    const ride_request = await RideRequest.findOneAndUpdate(
+        { _id: ride_request_id, status: 'pending' },
+        { ride_class, payment_method },
+    ).populate('departure destination user');
+    if (!ride_request) return next(new BadRequestError('Invalid ride request'));
+
+    // Update ride request payment method
+    ride_request.payment_method = payment_method;
+
+    // Search for riders within the current users location
+    const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
+
+    // Filter closest riders based on vehicle rating and online status
+    const filtered_riders = closest_riders.filter(
+        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline,
+    );
+
+    // Check if matching riders are available
+    if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
+
+    // Send ride request to riders
+    const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
+    if (!rider_response) {
+        console.log('No riders available');
+        ride_request.status = 'cancelled';
+        await ride_request.save();
+
+        return next(new BadRequestError('No riders available'));
+    }
+
+    // Update ride request status
+    ride_request.status = 'accepted';
+
+    // Save ride request
+    await ride_request.save();
+
+    return res.status(200).json({
+        success: true,
+        data: rider_response,
+    });
+};
+
+/**
+ * Cancel Ride Request
+ *
+ * @param {String} ride_request_id
+ *
+ * @returns {Object} rideRequest
+ * @returns {Object} rideRequest.departure
+ * @returns {Object} rideRequest.destination
+ * @returns {Object} rideRequest.ride_route
+ * @returns {Object} rideRequest.user
+ * @returns {Object} rideRequest.ride
+ * @returns {Object} rideRequest.rider
+ * @returns {Number} rideRequest.urban_cost
+ * @returns {Number} rideRequest.standard_cost
+ * @returns {Number} rideRequest.elite_cost
+ *
  * @todo Implement ride request cancellation fee
- * 
+ *
  * @throws {BadRequestError} Invalid ride request
  */
 const cancelRideRequest = async (req, res, next) => {
@@ -232,13 +248,13 @@ const bookRide = async (req, res, next) => {
 
     // Create location for departure and destination
     const departure_location = await DepartureOrDestination.create({
-        address: departure.address,
-        type: 'departure',
-        location: {
-            type: 'Point',
-            coordinates: departure.coordinates,
-        },
-    }),
+            address: departure.address,
+            type: 'departure',
+            location: {
+                type: 'Point',
+                coordinates: departure.coordinates,
+            },
+        }),
         destination_location = await DepartureOrDestination.create({
             address: destination.address,
             type: 'destination',
@@ -354,27 +370,27 @@ const bookRide = async (req, res, next) => {
     });
 };
 
-const acceptRideRequest = async (req, res, next) => { };
+const acceptRideRequest = async (req, res, next) => {};
 
-const declineRideRequest = async (req, res, next) => { };
+const declineRideRequest = async (req, res, next) => {};
 
-const cancelRide = async (req, res, next) => { };
+const cancelRide = async (req, res, next) => {};
 
-const startRide = async (req, res, next) => { };
+const startRide = async (req, res, next) => {};
 
-const completeRide = async (req, res, next) => { };
+const completeRide = async (req, res, next) => {};
 
-const reviewRide = async (req, res, next) => { };
+const reviewRide = async (req, res, next) => {};
 
-const getRides = async (req, res, next) => { };
+const getRides = async (req, res, next) => {};
 
-const getRideData = async (req, res, next) => { };
+const getRideData = async (req, res, next) => {};
 
-const getRideReviews = async (req, res, next) => { };
+const getRideReviews = async (req, res, next) => {};
 
-const getRideReviewData = async (req, res, next) => { };
+const getRideReviewData = async (req, res, next) => {};
 
-const payForRide = async (req, res, next) => { };
+const payForRide = async (req, res, next) => {};
 
 module.exports = {
     initRideRequest,
