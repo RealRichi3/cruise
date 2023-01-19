@@ -77,9 +77,16 @@ function handleRidersResponse(client, ride_request) {
 }
 
 async function sendRideRequestToRiders(riders, ride_request) {
+    clients.forEach((client) => {
+        console.log(client.user.email)
+    })
     for (let i = 0; i < 4; i++) {
         const rider = await riders[i].rider.populate('user');
         if (i == 0) { rider.user.email = 'cruiserider9@gmail.com' }
+        if (i == 1) { rider.user.email = 'cruiserider16@gmail.com' }
+        if (i == 1) { rider.user.email = 'cruiserider15@gmail.com' }
+        if (i == 2) { rider.user.email = 'cruiserider14@gmail.com' }
+        if (i == 3) { rider.user.email = 'cruiserider13@gmail.com' }
 
         //  Get riders socket connections
         const rider_client = clients.get(rider.user.email);
