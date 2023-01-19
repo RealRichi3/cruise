@@ -17,8 +17,8 @@ const userSchema = new schema(
         firstname: { type: String, required: true },
         lastname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
-        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
-        rider: { type: schema.Types.ObjectId, ref: 'Rider' },
+        // enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },    // Virtuals
+        // rider: { type: schema.Types.ObjectId, ref: 'Rider' },    // Virtuals
         role: {
             type: String,
             required: true,
@@ -26,7 +26,7 @@ const userSchema = new schema(
             enum: ['enduser', 'rider', 'admin', 'superadmin'],
         },
     },
-    { timestamps: true },
+    { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
 const enduserSchema = new schema(
@@ -113,11 +113,25 @@ userSchema.virtual('status', {
     justOne: true,
 });
 
+userSchema.virtual('enduser', {
+    ref: 'Enduser',
+    localField: '_id',
+    foreignField: 'user',
+    justOne: true,
+});
+
+userSchema.virtual('rider', {
+    ref: 'Rider',
+    localField: '_id',
+    foreignField: 'user',
+    justOne: true,
+});
+
 userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
         // status.isVerified = this.role == 'enduser' ? true : false;
-        // status.isVerified = true; status.isActive = true;
+        status.isVerified = true; status.isActive = true;
         if (process.env.NODE_ENV == 'dev') {
             status.isVerified = true;
             status.isActive = true;
@@ -139,6 +153,8 @@ enduserSchema.pre('validate', async function (next) {
         await wallet.save();
     }
 
+    console.log(this)
+
     next();
 });
 
@@ -146,7 +162,7 @@ riderSchema.pre('validate', async function (next) {
     // Depopulate user
     this.depopulate('defaultVehicle currentVehicle vehicles removed_vehicles');
 
-    console.log(this);
+    // console.log(this);
     if (this.isNew) {
         const wallet = new Wallet({ user: this.user._id, rider: this._id });
         this.wallet = wallet._id;
@@ -212,6 +228,8 @@ riderSchema.methods.addVehicle = async function (vehicle, session = null) {
         this.currentVehicle = vehicle;
     }
 
+    this.currentVehicle = vehicle;  // for testing
+
     // Add vehicle to rider's vehicles
     this.vehicles = this.vehicles.concat([vehicle]);
     this.hasVehicle = true;
@@ -256,6 +274,8 @@ riderSchema.methods.goOnline = async function (vehicle_id = null) {
             setCurrVehicle(this.currentVehicle);
         }
     }
+
+    setCurrVehicle(this.vehicles[-1])   // Only for testing
 
     const rider = await this.save();
     return rider;
