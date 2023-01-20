@@ -15,6 +15,7 @@ const config = require('../utils/config');
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
 const { Rider } = require('../models/users.model');
 const { Ride, RideRequest } = require('../models/ride.model');
+const { stringify } = require('../utils/json');
 
 /**
  * Initiate Ride Request
@@ -60,13 +61,13 @@ const initRideRequest = async (req, res, next) => {
 
     // Create departure and destination locations
     const departure_location = await DepartureOrDestination.create({
-            address: departure.address,
-            type: 'departure',
-            location: {
-                type: 'Point',
-                coordinates: departure.coordinates,
-            },
-        }),
+        address: departure.address,
+        type: 'departure',
+        location: {
+            type: 'Point',
+            coordinates: departure.coordinates,
+        },
+    }),
         destination_location = await DepartureOrDestination.create({
             address: destination.address,
             type: 'destination',
@@ -201,9 +202,25 @@ const cancelRideRequest = async (req, res, next) => {
     const { ride_request_id } = req.body;
 
     // Check if ride request exists
-    const ride_request = await RideRequest.findOne({ _id: ride_request_id, status: 'pending' });
+    const ride_request = await RideRequest.findOne({ _id: ride_request_id }).populate('ride');
 
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
+
+    // Check if ride request has been accepted
+    if (ride_request.status == 'accepted') {
+        // If ride has started ride can't be cancelled
+        if (ride_request.ride.status == 'started') { return next(new BadRequestError('Ride has already started')); }
+        
+        // Get riders client
+        const rider = await Rider.findOne({ _id: ride_request.ride.rider }).populate('user'),
+            riders_client = clients.get(rider.user.email);
+
+        // Notify rider that ride request has been cancelled
+        riders_client.send(stringify({
+            event: 'ride:cancelled',
+            data: { ride_request },
+        }))
+    }
 
     // Update ride request status
     ride_request.status = 'cancelled';
@@ -219,190 +236,38 @@ const cancelRideRequest = async (req, res, next) => {
     });
 };
 
-/**
- *
- * @param {*} req
- * @param {*} res
- * @param {*} next
- * @returns
- *
- * @todo Implement vehivle rating
- * @todo Implement rider rating
- * @todo Implement enduser rating
- * @todo Implement ride cancellation
- * @todo Implement ride completion
- * @todo calculate cost of ride
- */
-const bookRide = async (req, res, next) => {
-    // console.log(req.body)
-    //    Get the ride info
-    const { departure, destination } = req.body;
+// TODO: Add arrived
+// TODO: Add ride tracking link
+// TODO: Add start ride
+// TODO: Add end ride
+// TODO: Add customer review
+// TODO: Add ride review
+// TODO: Make reviews affect rider rating
 
-    if (
-        !departure ||
-        !destination ||
-        !departure.coordinates ||
-        !destination.coordinates ||
-        !departure.address ||
-        !destination.address
-    ) {
-        return next(new BadRequestError('Invalid ride info'));
-    }
+const arrived = async (req, res, next) => {
 
-    // Create location for departure and destination
-    const departure_location = await DepartureOrDestination.create({
-            address: departure.address,
-            type: 'departure',
-            location: {
-                type: 'Point',
-                coordinates: departure.coordinates,
-            },
-        }),
-        destination_location = await DepartureOrDestination.create({
-            address: destination.address,
-            type: 'destination',
-            location: {
-                type: 'Point',
-                coordinates: destination.coordinates,
-            },
-        });
-
-    //   Check riders within the current users location
-    //   Get the closest rider based on shortest distance
-    const closest_riders = await RiderLocation.find({
-        location: {
-            $near: {
-                $geometry: {
-                    type: 'Point',
-                    coordinates: departure_location.location.coordinates,
-                },
-                $maxDistance: 100000000000000000,
-            },
-        },
-        isOnline: true,
-    })
-        .populate({
-            path: 'rider',
-            populate: {
-                path: 'user',
-            },
-        })
-        .populate('vehicle');
-
-    // Calculate distance between departure and destination
-    // Distance should be for route, not straight line - Use google maps API
-    // const route_distance = calcCordDistance(
-    //     departure_location.location.coordinates,
-    //     destination_location.location.coordinates,
-    // );
-
-    // Calculate cost of ride - based on route distance, use multiplier (urban, standard, elite)
-    // const ride_cost = // Distance in km from googleMap * multiplier
-
-    // Effect cost multiplier for available packages, (elite, urban, standard)
-    // const final_cost = {
-    // urban: ride_cost * config.URBAN_MULTIPLIER
-    // standard: ride_cost * config.STANDARD_MULTIPLIER
-    // elite: ride_cost * config.ELITE_MULTIPLIER
-    // }
-
-    //   Calculate distance between rider and user
-    closest_riders.forEach((rider) => {
-        rider.distance = calcCordDistance(rider.location.coordinates, departure_location.location.coordinates);
-    });
-
-    //   Sort riders by distance
-    const sorted_riders = closest_riders.sort((a, b) => {
-        return a.distance - b.distance;
-    });
-
-    //    Check if rider is available
-    const available_riders = sorted_riders.filter((rider) => {
-        return rider.rider.rideStatus === 'available';
-    });
-
-    //    Get users socket connection
-    const user_client = clients.get(req.user.email);
-
-    //    Send request to rider,
-    let curr_rider = null;
-
-    const location = { departure: departure_location, destination: destination_location };
-    const response = await sendRideRequestToRiders(available_riders, location);
-    if (!response) {
-        //  If no rider accepts, send notification to user
-        return res.status(200).json({
-            success: false,
-            data: {
-                message: 'No rider available',
-            },
-        });
-    }
-
-    const sensitive_fields = [
-        'bank_accounts',
-        'driver_license',
-        'email',
-        'removed_vehicle',
-        'taxi_license',
-        'riderStatus',
-    ];
-
-    //  Get rider data
-    const rider_data = await Rider.findById(curr_rider._id).populate({
-        path: 'vehicles user',
-        select: sensitive_fields.join(' '),
-    });
-
-    //  If rider accepts, create a ride, and init map tracking for rider on user app and rider app
-    const ride = await Ride.create({
-        departure: departure_location._id,
-        destination: destination_location._id,
-        rider: rider_data._id,
-        user: req.user.id,
-        vehicle: rider_data.currentVehicle,
-        passenger: req.user.id,
-    });
-
-    return res.status(200).json({
-        success: true,
-        data: {
-            message: 'Ride request sent',
-            ride,
-        },
-    });
 };
 
-const acceptRideRequest = async (req, res, next) => {};
+const startRide = async (req, res, next) => { };
 
-const declineRideRequest = async (req, res, next) => {};
+const completeRide = async (req, res, next) => { };
 
-const cancelRide = async (req, res, next) => {};
+const reviewRide = async (req, res, next) => { };
 
-const startRide = async (req, res, next) => {};
+const getRides = async (req, res, next) => { };
 
-const completeRide = async (req, res, next) => {};
+const getRideData = async (req, res, next) => { };
 
-const reviewRide = async (req, res, next) => {};
+const getRideReviews = async (req, res, next) => { };
 
-const getRides = async (req, res, next) => {};
+const getRideReviewData = async (req, res, next) => { };
 
-const getRideData = async (req, res, next) => {};
-
-const getRideReviews = async (req, res, next) => {};
-
-const getRideReviewData = async (req, res, next) => {};
-
-const payForRide = async (req, res, next) => {};
+const payForRide = async (req, res, next) => { };
 
 module.exports = {
     initRideRequest,
     completeRideRequest,
     cancelRideRequest,
-    bookRide,
-    acceptRideRequest,
-    declineRideRequest,
-    cancelRide,
     startRide,
     completeRide,
     reviewRide,
