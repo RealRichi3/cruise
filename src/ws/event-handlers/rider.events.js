@@ -14,7 +14,7 @@ class RiderSockets {
 
     init() {
         const self = this.client;
-
+        // TODO: Add role based access control to all events
         // Change rider status to online
         this.client.on('rider:goonline', socketAsyncWrapper(async (data) => {
             console.log(data)

@@ -9,10 +9,6 @@ const {
     initRideRequest,
     completeRideRequest,
     cancelRideRequest,
-    bookRide,
-    acceptRideRequest,
-    declineRideRequest,
-    cancelRide,
     startRide,
     completeRide,
     reviewRide,
@@ -20,14 +16,14 @@ const {
 } = require('../controllers/ride.controller')
 
 const { basicAuth } = require('../middlewares/auth');
-const rbacMiddleware = require('../middlewares/rbac');
+const permit = require('../middlewares/rbac');
 
 router.use(basicAuth());
 
 router
-    .post('/request/init', initRideRequest)
-    .post('/request/complete', completeRideRequest)
-    .post('/cancel', cancelRideRequest)
-    .post('/book', bookRide)
+    .post('/request/init', permit('enduser superadmin'), initRideRequest)
+    .post('/request/complete', permit('enduser superadmin'), completeRideRequest)
+    .post('/request/cancel', permit('enduser superadmin'), cancelRideRequest)
+    .post('/start', permit('rider'), startRide)
 
 module.exports = router;

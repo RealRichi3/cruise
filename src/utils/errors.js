@@ -40,6 +40,13 @@ class ConflictError extends CustomAPIError {
     }
 }
 
+class NoContentError extends CustomAPIError {
+    constructor(message) {
+        super(message)
+        this.statusCode = 204
+    }
+}
+
 const UnauthenticatedError = UnauthorizedError
 
 module.exports = {
@@ -50,4 +57,5 @@ module.exports = {
     ForbiddenError,
     NotFoundError,
     ConflictError,
+    NoContentError,
 }
