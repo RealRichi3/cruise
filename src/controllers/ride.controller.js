@@ -8,7 +8,7 @@ const {
     getClosestRiders,
 } = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
-const { BadRequestError } = require('../utils/errors');
+const { BadRequestError, NoContentError, NotFoundError } = require('../utils/errors');
 const config = require('../utils/config');
 
 // Models
@@ -38,6 +38,8 @@ const { Ride, RideRequest } = require('../models/ride.model');
  *
  * @throws {BadRequestError} Invalid ride info
  * @throws {BadRequestError} Invalid ride route
+ * 
+ * // TODO: filter fields in response for initate ride request
  */
 const initRideRequest = async (req, res, next) => {
     // console.log(req.body)
@@ -128,6 +130,7 @@ const initRideRequest = async (req, res, next) => {
  * @returns {Number} rideRequest.standard_cost
  * @returns {Number} rideRequest.elite_cost
  *
+ * // TODO: Include ride tracking link to response
  */
 const completeRideRequest = async (req, res, next) => {
     // Get the selected ride class
@@ -158,10 +161,10 @@ const completeRideRequest = async (req, res, next) => {
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
     if (!rider_response) {
         console.log('No riders available');
-        ride_request.status = 'cancelled';
+        // ride_request.status = 'cancelled';
         await ride_request.save();
 
-        return next(new BadRequestError('No riders available'));
+        return next(new NotFoundError('No riders available'));
     }
 
     // Update ride request status
@@ -192,8 +195,6 @@ const completeRideRequest = async (req, res, next) => {
  * @returns {Number} rideRequest.standard_cost
  * @returns {Number} rideRequest.elite_cost
  *
- * @todo Implement ride request cancellation fee
- *
  * @throws {BadRequestError} Invalid ride request
  */
 const cancelRideRequest = async (req, res, next) => {
@@ -212,7 +213,9 @@ const cancelRideRequest = async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
-        data: ride_request,
+        data: {
+            message: 'Ride request cancelled',
+        },
     });
 };
 
