@@ -205,6 +205,18 @@
                 show_alert()
             }))
 
+            wss.addEventListener('ride:accepted', wsWrapper((data) => {
+                console.log('[ride:accepted] ')
+                console.log(data.detail);
+            }))
+
+            wss.addEventListener('ride:cancelled', wsWrapper((data) => {
+                console.log('[ride:cancelled] ')
+                console.log(data.detail);
+
+                alert('Ride cancelled')
+            }))
+
             wss.onclose = () => {
                 console.log('Connection closed');
                 setTimeout(start, 1000)
