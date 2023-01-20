@@ -38,6 +38,7 @@ const rideSchema = new schema({
         enum: ['pending', 'ongoing', 'completed', 'cancelled', 'arrived'],
         default: 'pending',
     },
+    tracking_link: { type: String },
     createdAt: { type: Date, default: Date.now },
 })
 
