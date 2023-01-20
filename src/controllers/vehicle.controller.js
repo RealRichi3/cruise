@@ -41,12 +41,12 @@ const addVehicle = async (req, res, next) => {
     if (!rider) return next(new UnauthorizedError('User is not a rider'));
 
     // Check if vehicle image is provided
-    if (!req.files) {
-        return next(new BadRequestError('Vehicle image is required'));
-    }
+    // if (!req.files) {
+    //     return next(new BadRequestError('Vehicle image is required'));
+    // }
 
     // Upload vehicle image by sending the req.files object
-    const vehicle_images = await vehicleimages(req,res,next)
+   /*  const vehicle_images = await vehicleimages(req,res,next)
 
     // Check if vehicle image is uploaded
     if (!vehicle_images) {
