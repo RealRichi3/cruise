@@ -210,7 +210,7 @@ const cancelRideRequest = async (req, res, next) => {
     if (ride_request.status == 'accepted') {
         // If ride has started ride can't be cancelled
         if (ride_request.ride.status == 'started') { return next(new BadRequestError('Ride has already started')); }
-        
+
         // Get riders client
         const rider = await Rider.findOne({ _id: ride_request.ride.rider }).populate('user'),
             riders_client = clients.get(rider.user.email);
@@ -244,8 +244,57 @@ const cancelRideRequest = async (req, res, next) => {
 // TODO: Add ride review
 // TODO: Make reviews affect rider rating
 
-const arrived = async (req, res, next) => {
+/**
+ * Arrived
+ * 
+ * Sends a notification to the user that the rider has arrived
+ * 
+ * @param {String} ride_request_id
+ * 
+ * @returns {string} message
+ * 
+ * @throws {BadRequestError} Invalid ride request
+ */
+const rideArrived = async (req, res, next) => {
+    const { ride_request_id } = req.body;
 
+    // Check if ride request exists
+    const ride_request = await RideRequest.findOne({ _id: ride_request_id }).populate('user ride');
+    if (!ride_request) return next(new BadRequestError('Invalid ride request'));
+
+    // Check if ride request belongs to rider
+    if (ride_request.ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+
+    // Check if ride request has been accepted
+    if (ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
+
+    // Check if ride has started
+    if (ride_request.ride.status == 'started') return next(new BadRequestError('Ride has started'));
+
+    // Check if rider has arrived
+    if (ride_request.ride.status == 'arrived') return next(new BadRequestError('Rider has already arrived'));
+
+    // Update ride status
+    ride_request.ride.status = 'arrived';
+
+    // Save ride
+    await ride_request.ride.save();
+
+    // Get users client
+    const users_client = clients.get(ride_request.user.email);
+
+    // Notify user that rider has arrived
+    users_client.send(stringify({
+        event: 'ride:arrived',
+        data: { ride_request },
+    }));
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            message: 'Rider has arrived',
+        },
+    });
 };
 
 const startRide = async (req, res, next) => { };
@@ -268,6 +317,7 @@ module.exports = {
     initRideRequest,
     completeRideRequest,
     cancelRideRequest,
+    rideArrived,
     startRide,
     completeRide,
     reviewRide,

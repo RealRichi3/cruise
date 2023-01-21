@@ -114,7 +114,6 @@ async function sendRideRequestToRiders(riders, ride_request) {
         //  Get response from rider
         const riders_response = await getRideResponseFromRider(rider_client, ride_request);
         if (riders_response) {
-            console.log(typeof ride_request)
             // Create a ride
             ride = await ride_request.createNewRide(rider._id);
 
