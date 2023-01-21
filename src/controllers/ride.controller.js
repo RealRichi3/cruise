@@ -8,7 +8,7 @@ const {
     getClosestRiders,
 } = require('../utils/ride');
 const { clients } = require('../ws/utils/clients');
-const { BadRequestError, NoContentError, NotFoundError } = require('../utils/errors');
+const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 const config = require('../utils/config');
 
 // Models
@@ -297,7 +297,48 @@ const rideArrived = async (req, res, next) => {
     });
 };
 
-const startRide = async (req, res, next) => { };
+/**
+ * Start Ride
+ * 
+ * Updates ride status to started
+ * 
+ * @param {String} ride_request_id
+ * 
+ * @returns {string} message
+ * 
+ * @throws {BadRequestError} Invalid ride request
+ * @throws {BadRequestError} Ride request has not been accepted
+ * @throws {BadRequestError} Ride has already started
+ * */
+const startRide = async (req, res, next) => {
+    const { ride_id } = req.body;
+
+    // Check if ride exists
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    if (!ride) return next(new BadRequestError('Invalid ride'));
+
+    // Check if ride belongs to rider
+    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+
+    // Check if ride request has been accepted
+    if (ride.ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
+
+    // Check if ride has started
+    if (ride.status == 'started') return next(new BadRequestError('Ride has already started'));
+
+    // Update ride status
+    ride.status = 'started';
+
+    // Save ride
+    await ride.save();
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            message: 'Ride has started',
+        },
+    });
+};
 
 const completeRide = async (req, res, next) => { };
 
