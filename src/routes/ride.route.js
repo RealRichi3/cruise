@@ -28,5 +28,6 @@ router
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
+    .get('/data', permit('enduser superadmin'), getRideData)
 
 module.exports = router;

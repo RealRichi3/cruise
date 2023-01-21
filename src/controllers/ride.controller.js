@@ -389,7 +389,33 @@ const reviewRide = async (req, res, next) => { };
 
 const getRides = async (req, res, next) => { };
 
-const getRideData = async (req, res, next) => { };
+/**
+ * Get Ride Data
+ * 
+ * @param {String} ride_id
+ * 
+ * @returns {Object} ride
+ * 
+ * @throws {BadRequestError} Invalid ride
+ * //TODO: Filter ride data to only include necessary data
+ */
+const getRideData = async (req, res, next) => { 
+    const { ride_id } = req.body;
+
+    // Check if ride exists
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    if (!ride) return next(new BadRequestError('Invalid ride'));
+
+    // Check if ride belongs to rider
+    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            ride,
+        },
+    });
+};
 
 const getRideReviews = async (req, res, next) => { };
 
