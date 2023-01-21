@@ -340,7 +340,50 @@ const startRide = async (req, res, next) => {
     });
 };
 
-const completeRide = async (req, res, next) => { };
+/**
+ * Complete Ride
+ * 
+ * Updates ride status to completed
+ * 
+ * @param {String} ride_id
+ * 
+ * @returns {string} message
+ * 
+ * @throws {BadRequestError} Invalid ride
+ * @throws {BadRequestError} Ride has not been started
+ * @throws {BadRequestError} Ride has already been completed
+ * 
+ * //TODO: End ride tracking socket connection
+ * */
+const completeRide = async (req, res, next) => {
+    const {ride_id} = req.body;
+
+    // Check if ride exists
+    const ride = await Ride.findOne({_id: ride_id}).populate('ride_request');
+    if (!ride) return next(new BadRequestError('Invalid ride'));
+
+    // Check if ride belongs to rider
+    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+
+    // Check if ride has started
+    if (ride.status != 'started') return next(new BadRequestError('Ride has not been started'));
+
+    // Check if ride has been completed
+    if (ride.status == 'completed') return next(new BadRequestError('Ride has already been completed'));
+
+    // Update ride status
+    ride.status = 'completed';
+
+    // Save ride
+    await ride.save();
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            message: 'Ride has been completed',
+        },
+    });
+ };
 
 const reviewRide = async (req, res, next) => { };
 

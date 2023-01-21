@@ -27,5 +27,6 @@ router
     .post('/request/cancel', permit('enduser superadmin'), cancelRideRequest)
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
+    .post('/complete', permit('rider'), completeRide)
 
 module.exports = router;
