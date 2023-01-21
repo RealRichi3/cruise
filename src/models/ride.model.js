@@ -2,6 +2,13 @@ const mongoose = require('mongoose')
 const schema = mongoose.Schema
 const { Rider } = require('./users.model')
 
+const rideReviewSchema = new schema({
+    ride: { type: schema.Types.ObjectId, ref: 'Ride', required: true },
+    user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    review: { type: String },
+})
+
 const rideRequestSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
     departure: { type: schema.Types.ObjectId, ref: 'DepartureOrDestination', required: true },
@@ -44,6 +51,12 @@ const rideSchema = new schema({
 
 rideSchema.virtual('ride_request', {
     ref: 'RideRequest',
+    localField: '_id',
+    foreignField: 'ride',
+})
+
+rideSchema.virtual('ride_review', {
+    ref: 'RideReview',
     localField: '_id',
     foreignField: 'ride',
 })
@@ -105,7 +118,8 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
     }
 }
 
+const RideReview = mongoose.model('RideReview', rideReviewSchema)
 const Ride = mongoose.model('Ride', rideSchema)
 const RideRequest = mongoose.model('RideRequest', rideRequestSchema)
 
-module.exports = { Ride, RideRequest }
+module.exports = { Ride, RideRequest, RideReview }
