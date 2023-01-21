@@ -3,7 +3,7 @@ const router = espress.Router();
 
 const {
     getRideData,
-    getRideReviews,
+    getRideReview,
     getRideReviewData,
     getUsersRides,
     initRideRequest,
@@ -12,7 +12,8 @@ const {
     rideArrived,
     startRide,
     completeRide,
-    reviewRide,
+    submitRideReview,
+    getRidersReviews,
     payForRide
 } = require('../controllers/ride.controller')
 
@@ -29,6 +30,10 @@ router
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
     .get('/data', permit('enduser superadmin'), getRideData)
-    .get('/rides', permit('enduser rider'), getUsersRides)
+    .get('/rides', permit('enduser'), getUsersRides)
+    .post('/review/submit', permit('enduser'), submitRideReview)
+    .get('/review', permit('superadmin admin'), getRideReview)
+    .get('/review/data', permit('superadmin admin'), getRideReviewData)
+    .get('/review/rider', permit('superadmin admin'), getRidersReviews)
 
 module.exports = router;
