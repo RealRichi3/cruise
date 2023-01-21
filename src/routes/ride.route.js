@@ -5,7 +5,7 @@ const {
     getRideData,
     getRideReviews,
     getRideReviewData,
-    getRides,
+    getUsersRides,
     initRideRequest,
     completeRideRequest,
     cancelRideRequest,
@@ -29,5 +29,6 @@ router
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
     .get('/data', permit('enduser superadmin'), getRideData)
+    .get('/rides', permit('enduser rider'), getUsersRides)
 
 module.exports = router;

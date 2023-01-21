@@ -387,7 +387,43 @@ const completeRide = async (req, res, next) => {
 
 const reviewRide = async (req, res, next) => { };
 
-const getRides = async (req, res, next) => { };
+/**
+ * Get Users Rides
+ * 
+ * Get rides booked by user, and rides that rider has accepted
+ * 
+ * @returns {Array} rides
+ * 
+ * @throws {BadRequestError} Invalid user
+ * @throws {BadRequestError} Invalid rider
+ * 
+ * */
+const getUsersRides = async (req, res, next) => { 
+    // Check users role 
+    if (req.user.role == 'enduser') {
+        // Get enduser's ride requests  - Includes all rides (pending, accepted, completed)
+        const users_rides = await RideRequest.find({ user: req.user.id });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                rides: users_rides,
+            },
+        });
+    } else if (req.user.role == 'rider') {
+        // Get rider's rides    - Includes only accepted rides
+        const riders_rides = await Ride.find({ rider: req.user.id });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                rides: riders_rides,
+            },
+        });
+    } else {
+        return next(new BadRequestError('Invalid user'));
+    }
+};
 
 /**
  * Get Ride Data
@@ -407,7 +443,7 @@ const getRideData = async (req, res, next) => {
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    // if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
@@ -431,7 +467,7 @@ module.exports = {
     startRide,
     completeRide,
     reviewRide,
-    getRides,
+    getUsersRides,
     getRideData,
     getRideReviews,
     getRideReviewData,
