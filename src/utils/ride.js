@@ -115,7 +115,7 @@ async function sendRideRequestToRiders(riders, ride_request) {
         const riders_response = await getRideResponseFromRider(rider_client, ride_request);
         if (riders_response) {
             // Create a ride
-            ride = ride_request.createNewRide(rider._id);
+            ride = await ride_request.createNewRide(rider._id);
 
             // TODO: Start realtime location tracking for rider on user app and rider ap
 

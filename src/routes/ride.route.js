@@ -9,6 +9,7 @@ const {
     initRideRequest,
     completeRideRequest,
     cancelRideRequest,
+    rideArrived,
     startRide,
     completeRide,
     reviewRide,
@@ -24,6 +25,7 @@ router
     .post('/request/init', permit('enduser superadmin'), initRideRequest)
     .post('/request/complete', permit('enduser superadmin'), completeRideRequest)
     .post('/request/cancel', permit('enduser superadmin'), cancelRideRequest)
+    .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
 
 module.exports = router;
