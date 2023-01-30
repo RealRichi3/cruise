@@ -22,7 +22,7 @@ const Password = require('../models/password.model');
 // Utils
 const config = require('../utils/config');
 const asyncWrapper = require('../utils/async_wrapper');
-const sendEmail = require('../utils/email');
+const sendEmail = require('../services/email.service');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
 const { Wallet, PaymentInfo } = require('../models/payment_info.model');

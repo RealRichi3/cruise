@@ -5,7 +5,7 @@ const { NotFoundError, UnauthorizedError } = require('../utils/errors');
 const {
     initiateTransaction,
     verifyTransactionStatus,
-} = require('../utils/transaction');
+} = require('../services/transaction.service');
 
 const getUsersTransactions = async (req, res, next) => {
     const transactions = await Transaction.find({ user: req.user.id }).populate(

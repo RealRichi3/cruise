@@ -1,4 +1,4 @@
-const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../utils/location');
+const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../services/location.service');
 const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
 const { stringify } = require('../../utils/json');
 const Vehicle = require('../../models/vehicle.model');

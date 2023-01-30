@@ -6,7 +6,7 @@ const {
 } = require('../utils/errors');
 const jwt = require('jsonwebtoken');
 const { BlacklistedToken } = require('../models/token.model');
-const { getAuthTokens } = require('../utils/token');
+const { getAuthTokens } = require('../services/token.service');
 
 const config = require('../utils/config');
 

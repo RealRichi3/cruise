@@ -1,4 +1,8 @@
 const WebSocketServer = require('ws');
+const Peer = require('peerjs').default
+const config = require('./utils/config');
+
+
 const app = require('./app');
 const PORT = process.env.PORT;
 
@@ -42,6 +46,8 @@ function startSocketEventListeners(client) {
     client.on('message', (message) => {
         curr_client = client;
         console.log('--------')
+
+        // Parse message
         const parsed_message = toJSON(message);
         console.log(parsed_message)
 
@@ -113,6 +119,29 @@ wss.on('error', (error) => {
     }
 
     console.log(error);
+});
+
+const ps = Peer({
+    port: 8800,
+    host: 'localhost',
+    path: '/peer',
+    debug: 3
+})
+
+console.log(config.SERVER_SIGNALLING_ID)
+ps.on('connection', (client) => {
+    console.log(`[peer] ${client.id} connected`);
+
+    client.on('message', (message) => {
+        console.log(`[peer] ${client.id} : ${message}`);
+    });
+
+    // client.on('disconnect', () => {
+        // console.log(`[peer] ${client.id} disconnected`);
+    // });
+    // client.on('disconnect', () => {
+    //     console.log(`[peer] ${client.id} disconnected`);
+    // });
 });
 
 module.exports = wss;
