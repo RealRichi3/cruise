@@ -1,7 +1,7 @@
 const User = require('../models/users.model');
 const TestToken = require('../models/token.model');
 const AuthCode = require('../models/authcode.model');
-const { sendEmail } = require('../utils/email');
+const { sendEmail } = require('../services/email.service');
 
 const { CustomAPIError, BadRequestError } = require('../utils/custom_errors');
 

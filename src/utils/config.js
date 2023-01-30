@@ -42,7 +42,8 @@ const URBAN_MULTIPLIER = process.env.URBAN_MULTIPLIER,
     COST_PER_KM = process.env.COST_PER_KM;
 
 /* WEBRTC */
-const SERVER_SIGNALLING_ID = process.env.SERVER_SIGNALLING_ID;
+const SERVER_SIGNALLING_ID = process.env.SERVER_SIGNALLING_ID,
+    PEER_PORT = process.env.PEER_PORT;
 
 module.exports = {
     // DB
@@ -96,4 +97,5 @@ module.exports = {
 
     // WEBRTC
     SERVER_SIGNALLING_ID,
+    PEER_PORT,
 };
