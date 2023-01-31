@@ -18,6 +18,20 @@
     <button class="go-offline">Go offline</button>
     <button class="add-vehicle">Add Vehicle</button>
     <button class="get-location">Get Location</button>
+    <button class="connect-peer">Connect Peer</button>
+    <div class="call">
+        <input type="text" class="peer_call_email">
+        <button class="call-peer">Call Rider</button>
+    </div>
+    <div class="call incoming-call hide">
+        <strong>Incoming Call</strong>
+        <div class="caller-details">
+            <p> </p>
+        </div>
+        <button class="accept-call">Accept Call</button>
+        <button class="reject-call">Reject Call</button>
+    </div>
+
     <!-- confirmation alert window -->
     <div class="alert show" role="alert">
         <strong>Success!</strong>
@@ -171,6 +185,7 @@
 
             wss.onmessage = wsWrapper((info) => {
                 console.log('----------------------')
+
                 let req_data = info.data
                 const parsed_data = parseData(info.data)
                 // console.log(parsed_data)
@@ -216,6 +231,24 @@
                 console.log(data.detail);
 
                 alert('Ride cancelled')
+            }))
+
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
+            }))
+            wss.addEventListener('', wsWrapper((data) => {
+
             }))
 
             wss.onclose = () => {
@@ -270,6 +303,154 @@
             console.log('[error] ' + data.detail);
         })
     </script>
+
+    <!-- WebRTC -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/0.3.20/peer.min.js"></script>
+    <script>
+        const peer = new Peer()
+        let peer_id;
+        let conn_peer_id;
+
+        peer.on('open', (id) => {
+            console.log('Peer ID: ' + id)
+            peer_id = id
+            // const conn = peer.connect('6107862e-61a7-4c06-8a26-578030a355bb')
+        })
+
+        peer.on('connection', (conn) => {
+            console.log('Connected to peer')
+            conn.on('data', (data) => {
+                console.log(data)
+            })
+        })
+
+        peer.on('error', (err) => {
+            console.log('---Peer connection error---')
+            console.log(err)
+        })
+
+        const connectButton = document.querySelector('.connect-peer')
+        connectButton.addEventListener('click', () => {
+            const conn = peer.connect(conn_peer_id)
+            conn.on('open', () => {
+                conn.send('Hello!')
+            })
+        })
+
+        function handleCallOfflineResponse(data) {
+            // console.log(data)
+            const random = Math.floor(Math.random() * 10)
+            console.log('Rider is offline' + random)
+            closeCallEventListeners()
+        }
+
+        function handleCallAcceptedResponse(data) {
+            // console.log(data)
+            alert('Call accepted')
+            conn_peer_id = data.detail.peer_id
+            const conn = peer.connect(conn_peer_id)
+            const call = peer.call(conn_peer_id, navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            }))
+
+            call.on('stream', (stream) => {
+                const video = document.querySelector('.video')
+                video.srcObject = stream
+                video.play()
+            })
+            closeCallEventListeners()
+        }
+
+        function handleCallDeclinedResponse(data) {
+            // console.log(data)
+            alert('Call declined')
+            closeCallEventListeners()
+        }
+        
+        function startCallEventListeners () {
+            // Add new listeners
+            wss.addEventListener('call:offline', handleCallOfflineResponse)
+            wss.addEventListener('call:accepted', handleCallAcceptedResponse)
+            wss.addEventListener('call:declined', handleCallDeclinedResponse)
+        }
+
+        function closeCallEventListeners () {
+            wss.removeEventListener('call:offline', handleCallOfflineResponse)
+            wss.removeEventListener('call:accepted', handleCallAcceptedResponse)
+            wss.removeEventListener('call:declined', handleCallDeclinedResponse)
+        }
+        
+        function refreshCallEventListeners () {
+            closeCallEventListeners()
+            startCallEventListeners()
+        }
+
+        const callButton = document.querySelector('.call-peer')
+        callButton.addEventListener('click', () => {
+            // Get rider email from input
+            const rider_email = document.querySelector('.peer_call_email').value
+
+            // Get rider peer id from server
+            const peer_data = {
+                rider_email: rider_email,
+                peer_id: peer_id
+            }
+
+            refreshCallEventListeners()
+
+            wss.broadcast('call:rider:init', peer_data)
+        })
+
+        wss.addEventListener('call:incoming', (data) => {
+            alert('Call incoming')
+            const caller = data.detail.caller
+            const caller_peer_id = data.detail.peer_id
+
+            const incoming_call_pane = document.querySelector('.incoming-call')
+            const user_html = `${JSON.stringify(caller)}`
+            incoming_call_pane.classList.remove('hide')
+            incoming_call_pane.classList.add('show')
+            incoming_call_pane.querySelector('.caller-details p').innerHTML = user_html
+
+            const accept_call_button = document.querySelector('.accept-call')
+            const decline_call_button = document.querySelector('.reject-call')
+
+            accept_call_button.addEventListener('click', () => {
+                const call_data = {
+                    peer_id: peer_id,
+                }
+                wss.broadcast('call:accepted', call_data)
+
+                incoming_call_pane.classList.add('hide')
+            })
+            decline_call_button.addEventListener('click', () => {
+                const call_data = {
+                    message: 'Call declined',
+                }
+                wss.broadcast('call:declined', call_data)
+
+                incoming_call_pane.classList.add('hide')
+            })
+
+            console.log(data)
+
+            conn_peer_id = data.detail.peer_id
+            const call_connection = peer.connect(conn_peer_id)
+
+            call_connection.on('open', () => {
+                call_connection.send('Hello!')
+                const call = peer.call(conn_peer_id, navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                }))
+            })
+        })
+
+    </script>
+
+
+    <!-- JS script -->
     <script src="./js/script.js"></script>
 </body>
 

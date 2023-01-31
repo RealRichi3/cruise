@@ -8,6 +8,9 @@ body, html {
     padding: 0;
 }
 
+* {
+    box-sizing: border-box;
+}
 .alert {
     background-color: #765e5e;
     width: fit-content;
@@ -19,6 +22,52 @@ body, html {
 .alert > button {
     width: 50px;
     height: 50px;
+}
+
+
+.incoming-call {
+    background-color: #765e5e;
+    width: fit-content;
+    padding: 20px;
+    /* height: 300px; */
+    color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.incoming-call > button {
+    width: 100px;
+    height: 30px;
+    border-radius: 5px;
+}
+
+.incoming-call > button:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.incoming-call .caller-details {
+    display: flex;
+    /* flex-direction: column; */
+    /* justify-content: center; */
+    /* align-items: center; */
+    /* width: 100%; */
+    border-radius: 10px;
+    margin: 10px;
+    max-width: 200px;
+    text-align: center;
+
+    /* padding: 10px; */
+    background-color: beige;
+    min-height: 100px
+}
+
+.caller-details p {
+    margin: 0;
+    padding: 0;
+    width: 100%;
 }
 
 .show {
