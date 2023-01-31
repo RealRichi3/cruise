@@ -5,6 +5,7 @@ const Vehicle = require('../../models/vehicle.model');
 const { Rider } = require('../../models/users.model');
 const config = require('../../utils/config');
 const { clients } = require('../utils/clients');
+const { randomUUID } = require('crypto');
 
 class CallSockets {
     constructor(client, sock) {
@@ -17,6 +18,8 @@ class CallSockets {
         // TODO: Add role based access control to all events
         // Change rider status to online
         this.client.on('call:rider:init', socketAsyncWrapper(async (data) => {
+            console.log(randomUUID())
+            console.log('New call initiated for ' + data.rider_email)
             // User should send rider email and peeer id
             const { rider_email, peer_id } = data;
 
@@ -25,6 +28,7 @@ class CallSockets {
 
             // If rider is not online, notify user
             if (rider_client == null) {
+                console.log('Rider is offline')
                 self.send(stringify({
                     event: 'call:offline',
                     data: { message: 'Rider is offline' }
@@ -35,36 +39,46 @@ class CallSockets {
             // If rider is online, notify rider
             // TODO: Check if rider is busy with another ride
             // TODO: Add user details to data sent to rider
-            rider_client.send(stringify({ event: 'call:incoming', data: { peer_id } }));
+            console.log('Rider is online')
+            rider_client.send(stringify({ event: 'call:incoming', data: { peer_id, caller: self.user } }));
 
             
             // Await rider response with rider's peer id
             const rider_response = await new Promise((resolve, reject) => {
-                rider_client.on('call:response', (data) => {
+                console.log('Awaiting rider response')
+                rider_client.on('call:accepted', (data) => {
+                    console.log('Rider accepted call')
                     resolve(data);
                 });
 
                 // Set timeout to close call if no response
                 setTimeout(() => {
+                    console.log('Call timed out')
                     self.send(stringify({ event: 'call:timeout', data: { message: 'Call timeout' } }));
     
                     // Notify rider that call timed out
+                    console.log('Notifying rider that call timed out')
                     rider_client.send(stringify({ event: 'call:timeout', data: { message: 'Call timeout' } }));
     
                     // Close call
+                    console.log('Closing call')
                     self.emit('call:end');
                     
                     resolve(null);
-                }, config.call_timeout);
+                }, 5000);
             });
 
             // If rider rejects call, notify user
             if (rider_response == null || rider_response.peer_id == null) {
+                console.log('Rider declined call')
+                self.send(stringify({ event: 'call:declined', data: { message: 'Rider declined call' } }));
                 return;
             }
 
             // If rider accepts call, notify user
+            console.log('Rider accepted call')
             self.send(stringify({ event: 'call:accepted', data: { peer_id: rider_response.peer_id } }));
+            return
         }, this.socket));
 
         this.client.on('call:enduser:init', socketAsyncWrapper(async (data) => {
@@ -117,11 +131,9 @@ class CallSockets {
 
         }, this.socket));
 
-
         // Change rider status to offline
         this.client.on('call:end', socketAsyncWrapper(async (data) => {
             
-
         }, this.socket));
     }
 }

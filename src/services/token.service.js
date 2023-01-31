@@ -1,10 +1,10 @@
 const { User } = require('../models/users.model');
 const { AuthCode } = require('../models/token.model');
-const asyncWrapper = require('./async_wrapper');
-const { NotFoundError } = require('./errors');
+const asyncWrapper = require('../utils/async_wrapper');
+const { NotFoundError } = require('../utils/errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const config = require('./config');
+const config = require('../utils/config');
 const { v4: UUID } = require('uuid');
 
 /**

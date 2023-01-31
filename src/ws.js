@@ -1,5 +1,5 @@
 const WebSocketServer = require('ws');
-const Peer = require('peerjs').default
+const { PeerServer } = require('peer')
 const config = require('./utils/config');
 
 
@@ -16,6 +16,8 @@ const { RiderSockets } = require('./ws/event-handlers/rider.events');
 const { authMiddleware } = require("./ws/middlewares/auth.ws");
 const { toJSON, stringify } = require("./utils/json");
 const { removeClient, addClient } = require('./ws/utils/clients');
+const { CallSockets } = require('./ws/event-handlers/call.events');
+const { randomUUID } = require('crypto');
 const wsWrapper = require('./ws/middlewares/wrapper.ws').socketAsyncWrapper;
 
 let curr_client = null;
@@ -29,8 +31,11 @@ let curr_client = null;
  * @returns {void}
  */
 function startSocketEventListeners(client) {
-    // Init event handlers
+        console.log(randomUUID())
+        // Init event handlers
     new RiderSockets(client, wss).init()
+    new CallSockets(client, wss).init()
+    
     client.send('Connection established');
 
     /**
@@ -63,6 +68,8 @@ function startSocketEventListeners(client) {
         const { event, data } = parsed_message;   // If event is specified
 
         client.emit(event, data);   // Emit event
+
+        return;
     });
 
     client.on('close', () => {
@@ -121,14 +128,14 @@ wss.on('error', (error) => {
     console.log(error);
 });
 
-const ps = Peer({
+const ps = PeerServer({
     port: 8800,
     host: 'localhost',
     path: '/peer',
-    debug: 3
+    debug: 3,
+    id: config.SERVER_SIGNALLING_ID
 })
 
-console.log(config.SERVER_SIGNALLING_ID)
 ps.on('connection', (client) => {
     console.log(`[peer] ${client.id} connected`);
 

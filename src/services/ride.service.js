@@ -1,4 +1,4 @@
-const { stringify } = require("./json");
+const { stringify } = require("../utils/json");
 const { Rider } = require("../models/users.model");
 const { clients } = require("../ws/utils/clients");
 const { Ride, RideRequest } = require("../models/ride.model");
