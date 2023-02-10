@@ -11,16 +11,15 @@ async function authenticate(socket) {
         }
 
         const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET);
-        const user_doc = await User.findById(decoded.id).populate('rider');
+        const user_doc = await User.findById(decoded.id)
+            .populate({
+                path: 'rider',
+                populate: {
+                    path: 'location',
+                    model: 'RiderLocation'
+                }
+            });
 
-        const rider = await Rider.findOne({ user: user_doc._id })
-        console.log(rider.toJSON({ virtuals: true}))
-        console.log(rider.toObject({ virtuals: true }))
-
-
-        const riderLocation = await RiderLocation.findOne({ rider: rider._id })
-        console.log(JSON.stringify(rider.toJSON(), null, 2))
-        // console.log(user_doc.rider)
         // Show virtuals
         socket.user = user_doc;
 

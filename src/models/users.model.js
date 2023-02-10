@@ -127,7 +127,7 @@ userSchema.virtual('rider', {
     justOne: true,
 });
 
-riderSchema.virtual('riderlocation', {
+riderSchema.virtual('location', {
     ref: 'RiderLocation',
     localField: '_id',
     foreignField: 'rider',
