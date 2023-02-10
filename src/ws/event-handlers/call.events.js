@@ -4,7 +4,7 @@ const { stringify } = require('../../utils/json');
 const Vehicle = require('../../models/vehicle.model');
 const { Rider } = require('../../models/users.model');
 const config = require('../../utils/config');
-const { clients } = require('../utils/clients');
+const { clients } = require('../clients');
 const { randomUUID } = require('crypto');
 
 class CallSockets {

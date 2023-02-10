@@ -2,6 +2,7 @@ const socketWrapper = require('./ws/middlewares/wrapper');
 const authenticate = require('./ws/middlewares/auth');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const { addClient, removeClient } = require('./ws/clients');
 const app = require("./app");
 
 const initializeSocketListeners = (socket) => {
@@ -14,7 +15,10 @@ const initializeSocketListeners = (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('Socket disconnected');
+        console.log(socket.user.email + ': disconnected');
+
+        // Remove client from clients map
+        removeClient(socket);
     });
 
     socket.on('error', (error) => {
@@ -26,7 +30,9 @@ const initializeSocketListeners = (socket) => {
     });
 };
 
+let curr_client;
 const onConnection = async (socket) => {
+    // Authenticate socket
     const authenticated_socket = await authenticate(socket);
 
     if (authenticated_socket instanceof Error) {
@@ -39,8 +45,11 @@ const onConnection = async (socket) => {
         throw new Error('Authentication failed');
     }
 
-    socket = authenticated_socket;
-    console.log(`${socket.id}: connected`);
+    socket = authenticated_socket; curr_client = socket;
+    console.log(`${socket.user.email}: connected`);
+
+    // Add client to clients map
+    addClient(curr_client);
 
     // Initialize socket listeners
     initializeSocketListeners(socket);

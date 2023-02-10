@@ -1,6 +1,5 @@
-const { stringify } = require("./json");
 const { Rider } = require("../models/users.model");
-const { clients } = require("../ws/utils/clients");
+const { clients } = require("../ws/clients");
 const { Ride, RideRequest } = require("../models/ride.model");
 const { RiderLocation } = require("../models/location.model");
 
@@ -33,13 +32,13 @@ function getCost(distance, vehicle_rating) {
 
 function sendRideRequestToRider(client, ride_request) {
     console.log("Sending ride request to rider: ", client.user.email);
-    client.send(
-        stringify({
+    client.emit(
+        {
             event: "ride:request",
             data: {
                 ride_request,
             },
-        })
+        }
     );
 }
 
@@ -120,13 +119,13 @@ async function sendRideRequestToRiders(riders, ride_request) {
             // TODO: Start realtime location tracking for rider on user app and rider ap
 
             // Send ride data to rider
-            rider_client.send(
-                stringify({
+            rider_client.emit(
+                {
                     event: "ride:accepted",
                     data: {
                         ride,
                     },
-                })
+                }
             );
 
             break;
@@ -149,7 +148,7 @@ async function getClosestRiders(coordinates) {
     }).populate("rider vehicle");
 }
 
-async function getRideRouteInKm() {}
+async function getRideRouteInKm() { }
 
 module.exports = {
     calcCordDistance,

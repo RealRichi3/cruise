@@ -7,7 +7,7 @@ const {
     vehicle_rating,
     getClosestRiders,
 } = require('../utils/ride');
-const { clients } = require('../ws/utils/clients');
+const { clients } = require('../ws/clients');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 const config = require('../utils/config');
 
@@ -16,6 +16,7 @@ const { DepartureOrDestination, RiderLocation } = require('../models/location.mo
 const { Rider } = require('../models/users.model');
 const { Ride, RideRequest, RideReview } = require('../models/ride.model');
 const { stringify } = require('../utils/json');
+const Vehicle = require('../models/vehicle.model');
 
 // TODO: Improve code documentation by adding more explanations to errors 
 
@@ -145,21 +146,23 @@ const completeRideRequest = async (req, res, next) => {
         { ride_class, payment_method },
     ).populate('departure destination user');
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
-
+    console.log('inside')
     // Update ride request payment method
     ride_request.payment_method = payment_method;
-
+    console.log('inside')
     // Search for riders within the current users location
     const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
 
+    // console.log(closest_riders)
+    console.log('inside')
     // Filter closest riders based on vehicle rating and online status
     const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline,
+        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline, console.log(this)
     );
-
+    console.log('inside')
     // Check if matching riders are available
-    if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
-
+    if (filtered_riders.length == 0) return next(new BadRequestError('No riders are available'));
+    console.log('inside')
     // Send ride request to riders
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
     if (!rider_response) {
