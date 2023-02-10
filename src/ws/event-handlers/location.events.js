@@ -1,29 +1,57 @@
 const { RiderLocation } = require('../../models/location.model')
 
-const saveNewLocation = async (rider_id, location) => {
-    const [longitude, latitude] = location.coordinates
+const saveNewLocation = async function (data, socket) {
+    try {
+        if (!socket) socket = this;
 
-    const new_location = await RiderLocation.create({
-        rider: rider_id,
-        location: {
-            type: 'Point',
-            coordinates: [longitude, latitude],
-        },
-    });
+        // console.log(socket.user)
+        const { location } = data
+        console.log(location)
+        const [longitude, latitude] = location.coordinates
 
-    // console.log(new_location)
+        const new_location = await RiderLocation.create({
+            rider: socket.user.rider._id,
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude],
+            },
+        });
 
-    return new_location;
+        console.log(new_location)
+
+        return new_location;
+    } catch (error) {
+        console.log(error)
+    }
 };
 
-const updateLocation = async (location_id, long, lat) => {
-    const location = await RiderLocation.findById(location_id);
+const updateLocation = async function (data) {
+    try {
+        const socket = this
+        console.log('Updating location', data)
+        const curr_location = data.location
+        const [longitude, latitude] = curr_location.coordinates
+        // console.log(socket.user.rider)
+        const location = await RiderLocation.findById(socket.user.rider.location);
+        console.log(location)
 
-    if (!location) { return null; }
+        if (!location) {
+            // Create new location
+            const new_location_data = { rider_id: socket.user.rider._id, location: { coordinates: [longitude, latitude] } }
 
-    const new_location_data = await location.updateCoordinates(long, lat)
+            await saveNewLocation(new_location_data, socket)
+            console.log('New location', new_location_data)
 
-    return new_location_data
+            return new_location_data
+        }
+
+        const new_location_data = await location.updateCoordinates(long, lat)
+        console.log('New location data', new_location_data)
+
+        return new_location_data
+    } catch (error) {
+        console.log(error)
+    }
 }
 
 const getLocation = async (vehicleId) => {

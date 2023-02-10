@@ -80,7 +80,7 @@ const riderSchema = new schema(
             enum: ['available', 'unavailable'],
         },
     },
-    { timestamps: true },
+    { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } },
 );
 
 const adminSchema = new schema(
@@ -124,6 +124,13 @@ userSchema.virtual('rider', {
     ref: 'Rider',
     localField: '_id',
     foreignField: 'user',
+    justOne: true,
+});
+
+riderSchema.virtual('riderlocation', {
+    ref: 'RiderLocation',
+    localField: '_id',
+    foreignField: 'rider',
     justOne: true,
 });
 
@@ -186,6 +193,7 @@ riderSchema.pre('validate', async function (next) {
 });
 
 riderSchema.pre('save', async function (next) {
+    console.log(this.toObject({ virtuals: true }))
     if (this.isModified('vehicles')) {
         if (this.vehicles.length > 0) {
             this.hasVehicle = true;
@@ -206,7 +214,7 @@ riderSchema.methods.addVehicle = async function (vehicle, session = null) {
     // Check if vehicle belongs to rider
     if (typeof vehicle == 'object') vehicle = vehicle._id;
     // console.log(vehicle)
-    
+
     // Check for existing vehicle
     let existing_vehicle;
     if (session)

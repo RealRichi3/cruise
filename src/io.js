@@ -2,10 +2,17 @@ const socketWrapper = require('./ws/middlewares/wrapper');
 const authenticate = require('./ws/middlewares/auth');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const app  = require("./app");
+const app = require("./app");
 
 const initializeSocketListeners = (socket) => {
+    // console.log(socket.user)
     // Initialize socket listeners
+    require('./ws/event-handlers/location.events')(io, socket);
+
+    socket.on('message', (message) => {
+        console.log(message);
+    });
+
     socket.on('disconnect', () => {
         console.log('Socket disconnected');
     });
@@ -22,13 +29,13 @@ const initializeSocketListeners = (socket) => {
 const onConnection = async (socket) => {
     const authenticated_socket = await authenticate(socket);
 
-    if (authenticated_socket instanceof Error) { 
+    if (authenticated_socket instanceof Error) {
         // Send error to client
         socket.emit('error', 'Authentication failed');
-        
+
         // Close connection
         socket.disconnect();
-        
+
         throw new Error('Authentication failed');
     }
 
@@ -52,7 +59,8 @@ const io = new Server(httpServer, {
 io.use(socketWrapper((socket, next) => {
     const { origin } = socket.handshake.headers;
 
-    if (origin === 'http://localhost:3000') {
+    const allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
+    if (allowed_origins.includes(origin)) {
         next();
     } else {
         next(new Error('Not allowed by CORS'));
