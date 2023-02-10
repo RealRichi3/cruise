@@ -1,16 +1,33 @@
 const jwt = require('jsonwebtoken');
+const config = require('../../utils/config');
+const { User, Rider } = require('../../models/users.model');
+const { RiderLocation } = require('../../models/location.model');
 
-module.export = async (socket, next) => {
+async function authenticate(socket) {
     try {
-        const token = socket.handshake.auth.token;
+        const token = socket.handshake.query?.access_token;
         if (!token) {
-            return next(new Error('Authentication error'));
+            throw new Error('Authentication token not provided')
         }
 
-        const decoded = jwt.verify(token, config.JWT_SECRET);
-        socket.user = decoded;
-        next();
+        const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET);
+        const user_doc = await User.findById(decoded.id)
+            .populate({
+                path: 'rider',
+                populate: {
+                    path: 'location',
+                    model: 'RiderLocation'
+                }
+            });
+
+        // Show virtuals
+        socket.user = user_doc;
+
+        return socket
     } catch (err) {
-        return next(new Error('Authentication error'));
+        console.log(err)
+        return err
     }
 }
+
+module.exports = authenticate

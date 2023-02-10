@@ -1,13 +1,15 @@
 const { activateForBooking, deactivateForBooking } = require('../../controllers/vehicle.controller');
 
 const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../utils/location');
-const { socketAsyncWrapper } = require("../middlewares/wrapper.ws");
+const { socketAsyncWrapper } = require("../middlewares/wrapper");
 const { stringify } = require('../../utils/json');
 const Vehicle = require('../../models/vehicle.model');
 const { Rider } = require('../../models/users.model');
 
+
+const updateRiderLocation
 class RiderSockets {
-    constructor(client, sock) {
+    constructor(io, socket) {
         this.client = client;
         this.socket = sock;
     }

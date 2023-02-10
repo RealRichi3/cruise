@@ -6,6 +6,7 @@ const errorHandler = require('./middlewares/error_handler');
 require('express-async-errors');
 
 const app = express();
+exports.app = app;
 
 // Middlewares
 if (process.env.NODE_ENV == 'dev') {
@@ -13,7 +14,10 @@ if (process.env.NODE_ENV == 'dev') {
 }
 
 // app.use(asyncError());
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+}));
 app.use(express.json());
 
 // Routes
@@ -34,49 +38,5 @@ app.use((req, res, next) => {
         message: `Can't find ${req.originalUrl} on this server!`,
     });
 });
-
-const http = require('http').createServer(app);
-const socketIO = require('socket.io');
-const io = socketIO(http);
-const socketWrapper = require('./ws/middlewares/wrapper')
-const authenticate = require('./ws/middlewares/auth')
-
-const onConnection = (socket) => {
-    authenticate(socket);
-    console.log('Socket connected');
-
-    socket.on('disconnect', () => {
-        console.log('Socket disconnected');
-    });
-
-    socket.on('error', (error) => {
-        // Send error to client
-        console.log(error);
-
-        // Close connection
-        socket.disconnect();
-    });
-};
-
-// Use cors
-io.use(socketWrapper((socket, next) => {
-    console.log('lajsdlfjsdf')
-    const { origin } = socket.handshake.headers;
-
-    if (origin === 'http://localhost:3000') {
-        next();
-    } else {
-        next(new Error('Not allowed by CORS'));
-    }
-}));
-
-io.on('connection', socketWrapper(onConnection));
-io.on('error', socketWrapper((error) => {
-    // Send error to client
-    console.log(error);
-
-    // Close connection
-    io.close();
-}));
 
 module.exports = app;
