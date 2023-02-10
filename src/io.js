@@ -4,10 +4,8 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const app  = require("./app");
 
-const onConnection = async (socket) => {
-    await authenticate(socket);
-    console.log('Socket connected');
-
+const initializeSocketListeners = (socket) => {
+    // Initialize socket listeners
     socket.on('disconnect', () => {
         console.log('Socket disconnected');
     });
@@ -19,6 +17,26 @@ const onConnection = async (socket) => {
         // Close connection
         socket.disconnect();
     });
+};
+
+const onConnection = async (socket) => {
+    const authenticated_socket = await authenticate(socket);
+
+    if (authenticated_socket instanceof Error) { 
+        // Send error to client
+        socket.emit('error', 'Authentication failed');
+        
+        // Close connection
+        socket.disconnect();
+        
+        throw new Error('Authentication failed');
+    }
+
+    socket = authenticated_socket;
+    console.log(`${socket.id}: connected`);
+
+    // Initialize socket listeners
+    initializeSocketListeners(socket);
 };
 
 // Create http server with express app

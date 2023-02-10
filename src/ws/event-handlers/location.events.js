@@ -1,7 +1,6 @@
-const { RiderLocation } = require('../models/location.model')
+const { RiderLocation } = require('../../models/location.model')
 
-const saveNewLocation = async function (rider_id, location) {
-    const socket = this
+const saveNewLocation = async (rider_id, location) => {
     const [longitude, latitude] = location.coordinates
 
     const new_location = await RiderLocation.create({
@@ -17,8 +16,7 @@ const saveNewLocation = async function (rider_id, location) {
     return new_location;
 };
 
-const updateLocation = async function (location_id, long, lat) {
-    const socket = this
+const updateLocation = async (location_id, long, lat) => {
     const location = await RiderLocation.findById(location_id);
 
     if (!location) { return null; }
@@ -28,8 +26,7 @@ const updateLocation = async function (location_id, long, lat) {
     return new_location_data
 }
 
-const getLocation = async function (vehicleId) {
-    const socket = this
+const getLocation = async (vehicleId) => {
     const location = await RiderLocation.findOne({ vehicle: vehicleId })
 
     if (!location) { return null; }
@@ -37,8 +34,7 @@ const getLocation = async function (vehicleId) {
     return location
 }
 
-const deleteVehicleLocation = async function (vehicle_id) {
-    const socket = this
+const deleteVehicleLocation = async (vehicle_id) => {
     const location = await RiderLocation.findOneAndDelete({ vehicle: vehicle_id })
 
     if (!location) { return null; }
@@ -46,9 +42,9 @@ const deleteVehicleLocation = async function (vehicle_id) {
     return location
 }
 
-module.exports = {
-    saveNewLocation,
-    updateLocation,
-    getLocation,
-    deleteVehicleLocation,
+module.exports = (io, socket) => {
+    socket.on('update-location', updateLocation);
+    socket.on('get-location', getLocation);
+    socket.on('save-new-location', saveNewLocation);
+    socket.on('delete-vehicle-location', deleteVehicleLocation)
 }
