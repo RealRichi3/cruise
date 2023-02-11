@@ -127,27 +127,27 @@
         goOnlineButton.addEventListener('click', goOnline)
         goOfflineButton.addEventListener('click', goOffline)
 
+        const server_url = 'http://localhost:5000/api/v1';
+        const axios_header = {
+            'Authorization': `Bearer ${localStorage.getItem(`access_token:${email}`)}`
+        }
         async function goOnline() {
-            const { longitude, latitude } = (await getLocation()).coords
+            
+            // Send request to server to go online
+            const { data } = await axios.post(`${server_url}/rider/online`, {}, {
+                headers: axios_header
+            })
 
-            console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
-            const data = {
-                // vehicle_id: "63bf5de1e73732712f4a364a",
-                location: {
-                    type: "Point",
-                    coordinates: [longitude, latitude]
-                },
-            }
-
-            wss.broadcast('rider:goonline', data)
+            console.log(data)
         }
 
         async function goOffline() {
-            const data = {
-                vehicle_id: "63bf5de1e73732712f4a364a",
-            }
+            // Send request to server to go offline
+            const { data } = await axios.post(`${server_url}/rider/offline`, {}, {
+                headers: axios_header
+            })
 
-            wss.broadcast('rider:gooffline', data)
+            console.log(data)
         }
     </script>
 
