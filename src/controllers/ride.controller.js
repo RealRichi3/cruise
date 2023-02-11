@@ -157,7 +157,7 @@ const completeRideRequest = async (req, res, next) => {
     console.log('inside')
     // Filter closest riders based on vehicle rating and online status
     const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline, console.log(this)
+        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline
     );
     console.log('inside')
     // Check if matching riders are available
@@ -166,7 +166,6 @@ const completeRideRequest = async (req, res, next) => {
     // Send ride request to riders
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
     if (!rider_response) {
-        console.log('No riders available');
         // ride_request.status = 'cancelled';
         await ride_request.save();
 

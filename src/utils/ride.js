@@ -32,9 +32,8 @@ function getCost(distance, vehicle_rating) {
 
 function sendRideRequestToRider(client, ride_request) {
     console.log("Sending ride request to rider: ", client.user.email);
-    client.emit(
+    client.emit('ride:request',
         {
-            event: "ride:request",
             data: {
                 ride_request,
             },
@@ -53,20 +52,30 @@ function sendRideRequestToRider(client, ride_request) {
  */
 function getRideResponseFromRider(client, ride_req) {
     return new Promise((resolve, reject) => {
-        client.on("ride:request_response", async (data) => {
+        client.on("ride:accepted", async (data) => {
             console.log("Rider response received: ");
             console.log(data);
-            //  If rider declines
-            if (!data.accepted) resolve(null);
 
             // Remove listener
-            client.removeAllListeners("ride:request_response");
+            client.removeAllListeners("ride:rejected");
+            resolve(data);
+        });
+
+        client.on("ride:rejected", async (data) => {
+            console.log("Rider response received: ");
+            console.log(data);
+
+            // Remove listener
+            client.removeAllListeners("ride:accepted");
             resolve(data);
         });
 
         // return null if no response from rider after 20 seconds
         setTimeout(() => {
-            if (client) client.removeAllListeners("ride:request_response");
+            if (client) {
+                client.removeAllListeners("ride:accepted");
+                client.removeAllListeners("ride:rejected");
+            }
             resolve(null);
         }, 20000);
     });
@@ -94,7 +103,8 @@ async function sendRideRequestToRiders(riders, ride_request) {
     //     'cruiserider15@gmail.com',
     //     'cruiserider16@gmail.com',
     // ]
-    for (let i = 0; i < 5; i++) {
+    const limit = riders.length > 5 ? 5 : riders.length;
+    for (let i = 0; i < limit; i++) {
         const rider = await riders[i].rider.populate("user");
         // rider.user.email = test_riders[i]
 

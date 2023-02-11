@@ -15,11 +15,11 @@ function show_alert() {
     const no_btn = document.querySelector('.no');
     
     yes_btn.addEventListener('click', () => {
-        wss.broadcast('ride:request_response', { accepted: true });
+        socket.emit('ride:accepted', { accepted: true });
         close_alert();
     })
     no_btn.addEventListener('click', () => {
-        wss.broadcast('ride:request_response', { accepted: false });
+        socket.emit('ride:rejected', { accepted: false });
         close_alert();
     })
     alert_close.addEventListener('click', () => {
