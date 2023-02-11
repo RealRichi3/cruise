@@ -6,6 +6,7 @@ const addClient = (socket) => {
 
 const removeClient = (socket) => {
     clients.delete(socket.user.email);
+    console.log(clients.keys())
 };
 
 module.exports = {

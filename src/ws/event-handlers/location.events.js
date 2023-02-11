@@ -30,7 +30,7 @@ const updateLocation = async function (data, res) {
         // await RiderLocation.deleteOne({ _id: socket.user.rider.location_id })
 
         // return
-        const location = await RiderLocation.findById(socket.user.rider.location._id);
+        const location = await RiderLocation.findOne({ rider: socket.user.rider._id });
         console.log(location)
         if (!location) {
             console.log('no loc found')
@@ -42,6 +42,7 @@ const updateLocation = async function (data, res) {
             await saveNewLocation(new_location_data, socket)
 
             res(null, new_location_data)
+            return
         }
 
         console.log(location)
