@@ -46,8 +46,10 @@ const updateLocation = async function (data, res) {
         const new_location_data = await location.updateCoordinates(longitude, latitude)
 
         res(null, new_location_data)
+        return
     } catch (error) {
         res(error)
+        return
     }
 }
 
