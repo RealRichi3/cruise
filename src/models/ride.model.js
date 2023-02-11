@@ -98,7 +98,7 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
         ride.populate('vehicle')
 
         // Update ride request status
-        this.status = 'accepted'
+        // this.status = 'accepted'
         await this.save()
         // console.log(ride)
     

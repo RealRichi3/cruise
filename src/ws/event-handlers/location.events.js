@@ -27,14 +27,11 @@ const updateLocation = async function (data, res) {
         const socket = this
         const curr_location = data.location
         const [longitude, latitude] = curr_location.coordinates
-        // await RiderLocation.deleteOne({ _id: socket.user.rider.location_id })
 
-        // return
+        // Check if location record exists
         const location = await RiderLocation.findOne({ rider: socket.user.rider._id });
-        console.log(location)
         if (!location) {
-            console.log('no loc found')
-            // Create new location
+            // Create new location if no existing location
             const new_location_data = {
                 rider_id: socket.user.rider._id,
                 location: { coordinates: [longitude, latitude] }
@@ -45,12 +42,11 @@ const updateLocation = async function (data, res) {
             return
         }
 
-        console.log(location)
+        // Update existing location
         const new_location_data = await location.updateCoordinates(longitude, latitude)
 
         res(null, new_location_data)
     } catch (error) {
-        console.log(error)
         res(error)
     }
 }

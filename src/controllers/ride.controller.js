@@ -173,7 +173,7 @@ const completeRideRequest = async (req, res, next) => {
     }
 
     // Update ride request status
-    ride_request.status = 'accepted';
+    // ride_request.status = 'accepted';
 
     // Save ride request
     await ride_request.save();

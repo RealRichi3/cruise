@@ -57,17 +57,20 @@ function getRideResponseFromRider(client, ride_req) {
             console.log(data);
 
             // Remove listener
+            client.removeAllListeners("ride:accepted")
             client.removeAllListeners("ride:rejected");
             resolve(data);
         });
 
         client.on("ride:rejected", async (data) => {
+            console.log(client.id)
             console.log("Rider response received: ");
             console.log(data);
 
             // Remove listener
             client.removeAllListeners("ride:accepted");
-            resolve(data);
+            client.removeAllListeners("ride:rejected");
+            resolve(null);
         });
 
         // return null if no response from rider after 20 seconds
@@ -103,7 +106,9 @@ async function sendRideRequestToRiders(riders, ride_request) {
     //     'cruiserider15@gmail.com',
     //     'cruiserider16@gmail.com',
     // ]
+    // console.log(riders)
     const limit = riders.length > 5 ? 5 : riders.length;
+    console.log(limit)
     for (let i = 0; i < limit; i++) {
         const rider = await riders[i].rider.populate("user");
         // rider.user.email = test_riders[i]
@@ -129,9 +134,8 @@ async function sendRideRequestToRiders(riders, ride_request) {
             // TODO: Start realtime location tracking for rider on user app and rider ap
 
             // Send ride data to rider
-            rider_client.emit(
+            rider_client.emit('ride:accepted',
                 {
-                    event: "ride:accepted",
                     data: {
                         ride,
                     },
