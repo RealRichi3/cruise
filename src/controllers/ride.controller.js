@@ -172,13 +172,25 @@ const completeRideRequest = async (req, res, next) => {
 
     // Update ride request status
     ride_request.status = 'accepted';
+    await ride_request.save();
 
     // Save ride request
-    await ride_request.save();
+    // const ride = await (await ride_request.save()).populate('ride rider');
+    const ride = await (await ride_request.save()).populate({
+        path: 'ride',
+        populate: {
+            path: 'passenger rider vehicle departure destination',
+        },
+    });
+
+    // Set rider data
+    ride.ride.rider = (await ride.ride.rider.populate('user')).user;
 
     return res.status(200).json({
         success: true,
-        data: rider_response,
+        data: {
+            ride_request: ride.toJSON(),
+        }
     });
 };
 
@@ -280,8 +292,6 @@ const rideArrived = async (req, res, next) => {
 
     // Get users client
     const users_client = clients.get(ride_request.user.email);
-
-    console.log(users_client.user.email)
 
     // Notify user that rider has arrived
     users_client.emit('rider:arrived',
