@@ -175,7 +175,6 @@ const completeRideRequest = async (req, res, next) => {
     await ride_request.save();
 
     // Save ride request
-    // const ride = await (await ride_request.save()).populate('ride rider');
     const ride = await (await ride_request.save()).populate({
         path: 'ride',
         populate: {
@@ -448,16 +447,22 @@ const getRideData = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    let ride = await Ride.findOne({ _id: ride_id }).populate('rider passenger vehicle departure destination');
     if (!ride) return next(new BadRequestError('Invalid ride'));
+    ride = await ride.populate({
+        path: 'ride_request',
+        populate: {
+            path: 'departure ride destination',
+        }
+    })
 
     // Check if ride belongs to rider
-    // if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
         data: {
-            ride,
+            ride: ride.toJSON(),
         },
     });
 };

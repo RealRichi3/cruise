@@ -110,7 +110,7 @@ async function sendRideRequestToRiders(riders, ride_request) {
         // If rider isn't connected, Try next rider
         if (!rider_client) {
             console.log(rider.user.email + " is not connected");
-            continue;
+            break;
         }
 
         //  If rider is connected, send ride request to rider
@@ -133,7 +133,7 @@ async function sendRideRequestToRiders(riders, ride_request) {
                 }
             );
 
-            break;
+            break
         }
     }
     return ride;

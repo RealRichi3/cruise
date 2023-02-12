@@ -21,7 +21,7 @@ const rideRequestSchema = new schema({
     ride_class: { type: String, enum: ['urban', 'standard', 'elite'] },
     distance: { type: Number },  // in kilometers
     ride: { type: schema.Types.ObjectId, ref: 'Ride' },
-})
+}, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 /**
  * @todo: Implement getEstimatedRideTime() method
@@ -47,12 +47,13 @@ const rideSchema = new schema({
     },
     tracking_link: { type: String },
     createdAt: { type: Date, default: Date.now },
-})
+}, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 rideSchema.virtual('ride_request', {
     ref: 'RideRequest',
     localField: '_id',
     foreignField: 'ride',
+    justOne: true,
 })
 
 rideSchema.virtual('ride_review', {

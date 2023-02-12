@@ -29,7 +29,7 @@ router
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
-    .get('/data', permit('enduser superadmin'), getRideData)
+    .get('/data', permit('enduser rider superadmin'), getRideData)
     .get('/rides', permit('enduser'), getUsersRides)
     .post('/review/submit', permit('enduser'), submitRideReview)
     .get('/review', permit('superadmin admin'), getRideReview)
