@@ -60,6 +60,7 @@ rideSchema.virtual('ride_review', {
     ref: 'RideReview',
     localField: '_id',
     foreignField: 'ride',
+    justOne: true,
 })
 
 /**

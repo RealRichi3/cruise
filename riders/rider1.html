@@ -210,6 +210,12 @@
                 alert('Ride cancelled')
             })
 
+            socket.on('rider:arrived', (data) => {
+                console.log('[rider:arrived] ')
+                console.log(data);
+                alert('Rider arrived')
+            })
+
             socket.on('frontend:message', wsWrapper((data) => {
                 console.log('[msg] self: ' + data.detail);
             }))

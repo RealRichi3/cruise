@@ -198,6 +198,12 @@
                 show_alert()
             })
 
+            socket.on('rider:arrived', (data) => {
+                console.log('[rider:arrived] ')
+                console.log(data);
+                alert('Rider arrived')
+            })
+
             socket.on('ride:accepted', (data) => {
                 console.log('[ride:accepted] ')
                 console.log(data);
@@ -230,6 +236,8 @@
 
                 alert('Ride cancelled')
             }))
+
+
         }
 
         start()

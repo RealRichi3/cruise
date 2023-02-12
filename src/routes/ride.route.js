@@ -34,8 +34,8 @@ router
 
     // Ride review
     .post('/review/submit', permit('rider enduser'), submitRideReview)
-    .get('/review', permit('superadmin admin'), getRideReview)
-    .get('/review/data', permit('superadmin admin'), getRideReviewData)
-    .get('/review/rider', permit('superadmin admin'), getRidersReviews)
+    .get('/review', permit('superadmin admin enduser'), getRideReview)
+    .get('/review/data', permit('superadmin admin enduser'), getRideReviewData)
+    .get('/review/rider', permit('superadmin admin enduser'), getRidersReviews)
 
 module.exports = router;

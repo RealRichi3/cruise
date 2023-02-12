@@ -513,7 +513,7 @@ const submitRideReview = async (req, res, next) => {
     if (ride.review) return next(new BadRequestError('Ride has already been reviewed'));
 
     // Create review
-    await RideReview.create({
+    const new_review = await RideReview.create({
         ride: ride_id,
         user: req.user.id,
         review,
@@ -524,6 +524,7 @@ const submitRideReview = async (req, res, next) => {
         success: true,
         data: {
             message: 'Ride has been reviewed',
+            review: new_review
         },
     });
 };
@@ -557,7 +558,7 @@ const getRideReview = async (req, res, next) => {
     return res.status(200).json({
         success: true,
         data: {
-            reviews: ride.ride_review,
+            review: ride.ride_review,
         },
     });
 };
@@ -575,10 +576,10 @@ const getRideReview = async (req, res, next) => {
  * // TODO: Set attr based control for rider, allow superuser to access all reviews
  */
 const getRideReviewData = async (req, res, next) => {
-    const { ride_review_id } = req.body;
+    const { review_id } = req.body;
 
     // Check if review exists
-    const review = await RideReview.findOne({ _id: ride_review_id }).populate('user ride');
+    const review = await RideReview.findOne({ _id: review_id }).populate('user ride');
 
     if (!review) return next(new BadRequestError('Invalid review'));
 
@@ -611,10 +612,13 @@ const getRidersReviews = async (req, res, next) => {
     if (!rider) return next(new BadRequestError('Invalid rider'));
 
     // Check if user is superuser
-    if (req.user.role != 'superuser' && req.user.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
+    // if (req.user.role != 'superuser' && req.user.rider?.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Get rider's reviews
-    const reviews = await RideReview.find({ rider: rider_id }).populate('user ride');
+    const reviews = await RideReview.find({ rider: rider_id }).populate({
+        path: 'user ride',
+        select: '-role -email'
+    });
 
     return res.status(200).json({
         success: true,
