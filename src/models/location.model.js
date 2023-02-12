@@ -25,7 +25,7 @@ const departurOrDestinationLocationShema = new Schema({
 });
 
 const riderLocationSchema = new Schema({
-    // vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
+    vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
     rider: { type: Schema.Types.ObjectId, ref: 'Rider' },
     location: {
         type: new Schema({

@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../utils/config');
-const { User, Rider } = require('../../models/users.model');
-const { RiderLocation } = require('../../models/location.model');
+const { User } = require('../../models/users.model');
 
 async function authenticate(socket) {
     try {

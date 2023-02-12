@@ -1,6 +1,5 @@
-const { stringify } = require("./json");
 const { Rider } = require("../models/users.model");
-const { clients } = require("../ws/utils/clients");
+const { clients } = require("../ws/clients");
 const { Ride, RideRequest } = require("../models/ride.model");
 const { RiderLocation } = require("../models/location.model");
 
@@ -33,13 +32,12 @@ function getCost(distance, vehicle_rating) {
 
 function sendRideRequestToRider(client, ride_request) {
     console.log("Sending ride request to rider: ", client.user.email);
-    client.send(
-        stringify({
-            event: "ride:request",
+    client.emit('ride:request',
+        {
             data: {
                 ride_request,
             },
-        })
+        }
     );
 }
 
@@ -54,20 +52,33 @@ function sendRideRequestToRider(client, ride_request) {
  */
 function getRideResponseFromRider(client, ride_req) {
     return new Promise((resolve, reject) => {
-        client.on("ride:request_response", async (data) => {
+        client.on("ride:accepted", async (data) => {
             console.log("Rider response received: ");
             console.log(data);
-            //  If rider declines
-            if (!data.accepted) resolve(null);
 
             // Remove listener
-            client.removeAllListeners("ride:request_response");
+            client.removeAllListeners("ride:accepted")
+            client.removeAllListeners("ride:rejected");
             resolve(data);
+        });
+
+        client.on("ride:rejected", async (data) => {
+            console.log(client.id)
+            console.log("Rider response received: ");
+            console.log(data);
+
+            // Remove listener
+            client.removeAllListeners("ride:accepted");
+            client.removeAllListeners("ride:rejected");
+            resolve(null);
         });
 
         // return null if no response from rider after 20 seconds
         setTimeout(() => {
-            if (client) client.removeAllListeners("ride:request_response");
+            if (client) {
+                client.removeAllListeners("ride:accepted");
+                client.removeAllListeners("ride:rejected");
+            }
             resolve(null);
         }, 20000);
     });
@@ -88,16 +99,10 @@ function getRideResponseFromRider(client, ride_req) {
  * */
 async function sendRideRequestToRiders(riders, ride_request) {
     let ride;
-    // const test_riders = [
-    //     'cruiserider9@gmail.com',
-    //     'cruiserider13@gmail.com',
-    //     'cruiserider14@gmail.com',
-    //     'cruiserider15@gmail.com',
-    //     'cruiserider16@gmail.com',
-    // ]
-    for (let i = 0; i < 5; i++) {
+    // Set limit to 5 riders if riders.length > 5
+    const limit = riders.length > 5 ? 5 : riders.length;
+    for (let i = 0; i < limit; i++) {
         const rider = await riders[i].rider.populate("user");
-        // rider.user.email = test_riders[i]
 
         //  Get riders socket connections
         const rider_client = clients.get(rider.user.email);
@@ -105,7 +110,7 @@ async function sendRideRequestToRiders(riders, ride_request) {
         // If rider isn't connected, Try next rider
         if (!rider_client) {
             console.log(rider.user.email + " is not connected");
-            continue;
+            break;
         }
 
         //  If rider is connected, send ride request to rider
@@ -120,16 +125,15 @@ async function sendRideRequestToRiders(riders, ride_request) {
             // TODO: Start realtime location tracking for rider on user app and rider ap
 
             // Send ride data to rider
-            rider_client.send(
-                stringify({
-                    event: "ride:accepted",
+            rider_client.emit('ride:accepted',
+                {
                     data: {
                         ride,
                     },
-                })
+                }
             );
 
-            break;
+            break
         }
     }
     return ride;
@@ -149,7 +153,7 @@ async function getClosestRiders(coordinates) {
     }).populate("rider vehicle");
 }
 
-async function getRideRouteInKm() {}
+async function getRideRouteInKm() { }
 
 module.exports = {
     calcCordDistance,

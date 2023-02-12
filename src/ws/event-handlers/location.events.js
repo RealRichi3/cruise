@@ -27,10 +27,11 @@ const updateLocation = async function (data, res) {
         const socket = this
         const curr_location = data.location
         const [longitude, latitude] = curr_location.coordinates
-        const location = await RiderLocation.findById(socket.user.rider.location);
 
+        // Check if location record exists
+        const location = await RiderLocation.findOne({ rider: socket.user.rider._id });
         if (!location) {
-            // Create new location
+            // Create new location if no existing location
             const new_location_data = {
                 rider_id: socket.user.rider._id,
                 location: { coordinates: [longitude, latitude] }
@@ -38,14 +39,17 @@ const updateLocation = async function (data, res) {
             await saveNewLocation(new_location_data, socket)
 
             res(null, new_location_data)
+            return
         }
 
+        // Update existing location
         const new_location_data = await location.updateCoordinates(longitude, latitude)
 
         res(null, new_location_data)
+        return
     } catch (error) {
-        console.log(error)
         res(error)
+        return
     }
 }
 

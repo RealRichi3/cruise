@@ -7,7 +7,7 @@ const {
     vehicle_rating,
     getClosestRiders,
 } = require('../utils/ride');
-const { clients } = require('../ws/utils/clients');
+const { clients } = require('../ws/clients');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 const config = require('../utils/config');
 
@@ -16,6 +16,7 @@ const { DepartureOrDestination, RiderLocation } = require('../models/location.mo
 const { Rider } = require('../models/users.model');
 const { Ride, RideRequest, RideReview } = require('../models/ride.model');
 const { stringify } = require('../utils/json');
+const Vehicle = require('../models/vehicle.model');
 
 // TODO: Improve code documentation by adding more explanations to errors 
 
@@ -154,17 +155,16 @@ const completeRideRequest = async (req, res, next) => {
 
     // Filter closest riders based on vehicle rating and online status
     const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline,
+        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline
     );
 
     // Check if matching riders are available
-    if (filtered_riders.length == 0) return next(new BadRequestError('No riders available'));
+    if (filtered_riders.length == 0) return next(new BadRequestError('No riders are available'));
 
     // Send ride request to riders
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
     if (!rider_response) {
-        console.log('No riders available');
-        // ride_request.status = 'cancelled';
+        ride_request.status = 'cancelled';
         await ride_request.save();
 
         return next(new NotFoundError('No riders available'));
@@ -172,13 +172,24 @@ const completeRideRequest = async (req, res, next) => {
 
     // Update ride request status
     ride_request.status = 'accepted';
+    await ride_request.save();
 
     // Save ride request
-    await ride_request.save();
+    const ride = await (await ride_request.save()).populate({
+        path: 'ride',
+        populate: {
+            path: 'passenger rider vehicle departure destination',
+        },
+    });
+
+    // Set rider data
+    ride.ride.rider = (await ride.ride.rider.populate('user')).user;
 
     return res.status(200).json({
         success: true,
-        data: rider_response,
+        data: {
+            ride_request: ride.toJSON(),
+        }
     });
 };
 
@@ -254,38 +265,48 @@ const cancelRideRequest = async (req, res, next) => {
  * @throws {BadRequestError} Invalid ride request
  */
 const rideArrived = async (req, res, next) => {
-    const { ride_request_id } = req.body;
+    const { ride_id } = req.body;
+
+    const ride = await Ride.findOne({ _id: ride_id }).populate('rider passenger ride_request');
+    if (!ride) return next(new BadRequestError('Invalid ride request'));
+
+    // Check if ride has started
+    if (ride.status == 'started') return next(new BadRequestError('Ride has already started'));
+
+    // Check if ride has been cancelled
+    if (ride.status == 'cancelled') return next(new BadRequestError('Ride has been cancelled'));
+
+    // Check if ride has been completed
+    if (ride.status == 'completed') return next(new BadRequestError('Ride has been completed'));
 
     // Check if ride request exists
-    const ride_request = await RideRequest.findOne({ _id: ride_request_id }).populate('user ride');
+    const ride_request = await ride.ride_request.populate('user ride');
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
 
     // Check if ride request belongs to rider
-    if (ride_request.ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider._id != req.user.rider._id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride request has been accepted
     if (ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
 
-    // Check if ride has started
-    if (ride_request.ride.status == 'started') return next(new BadRequestError('Ride has started'));
-
-    // Check if rider has arrived
-    if (ride_request.ride.status == 'arrived') return next(new BadRequestError('Rider has already arrived'));
-
     // Update ride status
-    ride_request.ride.status = 'arrived';
+    ride.status = 'arrived';
 
     // Save ride
     await ride_request.ride.save();
+    await ride.save();
 
     // Get users client
     const users_client = clients.get(ride_request.user.email);
 
     // Notify user that rider has arrived
-    users_client.send(stringify({
-        event: 'ride:arrived',
-        data: { ride_request },
-    }));
+    if (users_client) {
+        users_client.emit('rider:arrived',
+            {
+                data: { ride_request },
+            }
+        );
+    }
 
     return res.status(200).json({
         success: true,
@@ -312,11 +333,11 @@ const startRide = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request rider');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride request has been accepted
     if (ride.ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
@@ -357,11 +378,11 @@ const completeRide = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request rider');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride has started
     if (ride.status != 'started') return next(new BadRequestError('Ride has not been started'));
@@ -435,16 +456,22 @@ const getRideData = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    let ride = await Ride.findOne({ _id: ride_id }).populate('rider passenger vehicle departure destination');
     if (!ride) return next(new BadRequestError('Invalid ride'));
+    ride = await ride.populate({
+        path: 'ride_request',
+        populate: {
+            path: 'departure ride destination',
+        }
+    })
 
     // Check if ride belongs to rider
-    // if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user._id != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
         data: {
-            ride,
+            ride: ride.toJSON(),
         },
     });
 };
@@ -473,8 +500,11 @@ const submitRideReview = async (req, res, next) => {
     const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
+    console.log(ride)
+    console.log(req.user)
+
     // Check if user booked ride
-    if (ride.ride_request.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.passenger != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride has been completed
     if (ride.status != 'completed') return next(new BadRequestError('Ride has not been completed'));
@@ -483,7 +513,7 @@ const submitRideReview = async (req, res, next) => {
     if (ride.review) return next(new BadRequestError('Ride has already been reviewed'));
 
     // Create review
-    await RideReview.create({
+    const new_review = await RideReview.create({
         ride: ride_id,
         user: req.user.id,
         review,
@@ -494,6 +524,7 @@ const submitRideReview = async (req, res, next) => {
         success: true,
         data: {
             message: 'Ride has been reviewed',
+            review: new_review
         },
     });
 };
@@ -527,7 +558,7 @@ const getRideReview = async (req, res, next) => {
     return res.status(200).json({
         success: true,
         data: {
-            reviews: ride.ride_review,
+            review: ride.ride_review,
         },
     });
 };
@@ -545,10 +576,10 @@ const getRideReview = async (req, res, next) => {
  * // TODO: Set attr based control for rider, allow superuser to access all reviews
  */
 const getRideReviewData = async (req, res, next) => {
-    const { ride_review_id } = req.body;
+    const { review_id } = req.body;
 
     // Check if review exists
-    const review = await RideReview.findOne({ _id: ride_review_id }).populate('user ride');
+    const review = await RideReview.findOne({ _id: review_id }).populate('user ride');
 
     if (!review) return next(new BadRequestError('Invalid review'));
 
@@ -581,10 +612,13 @@ const getRidersReviews = async (req, res, next) => {
     if (!rider) return next(new BadRequestError('Invalid rider'));
 
     // Check if user is superuser
-    if (req.user.role != 'superuser' && req.user.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
+    // if (req.user.role != 'superuser' && req.user.rider?.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Get rider's reviews
-    const reviews = await RideReview.find({ rider: rider_id }).populate('user ride');
+    const reviews = await RideReview.find({ rider: rider_id }).populate({
+        path: 'user ride',
+        select: '-role -email'
+    });
 
     return res.status(200).json({
         success: true,
