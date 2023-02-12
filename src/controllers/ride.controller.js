@@ -146,10 +146,10 @@ const completeRideRequest = async (req, res, next) => {
         { ride_class, payment_method },
     ).populate('departure destination user');
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
-    
+
     // Update ride request payment method
     ride_request.payment_method = payment_method;
-    
+
     // Search for riders within the current users location
     const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
 
@@ -157,10 +157,10 @@ const completeRideRequest = async (req, res, next) => {
     const filtered_riders = closest_riders.filter(
         (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline
     );
-    
+
     // Check if matching riders are available
     if (filtered_riders.length == 0) return next(new BadRequestError('No riders are available'));
-    
+
     // Send ride request to riders
     const rider_response = await sendRideRequestToRiders(filtered_riders, ride_request);
     if (!rider_response) {
@@ -261,7 +261,7 @@ const rideArrived = async (req, res, next) => {
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
 
     // Check if ride request belongs to rider
-    if (ride_request.ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride_request.ride.rider != req.user.rider._id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride request has been accepted
     if (ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
@@ -281,11 +281,14 @@ const rideArrived = async (req, res, next) => {
     // Get users client
     const users_client = clients.get(ride_request.user.email);
 
+    console.log(users_client.user.email)
+
     // Notify user that rider has arrived
-    users_client.send(stringify({
-        event: 'ride:arrived',
-        data: { ride_request },
-    }));
+    users_client.emit('rider:arrived',
+        {
+            data: { ride_request },
+        }
+    );
 
     return res.status(200).json({
         success: true,
