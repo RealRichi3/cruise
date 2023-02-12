@@ -265,39 +265,48 @@ const cancelRideRequest = async (req, res, next) => {
  * @throws {BadRequestError} Invalid ride request
  */
 const rideArrived = async (req, res, next) => {
-    const { ride_request_id } = req.body;
+    const { ride_id } = req.body;
+
+    const ride = await Ride.findOne({ _id: ride_id }).populate('rider passenger ride_request');
+    if (!ride) return next(new BadRequestError('Invalid ride request'));
+
+    // Check if ride has started
+    if (ride.status == 'started') return next(new BadRequestError('Ride has already started'));
+
+    // Check if ride has been cancelled
+    if (ride.status == 'cancelled') return next(new BadRequestError('Ride has been cancelled'));
+
+    // Check if ride has been completed
+    if (ride.status == 'completed') return next(new BadRequestError('Ride has been completed'));
 
     // Check if ride request exists
-    const ride_request = await RideRequest.findOne({ _id: ride_request_id }).populate('user ride');
+    const ride_request = await ride.ride_request.populate('user ride');
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
 
     // Check if ride request belongs to rider
-    if (ride_request.ride.rider != req.user.rider._id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider._id != req.user.rider._id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride request has been accepted
     if (ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
 
-    // Check if ride has started
-    if (ride_request.ride.status == 'started') return next(new BadRequestError('Ride has started'));
-
-    // Check if rider has arrived
-    if (ride_request.ride.status == 'arrived') return next(new BadRequestError('Rider has already arrived'));
-
     // Update ride status
-    ride_request.ride.status = 'arrived';
+    ride.status = 'arrived';
 
     // Save ride
     await ride_request.ride.save();
+    await ride.save();
 
     // Get users client
     const users_client = clients.get(ride_request.user.email);
 
     // Notify user that rider has arrived
-    users_client.emit('rider:arrived',
-        {
-            data: { ride_request },
-        }
-    );
+    if (users_client) {
+        users_client.emit('rider:arrived',
+            {
+                data: { ride_request },
+            }
+        );
+    }
 
     return res.status(200).json({
         success: true,
@@ -324,11 +333,11 @@ const startRide = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request rider');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride request has been accepted
     if (ride.ride_request.status != 'accepted') return next(new BadRequestError('Ride request has not been accepted'));
@@ -369,11 +378,11 @@ const completeRide = async (req, res, next) => {
     const { ride_id } = req.body;
 
     // Check if ride exists
-    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
+    const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request rider');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride has started
     if (ride.status != 'started') return next(new BadRequestError('Ride has not been started'));
@@ -457,7 +466,7 @@ const getRideData = async (req, res, next) => {
     })
 
     // Check if ride belongs to rider
-    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider.user._id != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
@@ -491,8 +500,11 @@ const submitRideReview = async (req, res, next) => {
     const ride = await Ride.findOne({ _id: ride_id }).populate('ride_request');
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
+    console.log(ride)
+    console.log(req.user)
+
     // Check if user booked ride
-    if (ride.ride_request.user != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.passenger != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Check if ride has been completed
     if (ride.status != 'completed') return next(new BadRequestError('Ride has not been completed'));

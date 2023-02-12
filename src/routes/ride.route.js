@@ -31,7 +31,9 @@ router
     .post('/complete', permit('rider'), completeRide)
     .get('/data', permit('enduser rider superadmin'), getRideData)
     .get('/rides', permit('enduser'), getUsersRides)
-    .post('/review/submit', permit('enduser'), submitRideReview)
+
+    // Ride review
+    .post('/review/submit', permit('rider enduser'), submitRideReview)
     .get('/review', permit('superadmin admin'), getRideReview)
     .get('/review/data', permit('superadmin admin'), getRideReviewData)
     .get('/review/rider', permit('superadmin admin'), getRidersReviews)
