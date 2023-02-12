@@ -99,19 +99,10 @@ function getRideResponseFromRider(client, ride_req) {
  * */
 async function sendRideRequestToRiders(riders, ride_request) {
     let ride;
-    // const test_riders = [
-    //     'cruiserider9@gmail.com',
-    //     'cruiserider13@gmail.com',
-    //     'cruiserider14@gmail.com',
-    //     'cruiserider15@gmail.com',
-    //     'cruiserider16@gmail.com',
-    // ]
-    // console.log(riders)
+    // Set limit to 5 riders if riders.length > 5
     const limit = riders.length > 5 ? 5 : riders.length;
-    console.log(limit)
     for (let i = 0; i < limit; i++) {
         const rider = await riders[i].rider.populate("user");
-        // rider.user.email = test_riders[i]
 
         //  Get riders socket connections
         const rider_client = clients.get(rider.user.email);
