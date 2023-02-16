@@ -32,7 +32,7 @@ const newCallRequest = async function (data, res) {
                 targetuser_client.removeAllListeners('call:request:response')
 
                 resolve(null)
-            }, config.CALL_TIMEOUT)
+            }, config.CALL_REQUEST_TIMEOUT)
         })
 
         if (targetuser_response == null || targetuser_response.peer_id == null) {

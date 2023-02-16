@@ -41,6 +41,8 @@ const URBAN_MULTIPLIER = process.env.URBAN_MULTIPLIER,
     ELITE_MULTIPLIER = process.env.ELITE_MULTIPLIER,
     COST_PER_KM = process.env.COST_PER_KM;
 
+const CALL_REQUEST_TIMEOUT = process.env.CALL_REQUEST_TIMEOUT;
+
 module.exports = {
     // DB
     MONGO_URI,
@@ -89,5 +91,8 @@ module.exports = {
     URBAN_MULTIPLIER,
     STANDARD_MULTIPLIER,
     ELITE_MULTIPLIER,
-    COST_PER_KM
+    COST_PER_KM,
+
+    // CALL REQUEST TIMEOUT
+    CALL_REQUEST_TIMEOUT
 };
