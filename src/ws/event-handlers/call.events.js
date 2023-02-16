@@ -27,7 +27,7 @@ const newCallRequest = async function (data, res) {
         }
 
         // If targetuser is online, notify targetuser of incoming call
-        targetuser_client.emit('call:incoming', { peer_id })
+        targetuser_client.emit('call:incoming', { caller: socket.user, peer_id })
 
         let response = false;
         // Await targetuser response with targetuser's peer id
@@ -55,7 +55,7 @@ const newCallRequest = async function (data, res) {
                 targetuser_client.removeAllListeners('call:request:response')
 
                 resolve(null)
-            }, 10000)
+            }, config.CALL_REQUEST_TIMEOUT * 1000)
         })
 
         if (targetuser_response == null || targetuser_response.peer_id == null) {
