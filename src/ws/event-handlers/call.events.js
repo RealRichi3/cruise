@@ -1,6 +1,17 @@
 const { clients } = require('../clients');
 const config = require('../../utils/config');
 
+/**
+ * Initiate new Call request to a target user
+ *
+ * Sends a request to the target user to initiate a call
+ * If target user accepts call, target user's peer id is sent back to initiator
+ * If target user rejects call, initiator is notified
+ * 
+ * @param {Object} data
+ * @param {String} data.targetuser_email - Email of target user
+ * @param {String} data.peer_id - Peer JS id of initiator
+ */
 const newCallRequest = async function (data, res) {
     try {
         const socket = this
