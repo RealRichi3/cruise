@@ -1,143 +1,64 @@
-const { saveNewLocation, updateLocation, getLocation, deleteVehicleLocation } = require('../../services/location.service');
-const { socketAsyncWrapper } = require("../middlewares/wrapper");
-const { stringify } = require('../../utils/json');
-const Vehicle = require('../../models/vehicle.model');
-const { Rider } = require('../../models/users.model');
-const config = require('../../utils/config');
-const { clients } = require('../clients');
-const { randomUUID } = require('crypto');
+const newCallRequest = async function (data, res) {
+    try {
+        const socket = this
+        const { targetuser_email, peer_id } = data
 
-class CallSockets {
-    constructor(client, sock) {
-        this.client = client;
-        this.socket = sock;
-    }
+        // Get targetuser client
+        const targetuser_client = clients.get(targetuser_email)
 
-    init() {
-        const self = this.client;
-        // TODO: Add role based access control to all events
-        // Change rider status to online
-        this.client.on('call:rider:init', socketAsyncWrapper(async (data) => {
-            console.log(randomUUID())
-            console.log('New call initiated for ' + data.rider_email)
-            // User should send rider email and peeer id
-            const { rider_email, peer_id } = data;
-
-            // Get rider client
-            const rider_client = clients.get(rider_email);
-
-            // If rider is not online, notify user
-            if (rider_client == null) {
-                console.log('Rider is offline')
-                self.send(stringify({
-                    event: 'call:offline',
-                    data: { message: 'Rider is offline' }
-                }));
-                return;
-            }
-
-            // If rider is online, notify rider
-            // TODO: Check if rider is busy with another ride
-            // TODO: Add user details to data sent to rider
-            console.log('Rider is online')
-            rider_client.send(stringify({ event: 'call:incoming', data: { peer_id, caller: self.user } }));
-
-
-            // Await rider response with rider's peer id
-            const rider_response = await new Promise((resolve, reject) => {
-                console.log('Awaiting rider response')
-                rider_client.on('call:accepted', (data) => {
-                    console.log('Rider accepted call')
-                    resolve(data);
-                });
-
-                // Set timeout to close call if no response
-                setTimeout(() => {
-                    console.log('Call timed out')
-                    self.send(stringify({ event: 'call:timeout', data: { message: 'Call timeout' } }));
-
-                    // Notify rider that call timed out
-                    console.log('Notifying rider that call timed out')
-                    rider_client.send(stringify({ event: 'call:timeout', data: { message: 'Call timeout' } }));
-
-                    // Close call
-                    console.log('Closing call')
-                    self.emit('call:end');
-
-                    resolve(null);
-                }, 5000);
-            });
-
-            // If rider rejects call, notify user
-            if (rider_response == null || rider_response.peer_id == null) {
-                console.log('Rider declined call')
-                self.send(stringify({ event: 'call:declined', data: { message: 'Rider declined call' } }));
-                return;
-            }
-
-            // If rider accepts call, notify user
-            console.log('Rider accepted call')
-            self.send(stringify({ event: 'call:accepted', data: { peer_id: rider_response.peer_id } }));
+        // If targetuser is not online, notify initiator
+        if (targetuser_client == null) {
+            res({ message: 'targetuser is offline' })
             return
-        }, this.socket));
+        }
 
-        this.client.on('call:enduser:init', socketAsyncWrapper(async (data) => {
-            // Rider should send endusers_email and riders peeer id
-            const { enduser_email, peer_id } = data;
+        // If targetuser is online, notify targetuser of incoming call
+        targetuser_client.emit('call:incoming', { peer_id })
 
-            // Get enduser client
-            const enduser_client = clients.get(enduser_email);
-
-            // If enduser is not online, notify rider
-            if (enduser_client == null) {
-                self.send(stringify({
-                    event: 'call:offline',
-                    data: { message: 'Enduser is offline' }
-                }));
-                return;
-            }
-
-            // If enduser is online, notify enduser of incoming call
-            enduser_client.send(stringify({ event: 'call:incoming', data: { peer_id } }));
-
-            // Await enduser response with enduser's peer id
-            const enduser_response = await new Promise((resolve, reject) => {
-                enduser_client.on('call:response', (data) => {
-                    resolve(data);
-                });
-
-                // If enduser rejects call, notify rider
-                enduser_client.on('call:rejected', (data) => {
-                    self.send(stringify({ event: 'call:rejected', data: { message: 'Enduser rejected call' } }));
-                });
-
-                // Set timeout to close call if no response
-                setTimeout(() => {
-                    self.send(stringify({ event: 'call:timeout', data: { message: 'Call timeout' } }));
-
-                    // Close call
-                    self.emit('call:end');
-
+        // Await targetuser response with targetuser's peer id
+        const targetuser_response = await new Promise((resolve, reject) => {
+            targetuser_client.on('call:request:response', (data) => {
+                if (data == null || data.peer_id == null) {
                     resolve(null)
-                }, config.call_timeout);
-            });
+                }
+                resolve(data)
+            })
 
-            if (enduser_response == null || enduser_response.peer_id == null) {
-                return;
-            }
+            // Set timeout to close call if no response
+            setTimeout(() => {
+                targetuser_client.emit('call:timeout', { message: 'Call timeout' })
 
-            // If enduser accepts call, notify rider
-            self.send(stringify({ event: 'call:accepted', data: { peer_id: enduser_response.peer_id } }));
+                // Close socket listener
+                targetuser_client.removeAllListeners('call:request:response')
 
-        }, this.socket));
+                resolve(null)
+            }, config.CALL_TIMEOUT)
+        })
 
-        // Change rider status to offline
-        this.client.on('call:end', socketAsyncWrapper(async (data) => {
+        if (targetuser_response == null || targetuser_response.peer_id == null) {
+            res({ message: 'targetuser rejected call' })
+            return
+        }
 
-        }, this.socket));
+        // If targetuser accepts call, notify initiator
+        res(null, { peer_id: targetuser_response.peer_id })
+
+        return
+    } catch (error) {
+        res(error)
+        return
     }
 }
 
-module.exports = {
-    CallSockets,
+module.exports = (io, socket) => {
+    const res = (error, data) => {
+        if (error) {
+            socket.emit('call:error', { error });
+        } else {
+            socket.emit('call:success', { data });
+        }
+    };
+
+    socket.on('call:request', (data) => newCallRequest.call(socket, data, res));
 };
+
