@@ -75,7 +75,7 @@ module.exports = (io, socket) => {
         }
     }
 
-    socket.on('update-location', (data) => updateLocation.call(socket, data, res));
-    socket.on('get-location', (data) => getLocation.call(socket, data, res), res);
-    socket.on('save-new-location', (data) => saveNewLocation.call(socket, data, res));
+    socket.on('location:update', (data) => updateLocation.call(socket, data, res));
+    socket.on('location:get-location', (data) => getLocation.call(socket, data, res), res);
+    socket.on('location:save-new', (data) => saveNewLocation.call(socket, data, res));
 }

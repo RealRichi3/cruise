@@ -1,3 +1,6 @@
+const { clients } = require('../clients');
+const config = require('../../utils/config');
+
 const newCallRequest = async function (data, res) {
     try {
         const socket = this
@@ -15,24 +18,33 @@ const newCallRequest = async function (data, res) {
         // If targetuser is online, notify targetuser of incoming call
         targetuser_client.emit('call:incoming', { peer_id })
 
+        let response = false;
         // Await targetuser response with targetuser's peer id
         const targetuser_response = await new Promise((resolve, reject) => {
-            targetuser_client.on('call:request:response', (data) => {
-                if (data == null || data.peer_id == null) {
-                    resolve(null)
-                }
+            console.log('awaiting targetuser response')
+
+            function handleCallRequestResponse(data) {
+                response = true
+                console.log('targetuser response received')
+                targetuser_client.removeAllListeners('call:request:response', handleCallRequestResponse)
+
+                if (data == null || data.peer_id == null) resolve(null);
+
                 resolve(data)
-            })
+            }
+
+            targetuser_client.on('call:request:response', handleCallRequestResponse)
 
             // Set timeout to close call if no response
             setTimeout(() => {
+                if (response) return;
                 targetuser_client.emit('call:timeout', { message: 'Call timeout' })
 
                 // Close socket listener
                 targetuser_client.removeAllListeners('call:request:response')
 
                 resolve(null)
-            }, config.CALL_REQUEST_TIMEOUT)
+            }, 10000)
         })
 
         if (targetuser_response == null || targetuser_response.peer_id == null) {
@@ -45,6 +57,7 @@ const newCallRequest = async function (data, res) {
 
         return
     } catch (error) {
+        console.log(error)
         res(error)
         return
     }
