@@ -7,10 +7,10 @@ const app = require("./app");
 const { randomUUID } = require('crypto');
 
 const initializeSocketListeners = (socket) => {
-    console.log(randomUUID())
     // Initialize socket listeners
     require('./ws/event-handlers/location.events')(io, socket);
     require('./ws/event-handlers/call.events')(io, socket);
+    require('./ws/event-handlers/chat.events')(io, socket);
 
     socket.on('message', (message) => {
         console.log(message);
