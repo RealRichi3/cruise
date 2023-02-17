@@ -6,12 +6,15 @@ const { addClient, removeClient } = require('./ws/clients');
 const app = require("./app");
 const { randomUUID } = require('crypto');
 
-const initializeSocketListeners = (socket) => {
-    // Initialize socket listeners
+const initializeSocketEventHandlers = (socket) => {
+    // Initialize socket event handlers
     require('./ws/event-handlers/location.events')(io, socket);
     require('./ws/event-handlers/call.events')(io, socket);
     require('./ws/event-handlers/chat.events')(io, socket);
+}
 
+const initializeSocketListeners = (socket) => {
+    // Initialize socket listeners
     socket.on('message', (message) => {
         console.log(message);
     });
@@ -30,6 +33,9 @@ const initializeSocketListeners = (socket) => {
         // Close connection
         socket.disconnect();
     });
+
+    // Initialize socket event handlers
+    initializeSocketEventHandlers(io, socket);
 };
 
 let curr_client;

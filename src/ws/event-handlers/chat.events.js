@@ -1,12 +1,16 @@
 const { randomUUID } = require("crypto")
 const { ChatRoom, Message } = require("../../models/chat.model")
 const { Ride } = require("../../models/ride.model")
+const { clients } = require("../clients")
 
 const initiateChat = async function (data, res) {
     try {
         const socket = this;
         const { targetuser_id, ride_id } = data;
 
+        // Check for missing requred fields
+        if (!targetuser_id) { res("Missing required field: targetuser_id"); return; }
+        
         // Check if ride exists
         // const ride = await Ride.findById(ride_id);
         // if (!ride) { res("Ride does not exist"); return; }
@@ -41,7 +45,8 @@ const initiateChat = async function (data, res) {
             chat_room_id = new_chat_room._id;
 
         // Notify target user of chat room id
-        io.to(targetuser_id).emit("chat:invite", { chat_room_id });
+        const target_client = clients.get(targetuser_id)
+        if (target_client) target_client.emit("chat:invite", { chat_room_id });
 
         // Notify initiator of chat room id
         res(null, { chat_room_id });
