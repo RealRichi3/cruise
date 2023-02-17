@@ -71,7 +71,6 @@ const sendMsg = async function (data, res) {
             return
         }
 
-        console.log(chat_room)
         // Check if user is part of chat room
         const user_in_chat_room = chat_room.users.includes(socket.user._id)
         if (!user_in_chat_room) {
@@ -87,8 +86,8 @@ const sendMsg = async function (data, res) {
         })
 
         // Notify all users in chat room of new message
-        // const target_clients
-        // io.to(chat_room_id).emit('chat:message', { message: new_message })
+        const chat_room_client = clients.get(chat_room_id)
+        if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
 
         res(null, { message: new_message })
         return
