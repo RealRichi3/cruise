@@ -19,6 +19,13 @@
     <button class="add-vehicle">Add Vehicle</button>
     <button class="get-location">Get Location</button>
     <button class="update-location">Update Location</button>
+    <button class="call">Call User</button>
+    <div class="chat-area">
+        <input type="text" class="target-mail" placeholder="Target email"> </input>
+        <input type="text" class="message-content"> </input>
+        <button class="send-message">Send Message</button>
+        <button class="initiate-chat">Initiate Chat</button>
+    </div>
     <!-- confirmation alert window -->
     <div class="alert show" role="alert">
         <strong>Success!</strong>
@@ -27,6 +34,11 @@
         <button type="button" class="btn-close">X</button>
     </div>
 
+    <div class="call-dialog hide">
+        <strong>Incoming call</strong>
+        <button class="accept-call"> Accept </button>
+        <button class="reject-call">Reject</button>
+    </div>
 
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
@@ -60,18 +72,12 @@
             })
         })
 
-        // websocketButton.addEventListener('click', () => {
-        //     socket.emit('update-location','Hello from client');
-        //     wss.broadcast('ws:message', "Hi from the client")
-        //     // wss.send('Hello from client');
-        // });
-
         sendMessageButton.addEventListener('click', () => {
             console.log('Sending message')
             socket.emit('message', "Hi from the client")
         })
 
-        const email = 'cruiserider25@gmail.com'
+        const email = 'cruiserider30@gmail.com'
         const serverURL = 'http://localhost:5000/api/v1';
         function login() {
             axios.post(`${serverURL}/auth/login`, {
@@ -92,6 +98,7 @@
     <script>
         const updateLocationButton = document.querySelector('.update-location');
         const getLocationButton = document.querySelector('.get-location');
+        const callButton = document.querySelector('.call');
 
         async function getLocation() {
             return new Promise((resolve, reject) => {
@@ -112,13 +119,15 @@
 
             socket.emit('update-location', data)
         })
-        
-        
-        wss.addEventListener('vehicle:goonline', (data) => {
-            console.log(data)
-            console.log('[vehicle:goonline] ' + data.detail);
-        })
 
+        callButton.addEventListener('click', async () => {
+            console.log('Calling user')
+            const targetuser_email = 'cruiserider25@gmail.com'
+            const peer_id = '018412-lkasjd-f233u-42kj4-asd82-cruiserider30@gmail.com'
+            const data = { targetuser_email, peer_id }
+
+            socket.emit('call:request', data)
+        })
 
     </script>
 
@@ -132,7 +141,7 @@
             'Authorization': `Bearer ${localStorage.getItem(`access_token:${email}`)}`
         }
         async function goOnline() {
-            
+
             // Send request to server to go online
             const { data } = await axios.post(`${server_url}/rider/online`, {}, {
                 headers: axios_header
@@ -151,16 +160,10 @@
         }
     </script>
 
-    <!-- Error handler -->
-    <script>
-        wss.addEventListener('error', (data) => {
-            console.log('[error] ' + data.detail);
-        })
-    </script>
-
     <!-- Socket IO -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
+        const callDialog = document.querySelector('.call-dialog');
         const socket = io('http://localhost:5000', {
             handshake: true,
             auth: {
@@ -191,17 +194,65 @@
                 console.log('[error] ' + data);
             })
 
+            socket.on('call:incoming', (data) => {
+                console.log('[call:incoming]')
+                console.log(data)
+                callDialog.classList.remove('hide')
+                callDialog.classList.add('show')
+
+                data = { peer_id: '018412-lkasjd-f233u-42kj4-asd82-cruiserider30@gmail.com' }
+
+                const acceptButton = document.querySelector('.accept-call');
+                const rejectButton = document.querySelector('.reject-call');
+
+                function acceptCall() {
+                    console.log('Accepting call')
+                    socket.emit('call:request:response', data)
+                    callDialog.classList.remove('show')
+                    callDialog.classList.add('hide')
+
+                    acceptButton.removeEventListener('click', acceptCall)
+                    rejectButton.removeEventListener('click', rejectCall)
+                }
+
+                function rejectCall() {
+                    console.log('Rejecting call')
+                    socket.emit('call:request:response', null)
+                    callDialog.classList.remove('show')
+                    callDialog.classList.add('hide')
+
+                    acceptButton.removeEventListener('click', acceptCall)
+                    rejectButton.removeEventListener('click', rejectCall)
+                }
+
+                acceptButton.addEventListener('click', acceptCall)
+
+                rejectButton.addEventListener('click', rejectCall)
+
+                setTimeout(() => {
+                    socket.emit('call:request:response', null)
+                    acceptButton.removeEventListener('click', acceptCall)
+                    rejectButton.removeEventListener('click', rejectCall)
+                }, 10000)
+            })
+
+            socket.on('call:timeout', (data) => {
+                console.log('[call:timeout] ')
+                console.log(data);
+                alert('Call timed out')
+            })
+
+            socket.on('call:success', (data) => {
+                console.log('[call:success] ')
+                console.log(data);
+                alert('Call success')
+            })
+
             socket.on('ride:request', (data) => {
                 console.log('[ride:request] ')
                 console.log(data);
 
                 show_alert()
-            })
-
-            socket.on('rider:arrived', (data) => {
-                console.log('[rider:arrived] ')
-                console.log(data);
-                alert('Rider arrived')
             })
 
             socket.on('ride:accepted', (data) => {
@@ -216,28 +267,11 @@
                 alert('Ride cancelled')
             })
 
-            socket.on('frontend:message', wsWrapper((data) => {
-                console.log('[msg] self: ' + data.detail);
-            }))
-
-            socket.on('backend:message', wsWrapper((data) => {
-                console.log('[msg] backend: ')
-                console.log(data.detail);
-            }))
-
-            socket.on('ride:accepted', wsWrapper((data) => {
-                console.log('[ride:accepted] ')
-                console.log(data.detail);
-            }))
-
-            socket.on('ride:cancelled', wsWrapper((data) => {
-                console.log('[ride:cancelled] ')
-                console.log(data.detail);
-
-                alert('Ride cancelled')
-            }))
-
-
+            socket.on('rider:arrived', (data) => {
+                console.log('[rider:arrived] ')
+                console.log(data);
+                alert('Rider arrived')
+            })
         }
 
         start()

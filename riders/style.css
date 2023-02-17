@@ -28,3 +28,26 @@ body, html {
 .hide {
     display: none;
 }
+
+.chat-area {
+    background-color: #765e5e;
+    width: fit-content;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    /* align-items: left;no */
+    /* height: 300px; */
+    color: black;
+}
+
+.chat-area .message-content {
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    /* height: 300px; */
+    color: black;
+    min-height: 50px;
+    margin: 10px 0px;
+    text-justify: left;
+    padding: 0;
+}
