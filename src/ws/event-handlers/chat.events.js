@@ -5,12 +5,13 @@ const { clients } = require("../clients")
 
 const initiateChat = async function (data, res) {
     try {
+        console.log('initiateChat')
         const socket = this;
         const { targetuser_id, ride_id } = data;
 
         // Check for missing requred fields
         if (!targetuser_id) { res("Missing required field: targetuser_id"); return; }
-        
+
         // Check if ride exists
         // const ride = await Ride.findById(ride_id);
         // if (!ride) { res("Ride does not exist"); return; }
@@ -59,16 +60,18 @@ const initiateChat = async function (data, res) {
 
 const sendMsg = async function (data, res) {
     try {
+        console.log('sendMsg')
         const socket = this
         const { chat_room_id, message } = data
 
         // Check if chat room exists
-        const chat_room = await ChatRoom.findById(chat_room_id)
+        const chat_room = await ChatRoom.findById(chat_room_id).populate('messages')
         if (!chat_room) {
             res('Chat room does not exist')
             return
         }
 
+        console.log(chat_room)
         // Check if user is part of chat room
         const user_in_chat_room = chat_room.users.includes(socket.user._id)
         if (!user_in_chat_room) {
@@ -83,16 +86,14 @@ const sendMsg = async function (data, res) {
             message,
         })
 
-        // Add new message to chat room
-        chat_room.messages.push(new_message._id)
-        await chat_room.save()
-
         // Notify all users in chat room of new message
-        io.to(chat_room_id).emit('chat:message', { message: new_message })
+        // const target_clients
+        // io.to(chat_room_id).emit('chat:message', { message: new_message })
 
         res(null, { message: new_message })
         return
     } catch (error) {
+        console.log(error)
         res(error)
         return
     }
@@ -127,17 +128,21 @@ const getChatRoom = async function (data, res) {
 }
 
 module.exports = (io, socket) => {
-    const res = (error, data) => {
-        if (error) {
-            console.log(error)
-            socket.emit('chat:error', { error });
-        } else {
-            console.log('chat:success', { data })
-            socket.emit('chat:success', { data });
+    try {
+        const res = (error, data) => {
+            if (error) {
+                console.log(error)
+                socket.emit('chat:error', { error });
+            } else {
+                socket.emit('chat:success', { data });
+            }
         }
+    
+        socket.on('chat:initiate', (data) => initiateChat.call(socket, data, res));
+        socket.on('chat:message:new', (data) => sendMsg.call(socket, data, res));
+        socket.on('chat:message:get', (data) => getChatRoom.call(socket, data, res));
+        
+    } catch (error) {
+        console.log(error)
     }
-
-    socket.on('chat:initiate', (data) => initiateChat.call(socket, data, res));
-    socket.on('chat:send-message', (data) => sendMsg.call(socket, data, res));
-    socket.on('chat:get-messages', (data) => getChatRoom.call(socket, data, res));
 }

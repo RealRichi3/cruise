@@ -14,28 +14,32 @@ const initializeSocketEventHandlers = (socket) => {
 }
 
 const initializeSocketListeners = (socket) => {
-    // Initialize socket listeners
-    socket.on('message', (message) => {
-        console.log(message);
-    });
-
-    socket.on('disconnect', () => {
-        console.log(socket.user.email + ': disconnected');
-
-        // Remove client from clients map
-        removeClient(socket);
-    });
-
-    socket.on('error', (error) => {
-        // Send error to client
-        console.log(error);
-
-        // Close connection
-        socket.disconnect();
-    });
-
-    // Initialize socket event handlers
-    initializeSocketEventHandlers(io, socket);
+    try {
+        // Initialize socket listeners
+        socket.on('message', (message) => {
+            console.log(message);
+        });
+    
+        socket.on('disconnect', () => {
+            console.log(socket.user.email + ': disconnected');
+    
+            // Remove client from clients map
+            removeClient(socket);
+        });
+    
+        socket.on('error', (error) => {
+            // Send error to client
+            console.log(error);
+    
+            // Close connection
+            socket.disconnect();
+        });
+    
+        // Initialize socket event handlers
+        initializeSocketEventHandlers(socket);
+    } catch (error) {
+        console.log(error);        
+    }
 };
 
 let curr_client;

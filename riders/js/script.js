@@ -52,22 +52,30 @@ init_chat.addEventListener('click', async function () {
 
     console.log(user_data)
     
-    socket.on('chat:success', initateChat);
-    function initateChat (data) {
+    function initiateChatResponseHandler(data) {
         console.log('intiating chat')
-        socket.removeEventListener('chat:success', initateChat)
+        socket.removeEventListener('chat:success', initiateChatResponseHandler)
         chat_room_id = data.data.chat_room_id;
-        
+
         console.log('chat room id: ', chat_room_id)
     }
+    socket.on('chat:success', initiateChatResponseHandler);
     socket.emit('chat:initiate', {
         targetuser_id: user_data._id
     });
 });
 
 send_message.addEventListener('click', () => {
-    socket.emit('chat:send', {
+    console.log(message_content.value)
+    console.log(socket)
+    
+    function sendMessageResponseHandler (data) {
+        console.log('send message response handler')
+        console.log(data)
+    }
+    socket.on('chat:success', sendMessageResponseHandler);
+    socket.emit('chat:message:new', {
         message: message_content.value,
-        target_email: target_email.value
+        chat_room_id
     });
 });
