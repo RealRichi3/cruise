@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto")
 const { ChatRoom, Message } = require("../../models/chat.model")
+const { Ride } = require("../../models/ride.model")
 
 const initiateChat = async function (data, res) {
     try {
@@ -7,21 +8,23 @@ const initiateChat = async function (data, res) {
         const { targetuser_id, ride_id } = data;
 
         // Check if ride exists
-        const ride = await Ride.findById(ride_id);
-        if (!ride) { res("Ride does not exist"); return; }
+        // const ride = await Ride.findById(ride_id);
+        // if (!ride) { res("Ride does not exist"); return; }
 
-        // Check if user is part of ride
-        if (ride.rider != socket.user._id && 
-            ride.passenger != socket.user._id) {
-            res("User is not part of ride");
-            return;
-        }
+        // // Check if user is part of ride
+        // if (ride.rider != socket.user._id &&
+        //     ride.passenger != socket.user._id) {
+        //     res("User is not part of ride");
+        //     return;
+        // }
 
-        // Check if an existing chat room exists
+        // // Check if an existing chat room exist
         const chat_room = await ChatRoom.findOne({
             users: { $all: [socket.user._id, data.targetuser_id] },
-            ride_id
+            // ride_id
         });
+
+        console.log(chat_room)
 
         // If chat room exists, notify initiator of chat room id
         if (chat_room) {
@@ -32,10 +35,10 @@ const initiateChat = async function (data, res) {
         // If chat room does not exist, create new chat room
         const new_chat_room = await ChatRoom.create({
             users: [socket.user._id, data.targetuser_id],
-            ride_id,
+            // ride_id,
             messages: [],
         }),
-        chat_room_id = new_chat_room._id;
+            chat_room_id = new_chat_room._id;
 
         // Notify target user of chat room id
         io.to(targetuser_id).emit("chat:invite", { chat_room_id });
@@ -45,8 +48,7 @@ const initiateChat = async function (data, res) {
 
         return;
     } catch (error) {
-        res(error)
-        return
+        return res(error)
     }
 }
 
@@ -122,13 +124,15 @@ const getChatRoom = async function (data, res) {
 module.exports = (io, socket) => {
     const res = (error, data) => {
         if (error) {
-            socket.emit('location:error', { error });
+            console.log(error)
+            socket.emit('chat:error', { error });
         } else {
-            socket.emit('location:success', { data });
+            console.log('chat:success', { data })
+            socket.emit('chat:success', { data });
         }
     }
 
-    socket.on('chat:initiate', (data) => initiateChat(data, res));
-    socket.on('chat:send-message', (data) => sendMsg(data, res));
-    socket.on('chat:get-messages', (data) => getChatRoom(data, res));
+    socket.on('chat:initiate', (data) => initiateChat.call(socket, data, res));
+    socket.on('chat:send-message', (data) => sendMsg.call(socket, data, res));
+    socket.on('chat:get-messages', (data) => getChatRoom.call(socket, data, res));
 }
