@@ -51,7 +51,7 @@ const getRequiredConfigVars = (type) => {
 const getAuthTokens = async (user_id, token_type = null) => {
     try {
         // Get user details
-        const current_user = await User.findById(user_id).populate('status');
+        const current_user = await User.findById(user_id).populate('status rider enduser');
         if (!current_user) {
             throw new NotFoundError('User does not exist');
         }
@@ -61,6 +61,8 @@ const getAuthTokens = async (user_id, token_type = null) => {
             email: current_user.email,
             role: current_user.role,
             status: current_user.status,
+            rider: current_user.rider,
+            enduser: current_user.enduser,
         };
 
         // Set token type to access if not specified

@@ -18,6 +18,7 @@
     <button class="go-offline">Go offline</button>
     <button class="add-vehicle">Add Vehicle</button>
     <button class="get-location">Get Location</button>
+    <button class="update-location">Update Location</button>
     <!-- confirmation alert window -->
     <div class="alert show" role="alert">
         <strong>Success!</strong>
@@ -25,6 +26,8 @@
         <button class="no">No</button>
         <button type="button" class="btn-close">X</button>
     </div>
+
+
     <!-- Web socket with ws-->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script> -->
     <!-- Axios -->
@@ -32,9 +35,7 @@
 
     <!-- Buttons -->
     <script>
-        const websocketButton = document.querySelector('.ws');
         const loginButton = document.querySelector('.login');
-        const restartWsButton = document.querySelector('.start-ws');
         const sendMessageButton = document.querySelector('.send-mesage');
         const goOnlineButton = document.querySelector('.go-online');
         const goOfflineButton = document.querySelector('.go-offline');
@@ -58,16 +59,19 @@
                 console.log(err)
             })
         })
-        websocketButton.addEventListener('click', () => {
-            wss.broadcast('ws:message', "Hi from the client")
-            // wss.send('Hello from client');
-        });
+
+        // websocketButton.addEventListener('click', () => {
+        //     socket.emit('update-location','Hello from client');
+        //     wss.broadcast('ws:message', "Hi from the client")
+        //     // wss.send('Hello from client');
+        // });
 
         sendMessageButton.addEventListener('click', () => {
-            wss.broadcast('ws:message', "Hi from the client")
+            console.log('Sending message')
+            socket.emit('message', "Hi from the client")
         })
 
-        const email = 'cruiserider13@gmail.com'
+        const email = 'cruiserider27@gmail.com'
         const serverURL = 'http://localhost:5000/api/v1';
         function login() {
             axios.post(`${serverURL}/auth/login`, {
@@ -85,134 +89,37 @@
         loginButton.addEventListener('click', login)
     </script>
 
-    <!-- Utils -->
     <script>
-        function parseData(data) {
-            try {
-                const res = JSON.parse(data);
-                res.message_type = 'server'
+        const updateLocationButton = document.querySelector('.update-location');
+        const getLocationButton = document.querySelector('.get-location');
 
-                return res;
-            } catch (error) {
-                if (error instanceof SyntaxError) {
-                    return null;
-                }
-                throw new Error(error);
-            }
-        }
-
-        
-    </script>
-
-    <!-- Websocket Custom Methods -->
-    <script>
-        // Send message back to server
-        WebSocket.prototype.broadcast = function (event, data) {
-            const message = JSON.stringify({ event, data });
-            this.send(message);
-        }
-
-        // Emit messages to be handled within
-        WebSocket.prototype.emit = function (event, data) {
-            let message = data
-
-            const dom_event = new CustomEvent(event, {
-                detail: message
+        async function getLocation() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject)
             })
-
-            this.dispatchEvent(dom_event)
         }
-    </script>
 
-    <!-- Middlewares -->
-    <script>
-        const wsWrapper = (fn) => {
-            return async (data) => {
-                try {
-                    const response = await fn(data)
-                    // wss.emit('backend:message', response)
-                } catch (error) {
-                    wss.emit('error', error)
-                }
+        updateLocationButton.addEventListener('click', async () => {
+            const { longitude, latitude } = (await getLocation()).coords
+
+            console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
+            const data = {
+                location: {
+                    type: "Point",
+                    coordinates: [longitude, latitude]
+                },
             }
-        }
-    </script>
 
-    <!-- Location -->
-    <script>
-        const locationButton = document.querySelector('.get-location')
-
-        locationButton.addEventListener('click', () => {
-            getLocation().then((res) => {
-                console.log(res)
-            }).catch((err) => {
-                console.log(err)
-            })
+            socket.emit('update-location', data)
         })
-
-        function getLocation() {
-            return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))
-        }
-    </script>
-
-    <!-- Socket Event handlers -->
-    <script>
-        let wss;
-
-        function start() {
-            const access_token = localStorage.getItem(`access_token:${email}`);
-            wss = new WebSocket("ws://localhost:5000/ws", [access_token]);
-            globalThis.wss = wss
-
-            wss.onopen = () => {
-                console.log('Connected to server');
-            }
-
-            wss.onmessage = wsWrapper((info) => {
-                console.log('----------------------')
-                let req_data = info.data
-                const parsed_data = parseData(info.data)
-                // console.log(parsed_data)
-
-                // If stringified JSON, parseData will return an object with message_type = 'server'
-                if (parsed_data?.message_type === 'server') {
-                    // Check if event is specified
-                    if (parsed_data.event) {
-                        wss.emit(parsed_data.event, parsed_data.data)
-                        return
-                    }
-
-                    wss.emit('backend:message', parsed_data)
-                    return
-                }
-
-                wss.emit('backend:message', req_data)
-            })
-
-            wss.addEventListener('frontend:message', wsWrapper((data) => {
-                console.log('[msg] self: ' + data.detail);
-            }))
-
-            wss.addEventListener('backend:message', wsWrapper((data) => {
-                console.log('[msg] backend: ')
-                console.log(data.detail);
-            }))
-
-            wss.onclose = () => {
-                console.log('Connection closed');
-                setTimeout(start, 1000)
-            }
-        }
-
-        start()
-
-    </script>
-
-    <script>
+        
+        
         wss.addEventListener('vehicle:goonline', (data) => {
             console.log(data)
             console.log('[vehicle:goonline] ' + data.detail);
         })
+
+
     </script>
 
     <!-- Socket Controls -->
@@ -220,27 +127,27 @@
         goOnlineButton.addEventListener('click', goOnline)
         goOfflineButton.addEventListener('click', goOffline)
 
+        const server_url = 'http://localhost:5000/api/v1';
+        const axios_header = {
+            'Authorization': `Bearer ${localStorage.getItem(`access_token:${email}`)}`
+        }
         async function goOnline() {
-            const { longitude, latitude } = (await getLocation()).coords
+            
+            // Send request to server to go online
+            const { data } = await axios.post(`${server_url}/rider/online`, {}, {
+                headers: axios_header
+            })
 
-            console.log(`Longitude: ${longitude} | Latitude: ${latitude}`)
-            const data = {
-                // vehicle_id: "63bf5de1e73732712f4a364a",
-                location: {
-                    type: "Point",
-                    coordinates: [longitude, latitude]
-                },
-            }
-
-            wss.broadcast('rider:goonline', data)
+            console.log(data)
         }
 
         async function goOffline() {
-            const data = {
-                vehicle_id: "63bf5de1e73732712f4a364a",
-            }
+            // Send request to server to go offline
+            const { data } = await axios.post(`${server_url}/rider/offline`, {}, {
+                headers: axios_header
+            })
 
-            wss.broadcast('rider:gooffline', data)
+            console.log(data)
         }
     </script>
 
@@ -250,6 +157,86 @@
             console.log('[error] ' + data.detail);
         })
     </script>
+
+    <!-- Socket IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:5000', {
+            handshake: true,
+            auth: {
+                access_token: localStorage.getItem(`access_token:${email}`)
+            },
+
+            query: {
+                access_token: localStorage.getItem(`access_token:${email}`)
+            }
+        });
+
+        function start() {
+            socket.on('connection', () => {
+                console.log('Connected to server');
+            })
+
+            socket.on('disconnect', () => {
+                console.log('Connection closed');
+                setTimeout(start, 5000)
+            })
+
+            socket.on('success', (data) => {
+                console.log('[success] ');
+                console.log(data);
+            })
+
+            socket.on('error', (data) => {
+                console.log('[error] ' + data);
+            })
+
+            socket.on('ride:request', (data) => {
+                console.log('[ride:request] ')
+                console.log(data);
+
+                show_alert()
+            })
+
+            socket.on('ride:accepted', (data) => {
+                console.log('[ride:accepted] ')
+                console.log(data);
+            })
+
+            socket.on('ride:cancelled', (data) => {
+                console.log('[ride:cancelled] ')
+                console.log(data);
+
+                alert('Ride cancelled')
+            })
+
+            socket.on('frontend:message', wsWrapper((data) => {
+                console.log('[msg] self: ' + data.detail);
+            }))
+
+            socket.on('backend:message', wsWrapper((data) => {
+                console.log('[msg] backend: ')
+                console.log(data.detail);
+            }))
+
+            socket.on('ride:accepted', wsWrapper((data) => {
+                console.log('[ride:accepted] ')
+                console.log(data.detail);
+            }))
+
+            socket.on('ride:cancelled', wsWrapper((data) => {
+                console.log('[ride:cancelled] ')
+                console.log(data.detail);
+
+                alert('Ride cancelled')
+            }))
+        }
+
+        start()
+    </script>
+
+
+    <!-- JS script -->
     <script src="./js/script.js"></script>
 </body>
 
