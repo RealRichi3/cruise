@@ -2,15 +2,31 @@ const { randomUUID } = require("crypto")
 const { ChatRoom, Message } = require("../../models/chat.model")
 const { Ride } = require("../../models/ride.model")
 const { clients } = require("../clients")
+const { User } = require("../../models/users.model")
 
-const initiateChat = async function (data, res) {
+async function inviteTargetUserToChatRoom(target_user_id, room_id) {
+    console.log("inviting user to join chat")
+    const target_user_data = await User.findById(target_user_id);
+
+    console.log(target_user_id)
+    console.log(target_user_data)
+
+    const target_client = clients.get(target_user_data.email)
+    if (target_client) target_client.emit("chat:invite", { chat_room_id: room_id });
+    else { console.log('Target user not connected'); }
+
+    return;
+}
+
+const initiateChat = async function (req, res) {
     try {
+        const { data } = req
         console.log('initiateChat')
         const socket = this;
         const { targetuser_id, ride_id } = data;
 
         // Check for missing requred fields
-        if (!targetuser_id) { res("Missing required field: targetuser_id"); return; }
+        // if (!targetuser_id) { res("Missing required field: targetuser_id"); return; }
 
         // Check if ride exists
         // const ride = await Ride.findById(ride_id);
@@ -29,11 +45,11 @@ const initiateChat = async function (data, res) {
             // ride_id
         });
 
-        console.log(chat_room)
-
         // If chat room exists, notify initiator of chat room id
+        // and invite target user to chat room
         if (chat_room) {
-            res(null, { chat_room_id: chat_room._id });
+            inviteTargetUserToChatRoom(targetuser_id, chat_room._id)
+            res.send(null, { chat_room_id: chat_room._id });
             return;
         }
 
@@ -45,36 +61,35 @@ const initiateChat = async function (data, res) {
         }),
             chat_room_id = new_chat_room._id;
 
-        // Notify target user of chat room id
-        const target_client = clients.get(targetuser_id)
-        if (target_client) target_client.emit("chat:invite", { chat_room_id });
+        // Invite target user to chat room
+        inviteTargetUserToChatRoom(targetuser_id, chat_room_id)
 
         // Notify initiator of chat room id
-        res(null, { chat_room_id });
+        res.send(null, { chat_room_id });
 
         return;
     } catch (error) {
-        return res(error)
+        res.send(error)
+        return;
     }
 }
 
 const sendMsg = async function (data, res) {
     try {
-        console.log('sendMsg')
         const socket = this
         const { chat_room_id, message } = data
 
         // Check if chat room exists
         const chat_room = await ChatRoom.findById(chat_room_id).populate('messages')
         if (!chat_room) {
-            res('Chat room does not exist')
+            res.send('Chat room does not exist')
             return
         }
 
         // Check if user is part of chat room
         const user_in_chat_room = chat_room.users.includes(socket.user._id)
         if (!user_in_chat_room) {
-            res('User is not part of chat room')
+            res.send('User is not part of chat room')
             return
         }
 
@@ -89,16 +104,16 @@ const sendMsg = async function (data, res) {
         const chat_room_client = clients.get(chat_room_id)
         if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
 
-        res(null, { message: new_message })
+        res.send(null, { message: new_message })
         return
     } catch (error) {
         console.log(error)
-        res(error)
+        res.send(error)
         return
     }
 }
 
-const getChatRoom = async function (data, res) {
+const getChatRoomMessages = async function (data, res) {
     try {
         const socket = this
         const { chat_room_id } = data
@@ -109,38 +124,61 @@ const getChatRoom = async function (data, res) {
 
         // Check if chat room exists
         const chat_room = await ChatRoom.findById(chat_room_id)
-        if (!chat_room) { res('Chat room does not exist'); return }
+        if (!chat_room) { res.send('Chat room does not exist'); return }
 
         // Check if user is part of chat room
         const user_in_chat_room = chat_room.users.includes(socket.user._id)
-        if (!user_in_chat_room) { res('User is not part of chat room'); return }
+        if (!user_in_chat_room) { res.send('User is not part of chat room'); return }
 
         // Get all messages in chat room
         const messages = await Message.find({ _id: { $in: chat_room.messages } })
 
-        res(null, { messages })
+        res.send(null, { messages })
         return
     } catch (error) {
-        res(error)
+        res.send(error)
         return
     }
 }
 
 module.exports = (io, socket) => {
     try {
-        const res = (error, data) => {
+        const res = new Map()
+        res.send = (error, data) => {
+            const response_path = res.path
+            const response_data = { error, data }
+
             if (error) {
-                console.log(error)
-                socket.emit('chat:error', { error });
-            } else {
-                socket.emit('chat:success', { data });
+                console.log('An error occured')
+                console.log(error);
             }
+
+            socket.emit(response_path, response_data)
         }
-    
-        socket.on('chat:initiate', (data) => initiateChat.call(socket, data, res));
-        socket.on('chat:message:new', (data) => sendMsg.call(socket, data, res));
-        socket.on('chat:message:get', (data) => getChatRoom.call(socket, data, res));
-        
+
+        function socketHandlerMiddleware(data, path) {
+            const socket = this;
+            const socketRequestHandler = socket_paths[path];
+            const req = { user: socket.user, data, path }
+            res.path = 'response:' + path;
+
+            if (socket.user) return socketRequestHandler.call(socket, req, res);
+            res.send(res.path, { error: 'User is not authenticated' })
+        }
+
+        const socket_paths = {
+            "chat:initiate": initiateChat,
+            "chat:message:new": sendMsg,
+            "chat:message:get-all": getChatRoomMessages,
+        };
+
+        socket.on("chat:initiate",
+            (data) => socketHandlerMiddleware.call(socket, data, "chat:initiate"));
+        socket.on("chat:message:new",
+            (data) => socketHandlerMiddleware.call(socket, data, "chat:message:new"));
+        socket.on("chat:message:get-all",
+            (data) => socketHandlerMiddleware.call(socket, data, "chat:message:get-all"));
+
     } catch (error) {
         console.log(error)
     }
