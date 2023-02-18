@@ -16,13 +16,13 @@ var storage = multer.diskStorage({
     if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
         return cb(new Error("Please upload an image."));
     }
-    cb(null, `${Date.now()}_Taximania_${file.originalname}`);
+    cb(null, `${Date.now()}_CRUISE_${file.originalname}`);
     },
 });
 
 var uploadFile = multer({ 
   storage: storage,
-  limits: { fileSize: 1024 * 1024 * 5 }, 
+  limits: { fileSize: 1024 * 1024 * 10 }, 
   fileFilter: imageFilter });
 
   module.exports = uploadFile;
