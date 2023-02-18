@@ -22,7 +22,7 @@ async function inviteTargetUserToChatRoom(target_user_id, room_id) {
 
     const target_client = clients.get(target_user_data.email)
     if (!(room_id in target_client.rooms)) {
-        addClientToChatRoom(target_client, room_id)
+        // addClientToChatRoom(target_client, room_id)
 
         // Send invite to target client
         target_client.emit("chat:invite", { chat_room_id: room_id });
@@ -72,10 +72,9 @@ const initiateChat = async function (req, res) {
             users: [socket.user._id, data.targetuser_id],
             // ride_id,
             messages: [],
-        }),
-            chat_room_id = new_chat_room._id;
+        });
 
-        addClientToChatRoom(socket, chat_room._id)
+        addClientToChatRoom(socket, new_chat_room._id)
 
         // Invite target user to chat room
         inviteTargetUserToChatRoom(targetuser_id, chat_room_id)
