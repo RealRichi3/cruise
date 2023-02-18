@@ -3,40 +3,33 @@ const { ChatRoom, Message } = require("../../models/chat.model")
 const { Ride } = require("../../models/ride.model")
 const { clients } = require("../clients")
 const { User } = require("../../models/users.model")
-const { errorMonitor } = require("events")
 
-async function addUserToRoom(user_socket, room_id) {
+async function addClientToChatRoom(client, room_id) {
+    // Convert room_id to string ..
+    // .. for cases where MongooseObjectId is passed
     room_id = room_id.toString()
-    // Check if user is alread in room 
-    if (!(room_id in user_socket.rooms)) {
-        console.log(user_socket.rooms)
-        console.log('adding user to rooms')
-        user_socket.join(room_id)
+
+    // Add client to room if not already in
+    const client_in_room = room_id in client.rooms
+    if (!client_in_room) {
+        console.log('adding client to rooms')
+        client.join(room_id)
     }
 }
 
 async function inviteTargetUserToChatRoom(target_user_id, room_id) {
-    try {
-        console.log("inviting user to join chat")
-        const target_user_data = await User.findById(target_user_id);
+    const target_user_data = await User.findById(target_user_id);
 
-        console.log(target_user_id)
-        console.log(target_user_data)
+    const target_client = clients.get(target_user_data.email)
+    if (!(room_id in target_client.rooms)) {
+        addClientToChatRoom(target_client, room_id)
 
-        const target_client = clients.get(target_user_data.email)
-        if (target_client) {
-            addUserToRoom(target_client, room_id)
-            target_client.emit("chat:invite", { chat_room_id: room_id });
-        } 
-        else { console.log('Target user not connected'); }
-
-        return;
-
-    } catch (error) {
-        console.log(errorMonitor)
+        // Send invite to target client
+        target_client.emit("chat:invite", { chat_room_id: room_id });
     }
-}
 
+    return;
+}
 
 const initiateChat = async function (req, res) {
     try {
@@ -68,7 +61,7 @@ const initiateChat = async function (req, res) {
         // If chat room exists, notify initiator of chat room id
         // and invite target user to chat room
         if (chat_room) {
-            addUserToRoom(socket, chat_room._id)
+            addClientToChatRoom(socket, chat_room._id)
             inviteTargetUserToChatRoom(targetuser_id, chat_room._id)
             res.send(null, { chat_room_id: chat_room._id });
             return;
@@ -82,7 +75,7 @@ const initiateChat = async function (req, res) {
         }),
             chat_room_id = new_chat_room._id;
 
-        addUserToRoom(socket, chat_room._id)
+        addClientToChatRoom(socket, chat_room._id)
 
         // Invite target user to chat room
         inviteTargetUserToChatRoom(targetuser_id, chat_room_id)
@@ -149,6 +142,23 @@ const sendMsg = async function (req, res) {
     }
 }
 
+const joinChatRoom = async function (req, res) {
+    const socket = this
+    const { chat_room_id } = req.data
+
+    const chat_room = await ChatRoom.findById(chat_room_id).populate('messages')
+    if (!chat_room) {
+        res.send({ error: 'Chat room not found' })
+    }
+    if (!chat_room.users.includes(socket.user._id)) {
+        res.send({ error: 'User is not a member of this chatroom' })
+    }
+
+    addClientToChatRoom(socket, chat_room_id)
+
+    res.send(null, { chat_room })
+}
+
 const getChatRoomMessages = async function (data, res) {
     try {
         const socket = this
@@ -204,6 +214,7 @@ module.exports = (io, socket) => {
             "chat:initiate": initiateChat,
             "chat:message:new": sendMsg,
             "chat:message:get-all": getChatRoomMessages,
+            "chat:join": joinChatRoom,
         };
 
         socket.on("chat:initiate",
@@ -212,6 +223,8 @@ module.exports = (io, socket) => {
             (data) => socketHandlerMiddleware.call(socket, data, "chat:message:new"));
         socket.on("chat:message:get-all",
             (data) => socketHandlerMiddleware.call(socket, data, "chat:message:get-all"));
+        socket.on("chat:join",
+            (data) => socketHandlerMiddleware.call(socket, data, "chat:join"))
 
     } catch (error) {
         console.log(error)
