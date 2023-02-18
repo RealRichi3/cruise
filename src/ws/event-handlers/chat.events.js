@@ -3,21 +3,40 @@ const { ChatRoom, Message } = require("../../models/chat.model")
 const { Ride } = require("../../models/ride.model")
 const { clients } = require("../clients")
 const { User } = require("../../models/users.model")
+const { errorMonitor } = require("events")
+
+async function addUserToRoom(user_socket, room_id) {
+    room_id = room_id.toString()
+    // Check if user is alread in room 
+    if (!(room_id in user_socket.rooms)) {
+        console.log(user_socket.rooms)
+        console.log('adding user to rooms')
+        user_socket.join(room_id)
+    }
+}
 
 async function inviteTargetUserToChatRoom(target_user_id, room_id) {
-    console.log("inviting user to join chat")
-    const target_user_data = await User.findById(target_user_id);
+    try {
+        console.log("inviting user to join chat")
+        const target_user_data = await User.findById(target_user_id);
 
-    console.log(target_user_id)
-    console.log(target_user_data)
+        console.log(target_user_id)
+        console.log(target_user_data)
 
-    const target_client = clients.get(target_user_data.email)
-    if (target_client) target_client.emit("chat:invite", { chat_room_id: room_id });
-    else { console.log('Target user not connected'); }
+        const target_client = clients.get(target_user_data.email)
+        if (target_client) {
+            addUserToRoom(target_client, room_id)
+            target_client.emit("chat:invite", { chat_room_id: room_id });
+        } 
+        else { console.log('Target user not connected'); }
 
-    target_client.join(room_id)
-    return;
+        return;
+
+    } catch (error) {
+        console.log(errorMonitor)
+    }
 }
+
 
 const initiateChat = async function (req, res) {
     try {
@@ -49,7 +68,7 @@ const initiateChat = async function (req, res) {
         // If chat room exists, notify initiator of chat room id
         // and invite target user to chat room
         if (chat_room) {
-            socket.join(chat_room._id)
+            addUserToRoom(socket, chat_room._id)
             inviteTargetUserToChatRoom(targetuser_id, chat_room._id)
             res.send(null, { chat_room_id: chat_room._id });
             return;
@@ -62,8 +81,8 @@ const initiateChat = async function (req, res) {
             messages: [],
         }),
             chat_room_id = new_chat_room._id;
-        
-        socket.join(chat_room_id)
+
+        addUserToRoom(socket, chat_room._id)
 
         // Invite target user to chat room
         inviteTargetUserToChatRoom(targetuser_id, chat_room_id)
@@ -112,11 +131,15 @@ const sendMsg = async function (req, res) {
 
         let path = chat_room_id + ':chat:message:new'
         console.log(path)
-        io.to(chat_room_id).emit(path, { message: new_message })
+        console.log(socket.rooms)
+
+
+        // socket.emit(path, { message: new_message })
+        // socket.io.to(chat_room_id).emit(path, { message: new_message })
+        socket.io.to(chat_room_id).emit(path, { message: new_message })
         // // Notify all users in chat room of new message
         // const chat_room_client = clients.get(chat_room_id)
         // if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
-
         res.send(null, { message: new_message })
         return
     } catch (error) {
@@ -156,8 +179,6 @@ const getChatRoomMessages = async function (data, res) {
 
 module.exports = (io, socket) => {
     try {
-        global.io = io
-
         const res = new Map()
         res.send = (error, data) => {
             const response_path = res.path
@@ -170,6 +191,7 @@ module.exports = (io, socket) => {
 
         function socketHandlerMiddleware(data, path) {
             const socket = this;
+            socket.io = io
             const socketRequestHandler = socket_paths[path];
             const req = { user: socket.user, data, path }
             res.path = 'response:' + path;
