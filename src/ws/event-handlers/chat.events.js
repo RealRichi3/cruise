@@ -15,6 +15,7 @@ async function inviteTargetUserToChatRoom(target_user_id, room_id) {
     if (target_client) target_client.emit("chat:invite", { chat_room_id: room_id });
     else { console.log('Target user not connected'); }
 
+    target_client.join(room_id)
     return;
 }
 
@@ -48,6 +49,7 @@ const initiateChat = async function (req, res) {
         // If chat room exists, notify initiator of chat room id
         // and invite target user to chat room
         if (chat_room) {
+            socket.join(chat_room._id)
             inviteTargetUserToChatRoom(targetuser_id, chat_room._id)
             res.send(null, { chat_room_id: chat_room._id });
             return;
@@ -60,6 +62,8 @@ const initiateChat = async function (req, res) {
             messages: [],
         }),
             chat_room_id = new_chat_room._id;
+        
+        socket.join(chat_room_id)
 
         // Invite target user to chat room
         inviteTargetUserToChatRoom(targetuser_id, chat_room_id)
@@ -74,10 +78,10 @@ const initiateChat = async function (req, res) {
     }
 }
 
-const sendMsg = async function (data, res) {
+const sendMsg = async function (req, res) {
     try {
         const socket = this
-        const { chat_room_id, message } = data
+        const { chat_room_id, message } = req.data
 
         // Check if chat room exists
         const chat_room = await ChatRoom.findById(chat_room_id).populate('messages')
@@ -100,9 +104,18 @@ const sendMsg = async function (data, res) {
             message,
         })
 
-        // Notify all users in chat room of new message
-        const chat_room_client = clients.get(chat_room_id)
-        if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
+        const populate_config = {
+            path: 'sender',
+            select: 'firstname lastname email'
+        }
+        console.log(await new_message.populate(populate_config))
+
+        let path = chat_room_id + ':chat:message:new'
+        console.log(path)
+        io.to(chat_room_id).emit(path, { message: new_message })
+        // // Notify all users in chat room of new message
+        // const chat_room_client = clients.get(chat_room_id)
+        // if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
 
         res.send(null, { message: new_message })
         return
@@ -143,15 +156,14 @@ const getChatRoomMessages = async function (data, res) {
 
 module.exports = (io, socket) => {
     try {
+        global.io = io
+
         const res = new Map()
         res.send = (error, data) => {
             const response_path = res.path
             const response_data = { error, data }
 
-            if (error) {
-                console.log('An error occured')
-                console.log(error);
-            }
+            if (error) console.log(error);
 
             socket.emit(response_path, response_data)
         }
