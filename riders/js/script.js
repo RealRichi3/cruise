@@ -40,18 +40,7 @@ const target_email = document.querySelector('.target-mail');
 const api_url = 'http://localhost:5000/api/v1';
 let chat_room_id = null;
 
-function sendMessageResponseHandler(data) {
-    console.log('message sent', data)
-}
-socket.on('reponse:chat:message:new', sendMessageResponseHandler);
-send_message.addEventListener('click', () => {
-    socket.emit('chat:message:new', {
-        message: message_content.value,
-        chat_room_id
-    });
-});
-
-// Chat room 
+// Chat room helpers
 {
     function saveChatRoomIdToStorage(room_id) {
         localStorage.setItem(email + ':chat_room_id', room_id);
@@ -62,12 +51,6 @@ send_message.addEventListener('click', () => {
         return stored_room_id
     }
 
-    function chatInviteHandler(data) {
-        const { chat_room_id } = data
-        console.log('New chat room invite: ', chat_room_id)
-        saveChatRoomIdToStorage(chat_room_id)
-    }
-
     function getMessagesHandler(data) {
         console.log('Get messages handler')
         const { messages } = data
@@ -75,35 +58,56 @@ send_message.addEventListener('click', () => {
     }
 
     function newChatRoomMessgeHandler(data) {
-        console.log('New chat room message')
+        console.log('new message')
         const { message } = data
         console.log(message.sender.email + ': ' + message.message)
     }
-
-    socket.on('response:chat:invite', chatInviteHandler)
-
-    // socket.emit('chat:message:get-all', { chat_room_id })
-    console.log(chat_room_id + ':chat:message:new')
-    socket.on(chat_room_id + ':chat:message:new', newChatRoomMessgeHandler)
-    if (!socket.hasListeners("63eff9c4ffb90fdf2503c522:chat:message:new")) {
-    }
 }
 
+// Response handlers
+function joinRoomResponseHandler(data) {
+    console.log(data)
+}
+socket.on('response:chat:join', joinRoomResponseHandler)
+
+function chatInviteHandler(data) {
+    const { chat_room_id } = data
+    console.log('New chat room invite: ', chat_room_id)
+    saveChatRoomIdToStorage(chat_room_id)
+
+    socket.emit('chat:join', { chat_room_id })
+    
+    if (!socket.hasListeners(chat_room_id + ':chat:message:new')) {
+        socket.on(chat_room_id + ':chat:message:new', newChatRoomMessgeHandler);
+    }
+}
+socket.on('chat:invite', chatInviteHandler)
 
 function initiateChatResponseHandler(data) {
-    console.log('intiating chat')
     chat_room_id = data.data.chat_room_id;
 
     saveChatRoomIdToStorage(chat_room_id)
 
-    console.log('chat room id: ', chat_room_id)
-
     if (!socket.hasListeners(chat_room_id + ':chat:message:new')) {
-        console.log('listener exists')
         socket.on(chat_room_id + ':chat:message:new', newChatRoomMessgeHandler);
-    } else { console.log('listener does not exist') }
+    }
 }
 socket.on('response:chat:initiate', initiateChatResponseHandler);
+
+function sendMessageResponseHandler(data) {
+    console.log('message sent', data)
+}
+socket.on('reponse:chat:message:new', sendMessageResponseHandler);
+
+// Send message to chat room
+send_message.addEventListener('click', () => {
+    socket.emit('chat:message:new', {
+        message: message_content.value,
+        chat_room_id: getChatRoomIdFromStorage()
+    });
+});
+
+// Intitate Chat
 init_chat.addEventListener('click', async function () {
     console.log('init chat')
     const response = await axios.get(api_url + '/user/user-data', {
