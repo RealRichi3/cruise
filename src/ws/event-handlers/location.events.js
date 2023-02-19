@@ -24,6 +24,7 @@ const saveNewLocation = async function (data, socket) {
 
 const updateLocation = async function (data, res) {
     try {
+        console.log('updateLocation')
         const socket = this
         const curr_location = data.location
         const [longitude, latitude] = curr_location.coordinates
@@ -76,6 +77,6 @@ module.exports = (io, socket) => {
     }
 
     socket.on('location:update', (data) => updateLocation.call(socket, data, res));
-    socket.on('location:get-location', (data) => getLocation.call(socket, data, res), res);
+    socket.on('location:get-location', (data) => getLocation.call(socket, data, res));
     socket.on('location:save-new', (data) => saveNewLocation.call(socket, data, res));
 }
