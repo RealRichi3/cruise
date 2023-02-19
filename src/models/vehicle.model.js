@@ -21,7 +21,17 @@ const vehicleSchema = new schema({
         ref: 'VehicleStatus',
         required: true
     },
+    rating : { type: Number, default: 1 },
+    actve_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
+    rating: {type: Number, min: 1, max: 5, default: 4},
+    // images: [{ type: String, required: true }],
 });
+
+vehicleSchema.virtual('location', {
+    ref: 'Location',
+    localField: '_id',
+    foreignField: 'vehicle',
+})
 
 const VehicleStatus = mongoose.model('VehicleStatus', vehicle_statusSchema);
 
@@ -34,6 +44,18 @@ vehicleSchema.pre('validate', async function (next) {
 
     next();
 });
+
+vehicleSchema.methods.updateBookingStatus = function (status) {
+    return new Promise((resolve, reject) => {
+        try {
+            this.booking_status = status;
+            this.save().then(() => { resolve(this) });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
 
 const Vehicle = mongoose.model('Vehicle', vehicleSchema);
 

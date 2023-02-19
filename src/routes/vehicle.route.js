@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const upload = require('../middlewares/multerobject');
 
 const {
     addVehicle,
@@ -16,7 +17,7 @@ const rbacMiddleware = require('../middlewares/rbac');
 router.use(basicAuth(), rbacMiddleware('rider'));
 
 router
-    .post('/add', addVehicle)
+    .post('/add', upload.array("images", 5), addVehicle)
     .get(
         '/get/:id',
         rbacMiddleware('enduser rider admin superadmin'),

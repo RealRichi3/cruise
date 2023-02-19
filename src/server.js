@@ -14,18 +14,16 @@ switch (process.env.NODE_ENV) {
 }
 
 require('dotenv').config({ path });
-
 const { MONGO_URI, PORT } = require('./utils/config');
-const app = require('./app');
-
 const connectDatabase = require('./db/connectDB');
+const httpServer = require("./io");
 
 async function start() {
     try {
         await connectDatabase(MONGO_URI);
 
-        app.listen(PORT, function () {
-            console.log(`Server is running on port ${PORT}....`);
+        httpServer.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
         });
     } catch (error) {
         console.log(error);
