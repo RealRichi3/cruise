@@ -42,16 +42,16 @@ const initiateChat = async function (req, res) {
     }
 
     // Check if ride exists
-    const ride = await Ride.findById(ride_id);
+    const ride = await Ride.findById(ride_id).populate('rider');
     if (!ride) {
         res.send("Ride does not exist");
         return;
     }
 
     // Check if user is part of ride
-    if (ride.rider != socket.user._id &&
-        ride.passenger != socket.user._id) {
-        res("User is not part of ride");
+    if (ride.rider.user.toString() != socket.user._id &&
+        ride.passenger.toString() != socket.user._id) {
+        res.send("User is not part of ride");
         return;
     }
 
@@ -120,29 +120,23 @@ const sendMessageToChatRoom = async function (req, res) {
     }
 
     // Create new message
-    const new_message = await Message.create({
+    let new_message = await Message.create({
         sender: socket.user._id,
         chat_room: chat_room_id,
         message,
     })
 
+    // Add senders data to message
     const populate_config = {
         path: 'sender',
         select: 'firstname lastname email'
     }
-    console.log(await new_message.populate(populate_config))
+    new_message = await new_message.populate(populate_config)
 
+    // Notify all users in chat room of new message
     let path = chat_room_id + ':chat:message:new'
-    console.log(path)
-    console.log(socket.rooms)
+    io.to(chat_room_id).emit(path, { message: new_message })
 
-
-    // socket.emit(path, { message: new_message })
-    // socket.io.to(chat_room_id).emit(path, { message: new_message })
-    socket.io.to(chat_room_id).emit(path, { message: new_message })
-    // // Notify all users in chat room of new message
-    // const chat_room_client = clients.get(chat_room_id)
-    // if (chat_room_client) chat_room_client.emit('chat:message', { message: new_message })
     res.send(null, { message: new_message })
     return
 }
@@ -161,20 +155,25 @@ const joinChatRoom = async function (req, res) {
                     select: 'email firstname lastname'
                 }
             })
+    
+    // Check if chat room exists
     if (!chat_room) {
-        res.send({ error: 'Chat room not found' })
+        res.send({ error: 'Chat room not found' }); return;
     }
+
+    // Check if user is part of chat room
     if (!chat_room.users.includes(socket.user._id)) {
-        res.send({ error: 'User is not a member of this chatroom' })
+        res.send({ error: 'User is not a member of this chatroom' }); return;
     }
-    console.log(chat_room.toJSON())
+
+    // Add user to chat room
     addClientToChatRoom(socket, chat_room_id)
 
     res.send(null, { chat_room })
     return
 }
 
-const getChatRoomMessages = async function (data, res) {
+const getPreviousChatRoomMessages = async function (req, res) {
     const socket = this
     const { chat_room_id } = req.data
 
@@ -188,26 +187,33 @@ const getChatRoomMessages = async function (data, res) {
                     select: 'email firstname lastname'
                 }
             })
+    
+    // Check if chat room exists
     if (!chat_room) {
         res.send({ error: 'Chat room not found' })
-    }
-    if (!chat_room.users.includes(socket.user._id)) {
-        res.send({ error: 'User is not a member of this chatroom' })
+        return;
     }
 
-    res.send(null, { messages: chat })
+    // Check if user is part of chat room
+    if (!chat_room.users.includes(socket.user._id)) {
+        res.send({ error: 'User is not a member of this chatroom' })
+        return;
+    }
+
+    res.send(null, { messages: chat_room })
     return
 }
 
 module.exports = (io, socket) => {
     try {
+        global.io = io;
+
         const res = new Map()
         res.send = (error, data) => {
             const response_path = res.path
             const response_data = { error, data }
 
             if (error) console.log(error);
-
             socket.emit(response_path, response_data)
         }
 
@@ -226,6 +232,7 @@ module.exports = (io, socket) => {
                 let response = null;
                 if (socket.user) {
                     response = await socketRequestHandler.call(socket, req, res);
+                    return;
                 }
                 if (response instanceof Error) { throw response };
 
@@ -239,7 +246,7 @@ module.exports = (io, socket) => {
         const socket_paths = {
             "chat:initiate": initiateChat,
             "chat:message:new": sendMessageToChatRoom,
-            "chat:message:get-all": getChatRoomMessages,
+            "chat:message:previous": getPreviousChatRoomMessages,
             "chat:join": joinChatRoom,
         };
 
@@ -247,8 +254,8 @@ module.exports = (io, socket) => {
             (data) => socketHandlerMiddleware.call(socket, data, "chat:initiate"));
         socket.on("chat:message:new",
             (data) => socketHandlerMiddleware.call(socket, data, "chat:message:new"));
-        socket.on("chat:message:get-all",
-            (data) => socketHandlerMiddleware.call(socket, data, "chat:message:get-all"));
+        socket.on("chat:message:previous",
+            (data) => socketHandlerMiddleware.call(socket, data, "chat:message:previous"));
         socket.on("chat:join",
             (data) => socketHandlerMiddleware.call(socket, data, "chat:join"))
 
