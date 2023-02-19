@@ -42,16 +42,16 @@ const initiateChat = async function (req, res) {
     }
 
     // Check if ride exists
-    const ride = await Ride.findById(ride_id);
+    const ride = await Ride.findById(ride_id).populate('rider');
     if (!ride) {
         res.send("Ride does not exist");
         return;
     }
 
     // Check if user is part of ride
-    if (ride.rider != socket.user._id &&
-        ride.passenger != socket.user._id) {
-        res("User is not part of ride");
+    if (ride.rider.user.toString() != socket.user._id &&
+        ride.passenger.toString() != socket.user._id) {
+        res.send("User is not part of ride");
         return;
     }
 
@@ -167,7 +167,7 @@ const joinChatRoom = async function (req, res) {
     if (!chat_room.users.includes(socket.user._id)) {
         res.send({ error: 'User is not a member of this chatroom' })
     }
-    console.log(chat_room.toJSON())
+
     addClientToChatRoom(socket, chat_room_id)
 
     res.send(null, { chat_room })
@@ -207,7 +207,6 @@ module.exports = (io, socket) => {
             const response_data = { error, data }
 
             if (error) console.log(error);
-
             socket.emit(response_path, response_data)
         }
 
@@ -226,6 +225,7 @@ module.exports = (io, socket) => {
                 let response = null;
                 if (socket.user) {
                     response = await socketRequestHandler.call(socket, req, res);
+                    return;
                 }
                 if (response instanceof Error) { throw response };
 
