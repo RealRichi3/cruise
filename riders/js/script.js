@@ -34,6 +34,7 @@ function close_alert() {
 
 const init_chat = document.querySelector('.initiate-chat');
 const send_message = document.querySelector('.send-message');
+const get_prev_messages = document.querySelector('.get-previous-messages')
 const message_content = document.querySelector('.message-content');
 const target_email = document.querySelector('.target-mail');
 
@@ -84,7 +85,12 @@ function chatInviteHandler(data) {
 socket.on('chat:invite', chatInviteHandler)
 
 function initiateChatResponseHandler(data) {
-    chat_room_id = data.data.chat_room_id;
+    if (data.error) {
+        console.log('ERROR: ', data.error)
+        return
+    }
+
+    chat_room_id = data.data?.chat_room_id;
 
     saveChatRoomIdToStorage(chat_room_id)
 
@@ -99,6 +105,12 @@ function sendMessageResponseHandler(data) {
 }
 socket.on('reponse:chat:message:new', sendMessageResponseHandler);
 
+function getPreviousMessagesResponseHandler(data) {
+    console.log('previous messages')
+    console.log(data)
+}
+socket.on('response:chat:message:previous', getPreviousMessagesResponseHandler);
+
 // Send message to chat room
 send_message.addEventListener('click', () => {
     socket.emit('chat:message:new', {
@@ -112,7 +124,8 @@ init_chat.addEventListener('click', async function () {
     console.log('init chat')
     const response = await axios.get(api_url + '/user/user-data', {
         params: {
-            target_email: target_email.value
+            target_email: target_email.value,
+           
         }
     })
 
@@ -121,6 +134,15 @@ init_chat.addEventListener('click', async function () {
 
     console.log(user_data)
     socket.emit('chat:initiate', {
-        targetuser_id: user_data._id
+        targetuser_id: user_data._id,
+        ride_id: '63f2864de258e2b0a9d00297'
     });
 });
+
+// Get previous messages
+get_prev_messages.addEventListener('click', () => {
+    console.log('gettign prev messages')
+    socket.emit('chat:message:previous', {
+        chat_room_id: getChatRoomIdFromStorage()
+    });
+})
