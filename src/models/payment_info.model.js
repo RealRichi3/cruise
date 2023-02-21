@@ -37,11 +37,13 @@ const bankAccountSchema = new schema({
 
 const dedicatedVirtualAccountSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    enduser: { type: schema.Types.ObjectId, ref: 'EndUser', required: true },
-    bankname: { type: schema.Types.String, requird: true },
-    bankid: { type: schema.Types.Number, required: true },
-    account_name: { type: schema.Types.String, required: true },
-    account_number: { type: schema.Types.Number, required: true },
+    rider: { type: schema.Types.ObjectId, ref: 'rider', required: true, unique: true },
+    customer_code: { type: schema.Types.String, /*required: true */ },
+    customer_id: { type: schema.Types.String, /*required: true */ },
+    bankname: { type: schema.Types.String, /* requird: true */ },
+    bankid: { type: schema.Types.Number, /* required: true */ },
+    account_name: { type: schema.Types.String, /* required: true */ },
+    account_number: { type: schema.Types.Number, /* required: true */ },
     currency: { type: schema.Types.String, default: 'NGN' },
     customer_code: { type: schema.Types.String, required: true }
 })
