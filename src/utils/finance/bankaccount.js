@@ -55,11 +55,18 @@ async function createCustomerProfileForDedicatedAccount(user_data) {
  *  
  * @returns {Object} Dedicated Virtual Account data
  */
-async function ceateNewDedicatedVirtualAccount(data) {
-    const { email, first_name,
-        middle_name, lastname,
-        phone, preferred_bank } = data
+async function ceateDedicatedVirtualAccount(data) {
+    const { email, preferred_bank } = data
 
+    const user = await User.findOne({ email }).populate('rider')
+    if (!user) { return new Error('User does not exist') }
+
+    let rider = user.rider
+    if (!rider) { return new Error('User is not a rider')}
+
+    rider = await user.rider.populate('dedicated_virtuial_account')
+
+    let riders_dva = rider.dedicated_virtual_account
 
     // Send request to paystack API to generate Dedicated virtual account
     const PAYSTACK_DVA_URL = 'https://api.paystack.co/dedicated_account/'
@@ -71,8 +78,8 @@ async function ceateNewDedicatedVirtualAccount(data) {
             'Content-Type': 'application/json',
         },
         data: {
-            email, first_name, middle_name, lastname,
-            phone, preferred_bank, country: 'NG'
+            customer: riders_dva.customer_code,
+            preferred_bank: preferred_bank || config.DVA_PREFERRED_BANK || 'access-bank'
         }
     }
     const api_response = await axios(axios_config)
@@ -82,5 +89,16 @@ async function ceateNewDedicatedVirtualAccount(data) {
         return new Error("An error occured while generating a dedicated Virtual account")
     }
 
-    return api_response.data.data
+    const created_dva = api_response.data.data
+
+    // Update riders dedicated virtual account
+   riders_dva =  riders_dva.updateOne({
+        account_name: created_dva.account_name,
+        account_number: created_dva.account_number,
+        bank_name: created_dva.bank.name,
+        bank_id: created_dva.back.id
+    })
+
+
+    return riders_dva
 }
