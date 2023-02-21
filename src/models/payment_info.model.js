@@ -35,6 +35,17 @@ const bankAccountSchema = new schema({
     bank_name: { type: String, required: true },
 });
 
+const dedicatedVirtualAccountSchema = new schema({
+    user: { type: schema.Types.ObjectId, ref: 'User', required: true },
+    enduser: { type: schema.Types.ObjectId, ref: 'EndUser', required: true },
+    bankname: { type: schema.Types.String, requird: true },
+    bankid: { type: schema.Types.Number, required: true },
+    account_name: { type: schema.Types.String, required: true },
+    account_number: { type: schema.Types.Number, required: true },
+    currency: { type: schema.Types.String, default: 'NGN' },
+    customer_code: { type: schema.Types.String, required: true }
+})
+
 const cardSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
     enduser: { type: schema.Types.ObjectId, ref: 'EndUser', required: true },
@@ -53,10 +64,12 @@ const WithdrawalRequest = mongoose.model(
     'WithdrawalRequest',
     withdrawalRequestSchema
 );
+const DedicatedVirtualAccount = mongoose.model('DedicatedVirtualAccoun', dedicatedVirtualAccountSchema)
 
 module.exports = {
     Card,
     BankAccount,
     Wallet,
     WithdrawalRequest,
+    DedicatedVirtualAccount
 };
