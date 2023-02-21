@@ -57,6 +57,13 @@ const cardSchema = new schema({
     cvv: { type: String, required: true },
 });
 
+dedicatedVirtualAccountSchema.virtual('transactions', {
+    ref: 'Transaction',
+    localField: '_id',
+    foreignField: 'user',
+    jsutOne: true,
+})
+
 const Card = mongoose.model('Card', cardSchema);
 const BankAccount = mongoose.model('BankAccount', bankAccountSchema);
 const Wallet = mongoose.model('Wallet', walletSchema);
