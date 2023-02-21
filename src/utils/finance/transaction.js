@@ -1,8 +1,15 @@
-const { Transaction, Invoice } = require('../models/transaction.model');
-const config = require('../utils/config');
+const { Transaction, Invoice } = require('../../models/transaction.model');
+const config = require('../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../utils/errors');
-const { Wallet } = require('../models/payment_info.model');
+const { NotFoundError, UnauthorizedError } = require('../errors');
+const { Wallet } = require('../../models/payment_info.model');
+
+
+async function handleBankTransfer () {
+    // Generate dedicated virtual account data
+    // Stoore DVA to reference user
+    // return account data
+}
 
 // Transaction Controller
 /**
@@ -27,7 +34,7 @@ const { Wallet } = require('../models/payment_info.model');
  * */
 const initiateTransaction = async function (data) {
     try {
-        const { amount, type, payment_method, user_id, enduser_id } = data;
+        const { amount, type, payment_method, user_id, enduser_id, dva_id } = data;
 
         // Create Invoice for pending transaction
         const invoice = new Invoice({
@@ -44,6 +51,7 @@ const initiateTransaction = async function (data) {
             type,
             payment_method,
             invoice: invoice._id,
+            dedicated_virtual_account: dva_id       // if payment_method is bank transfer
         });
 
         invoice.transaction = transaction._id;

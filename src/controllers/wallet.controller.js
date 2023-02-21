@@ -17,7 +17,7 @@ const {
 const {
     initiateTransaction,
     verifyTransactionStatus,
-} = require('../utils/transaction');
+} = require('../utils/finance/transaction');
 const config = require('../utils/config');
 const sendEmail = require('../utils/email');
 const {

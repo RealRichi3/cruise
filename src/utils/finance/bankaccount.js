@@ -47,11 +47,7 @@ async function createCustomerProfileForDedicatedAccount(user_data) {
  * 
  * @param {Object} data
  * @param {string} data.email,
- * @param {string} data.first_name,
- * @param {string} data.middle_name,
- * @param {string} data.last_name,
- * @param {number} data.phone
- * @param {string} data.preferred_bank
+ * @param {string} data.preferred_bank,
  *  
  * @returns {Object} Dedicated Virtual Account data
  */
@@ -62,7 +58,7 @@ async function ceateDedicatedVirtualAccount(data) {
     if (!user) { return new Error('User does not exist') }
 
     let rider = user.rider
-    if (!rider) { return new Error('User is not a rider')}
+    if (!rider) { return new Error('User is not a rider') }
 
     rider = await user.rider.populate('dedicated_virtuial_account')
 
@@ -89,16 +85,14 @@ async function ceateDedicatedVirtualAccount(data) {
         return new Error("An error occured while generating a dedicated Virtual account")
     }
 
-    const created_dva = api_response.data.data
-
     // Update riders dedicated virtual account
-   riders_dva =  riders_dva.updateOne({
+    const created_dva = api_response.data.data
+    riders_dva = riders_dva.updateOne({
         account_name: created_dva.account_name,
         account_number: created_dva.account_number,
         bank_name: created_dva.bank.name,
         bank_id: created_dva.back.id
     })
-
 
     return riders_dva
 }

@@ -25,7 +25,7 @@ const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../utils/email');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
-const { Wallet, PaymentInfo } = require('../models/payment_info.model');
+const { Wallet, PaymentInfo, DedicatedVirtualAccount } = require('../models/payment_info.model');
 
 /**
  * Handle existing unverified user.
@@ -299,6 +299,8 @@ const riderSignup = async (req, res, next) => {
             session,
         }).then((rider) => rider[0]);
 
+        // Create dedicated virtual account for rider
+        
         // Create Vehicle info
         if (rider.hasVehicle) {
             vehicle = await Vehicle.create(
