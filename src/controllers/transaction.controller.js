@@ -2,7 +2,7 @@ const { Transaction, Invoice } = require('../models/transaction.model');
 const { Wallet } = require('../models/payment_info.model.js')
 const config = require('../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../utils/errors');
+const { NotFoundError, UnauthorizedError, UnauthenticatedError } = require('../utils/errors');
 const {
     initiateTransaction,
     verifyTransactionStatus,
@@ -114,8 +114,8 @@ const confirmTopup = async (req, res, next) => {
     If transaction is not successful, the result will be an error
     If successful, the result will be a transaction object 
     */
-   // If error occured while verifying transaction, return error
-   if (result instanceof Error) {
+    // If error occured while verifying transaction, return error
+    if (result instanceof Error) {
         const possible_error_msgs = [
             'Transaction not found',
             'Transaction not successful',
@@ -126,7 +126,7 @@ const confirmTopup = async (req, res, next) => {
 
         return next(result);
     }
-    
+
     let transaction = result;
 
     /* 
@@ -135,7 +135,7 @@ const confirmTopup = async (req, res, next) => {
         proceed to update wallet balance and transaction status 
     */
     if (!transaction.reflected) {
-        await transaction.updateOne({ status: 'success'})
+        await transaction.updateOne({ status: 'success' })
         transaction = await effectVerifiedWalletTopupTransaction(transaction._id)
     }
 
@@ -151,6 +151,11 @@ const confirmTopup = async (req, res, next) => {
 const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
     if (req.body.event != 'charge.completed') return next();
 
+    const verification_hash = req.headers.verify_hash
+    if (verification_hash != config.FLUTTEWAVE_VERIFY_HASH) {
+        return next(new UnauthenticatedError('Please provide valid authorization'))
+    }
+    
     const txn_data = req.body.data
     const { tx_ref, amount, charged_amount } = txn_data
 
@@ -174,7 +179,7 @@ const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
         case 'wallet_withdrawal':
             // Handle verified Wallet withdrawal transaction
             transaction = await effectVerifiedWalletWithdrawalTransaction(transaction._id)
-            
+
             break;
         default:
             throw new Error('Please specify transaction type')

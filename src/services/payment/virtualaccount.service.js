@@ -32,7 +32,7 @@ async function createFLWVirtualAccount(data) {
         url: 'https://api.flutterwave.com/v3/virtual-account-numbers',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.FLUTTEWAVE_SECRET_KEY}`
+            'Authorization': `Bearer ${config.FLUTTERWAVE_SECRET_KEY}`
         },
         data: account_data
     };
