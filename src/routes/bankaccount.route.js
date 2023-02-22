@@ -6,7 +6,8 @@ const {
     removeBankAccount,
     getBankAccounts,
     getBankAccountData,
-    createDedicatedVirtualBankAccount,
+    createDVA,
+    getLinkedDVA
 } = require('../controllers/bankaccount.controller');
 
 const { basicAuth } = require('../middlewares/auth');
@@ -23,6 +24,7 @@ router
     )
     .get('/get-all', getBankAccounts)
     .delete('/remove/:id', removeBankAccount)
-    .post('/dva/create', createDedicatedVirtualBankAccount)
+    .post('/dva/create', createDVA)
+    .get('/dva/linked/:ride_id', getLinkedDVA)
 
 module.exports = router;

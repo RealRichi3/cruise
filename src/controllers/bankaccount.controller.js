@@ -8,6 +8,7 @@ const {
 const { Rider } = require('../models/users.model');
 const { BankAccount } = require('../models/payment_info.model');
 const { createDVA, createDVACustomerProfile } = require('../services/payment/dva.service');
+const { Ride } = require('../models/ride.model');
 
 // Bank Controller
 /**
@@ -171,7 +172,19 @@ const createDedicatedVirtualBankAccount = async (req, res, next) => {
 }
 
 const getLinkedDedicatedVirtualBankAccount = async (req, res, next) => {
+    const { ride_id } = req.params
 
+    const ride = await Ride.findById(ride_id).populate('rider')
+    const rider = await ride.rider.populate('dedicated_virtual_account')
+
+    if (!rider.dedicated_virtual_account) {
+        return next(new NotFoundError('Matching DVA account not found for Linked rider'))
+    }
+
+    return res.status(200).send({
+        success: true,
+        data: rider.dedicated_virtual_account
+    })
 }
 
 module.exports = {
@@ -179,5 +192,6 @@ module.exports = {
     removeBankAccount,
     getBankAccounts,
     getBankAccountData,
-    createDedicatedVirtualBankAccount
+    createDVA: createDedicatedVirtualBankAccount,
+    getLinkedDVA: getLinkedDedicatedVirtualBankAccount
 };
