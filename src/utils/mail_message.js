@@ -81,8 +81,30 @@ class WalletTopupReceiptMessage extends MailMessage {
     }
 }
 
+class WalletWithdrawalReceiptMessage extends MailMessage {
+    constructor() {
+        super();
+        this.setFrom(' ');
+        this.setSubject('Receipt for Wallet Withdrawal');
+    }
+
+    setBody(receipt) {
+        this.body = `
+            <h1>Receipt for Wallet Withdrawal</h1>
+            <p>Amount: ${receipt.amount}</p>
+            <p>Date: ${receipt.date}</p>
+            <p>Transaction reference: ${receipt.reference}</p>
+            `;
+    }
+
+    getBody() {
+        return this.body;
+    }
+}
+
 module.exports = {
     MailMessage,
     WalletTopupInvoiceMessage,
     WalletTopupReceiptMessage,
+    WalletWithdrawalReceiptMessage,
 };
