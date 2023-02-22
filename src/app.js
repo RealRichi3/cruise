@@ -27,6 +27,7 @@ app.use('/api/v1/vehicle', require('./routes/vehicle.route'));
 app.use('/api/v1/bankaccount', require('./routes/bankaccount.route'));
 app.use('/api/v1/card', require('./routes/card.route'));
 app.use('/api/v1/wallet', require('./routes/wallet.route'));
+app.use('/api/v1/transaction', require('./routes/transaction.route'));
 app.use('/api/v1/ride', require('./routes/ride.route'));
 app.use('/api/v1/rider', require('./routes/rider.route'));
 
