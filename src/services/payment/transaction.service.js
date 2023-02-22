@@ -1,8 +1,44 @@
-const { Transaction, Invoice } = require('../models/transaction.model');
-const config = require('../utils/config');
+const { Transaction, Invoice } = require('../../models/transaction.model');
+const config = require('../../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../utils/errors');
-const { Wallet } = require('../models/payment_info.model');
+const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
+const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
+const { User } = require('../../models/users.model');
+const { createFLWVirtualAccount } = require('./virtualaccount.service');
+
+/**
+ * Get Temporary Virtual Account
+ * 
+ * @param {MoongooseObjectId} user_id 
+ * @param {MongooseObject} txn - Transaction record
+ * 
+ * @returns {MongooseObject} - Virtual Account record in database
+ */
+async function getTemporaryVirtualAccount(user_id, txn) {
+    if (!txn.reference) throw new Error('No transaction reference');
+
+    const user = await User.findById(user_id)
+    if (!user) { throw new Error('User does not exist') }
+
+    const data = { firstname, lastname, email, } = user
+    data.tx_ref = txn.reference
+    data.frequency = 1          // Maximum number of allowed payment
+    data.amount = txn.amount
+    data.is_permanent = false   // for static virtual account, set to true
+
+    // Create virtual account from flutterwave API
+    const virtual_account_data = await createFLWVirtualAccount(data)
+    virtual_account_data.user = user._id
+
+    // Create Virtual account record in DB
+    const db_virtual_account = await VirtualAccount.create({
+        ...virtual_account_data,
+        ...data,
+        transaction: txn._id
+    })
+
+    return db_virtual_account
+}
 
 // Transaction Controller
 /**
@@ -46,6 +82,14 @@ const initiateTransaction = async function (data) {
             invoice: invoice._id,
         });
 
+        // Generate virtual account if payment method is bank transfer
+        if (payment_method == 'bank_transfer') {
+            const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
+            transaction.virtual_account = virtual_account._id
+
+            console.log(virtual_account)
+        }
+
         invoice.transaction = transaction._id;
         let iresult = await invoice
             .save()
@@ -77,9 +121,9 @@ const initiateTransaction = async function (data) {
         }
 
         console.log(transaction);
-        return transaction;
+        return transaction.populate('invoice user virtual_account');
     } catch (error) {
-        throw new Error(error);
+        throw error;
     }
 };
 

@@ -6,6 +6,7 @@ const {
     removeBankAccount,
     getBankAccounts,
     getBankAccountData,
+    createVAforRider
 } = require('../controllers/bankaccount.controller');
 
 const { basicAuth } = require('../middlewares/auth');
@@ -21,6 +22,7 @@ router
         getBankAccountData
     )
     .get('/get-all', getBankAccounts)
-    .delete('/remove/:id', removeBankAccount);
+    .delete('/remove/:id', removeBankAccount)
+    .post('/virtual/create', createVAforRider)
 
 module.exports = router;

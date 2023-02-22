@@ -4,7 +4,7 @@ const asyncWrapper = require('./async_wrapper');
 const { NotFoundError } = require('./errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const config = require('./config');
+const config = require('../config');
 const { v4: UUID } = require('uuid');
 
 /**

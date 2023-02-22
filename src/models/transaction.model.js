@@ -1,3 +1,5 @@
+const { BadRequestError } = require('../utils/errors');
+
 const mongoose = require('mongoose'),
     bcrypt = require('bcryptjs'),
     schema = mongoose.Schema,
@@ -70,10 +72,9 @@ const transactionsSchema = new schema(
             required: true,
             enum: ['ussd', 'card', 'bank_transfer'],
         },
-        type: {
-            type: String,
-            required: true,
-            enum: ['wallet_topup', 'book_ride', 'wallet_withdrawal'],
+        virtual_account: {
+            type: schema.Types.ObjectId, ref: 'VirtualAccount',
+            // required: true   // Required if payment_mode is is bank transfer
         },
         status: {
             type: String,
@@ -81,27 +82,25 @@ const transactionsSchema = new schema(
             default: 'pending',
             enum: ['pending', 'success', 'failed'],
         },
-        reference: { type: String, default: UU },
-        reflected: { type: Boolean, default: false }, // If transaction has been reflected in user's wallet
-        date: { type: Date, default: Date.now },
+        reference: { type: String, default: UU, required: true },
+        reflected: { type: Boolean, default: false, required: true }, // If transaction has been reflected in user's wallet
+        date: { type: Date, default: Date.now, required: true },
     },
     { timestamps: true }
 );
 
 transactionsSchema.pre('validate', async function (next) {
-    return new Promise(async (resolve, reject) => {
-        if (this.status == 'success') {
-            // There should be a receipt if status is success
-            if (!this.receipt) {
-                reject('Please specify receipt id');
-            }
-            if (!this.invoice) {
-                reject(new 'Please specify invoice id'());
-            }
+    if (this.status == 'success') {
+        // There should be a receipt if status is success
+        if (!this.receipt) {
+            return next(new BadRequestError('Please specify receipt id'));
         }
+        if (!this.invoice) {
+            return next(new BadRequestError('Please specify invoice id'));
+        }
+    }
 
-        resolve();
-    });
+    next()
 });
 
 transactionsSchema.methods.generateReceipt = async function () {

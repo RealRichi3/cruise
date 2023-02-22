@@ -6,10 +6,10 @@ const {
     getRideRouteInKm,
     vehicle_rating,
     getClosestRiders,
-} = require('../utils/ride');
+} = require('../services/ride.service');
 const { clients } = require('../ws/clients');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
-const config = require('../utils/config');
+const config = require('../config');
 
 // Models
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
@@ -250,7 +250,6 @@ const cancelRideRequest = async (req, res, next) => {
 };
 
 // TODO: Add ride tracking link
-// TODO: Add customer review
 // TODO: Make reviews affect rider rating
 
 /**
@@ -553,7 +552,7 @@ const getRideReview = async (req, res, next) => {
     if (!ride) return next(new BadRequestError('Invalid ride'));
 
     // Check if ride belongs to rider
-    // if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
@@ -584,7 +583,7 @@ const getRideReviewData = async (req, res, next) => {
     if (!review) return next(new BadRequestError('Invalid review'));
 
     // Check if review belongs to rider
-    // if (req.user.role == 'rider' && review.ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
+    if (req.user.role == 'rider' && review.ride.rider != req.user.id) return next(new UnauthorizedError('Unauthorized access'));
 
     return res.status(200).json({
         success: true,
@@ -612,7 +611,7 @@ const getRidersReviews = async (req, res, next) => {
     if (!rider) return next(new BadRequestError('Invalid rider'));
 
     // Check if user is superuser
-    // if (req.user.role != 'superuser' && req.user.rider?.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
+    if (req.user.role != 'superuser' && req.user.rider?.id != rider_id) return next(new UnauthorizedError('Unauthorized access'));
 
     // Get rider's reviews
     const reviews = await RideReview.find({ rider: rider_id }).populate({
@@ -627,6 +626,38 @@ const getRidersReviews = async (req, res, next) => {
         },
     });
 };
+
+const getUsersBookedRides = async (req, res, next) => {
+    const passenger_id = req.user.id
+
+    const fields_to_populate = 'ride_request rider departure destination'
+
+    const rides = await Ride.find({ passenger: passenger_id }).populate(fields_to_populate)
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            rides,
+        },
+    });
+}
+
+const getRidersCompletedRides = async (req, res, next) => {
+    const rider_id = req.user?.rider.id
+
+    const rider_info = await Rider.findById(rider_id)
+    if (!rider_info) return next(new NotFoundError('Rider not found'))
+
+    const fields_to_populate = 'ride_request passenger departure destination'
+    const rides = await Ride.find({ rider: rider_id, status: 'completed' }).populate(fields_to_populate)
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            rides,
+        },
+    });
+}
 
 const payForRide = async (req, res, next) => { };
 
@@ -643,5 +674,7 @@ module.exports = {
     getRideReview,
     getRideReviewData,
     getRidersReviews,
+    getUsersBookedRides,
+    getRidersCompletedRides,
     payForRide,
 };

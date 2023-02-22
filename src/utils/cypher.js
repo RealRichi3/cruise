@@ -1,6 +1,6 @@
 const { Buffer } = require('buffer');
 const crypto = require('crypto');
-const config = require('../utils/config');
+const config = require('../config');
 
 const algorithm = config.CRYPTO_ALGORITHM;
 const password = Buffer.from(config.CRYPTO_PASSWORD, 'hex')

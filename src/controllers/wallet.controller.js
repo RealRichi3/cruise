@@ -17,9 +17,9 @@ const {
 const {
     initiateTransaction,
     verifyTransactionStatus,
-} = require('../utils/transaction');
-const config = require('../utils/config');
-const sendEmail = require('../utils/email');
+} = require('../services/payment/transaction.service');
+const config = require('../config');
+const sendEmail = require('../services/email.service');
 const {
     WalletTopupInvoiceMessage,
     WalletTopupReceiptMessage,
@@ -156,8 +156,7 @@ const getWalletTransactionData = async (req, res, next) => {
 const topUpWallet = async (req, res, next) => {
     const { amount, payment_method, type } = req.body;
     const id = req.user.id;
-
-    const enduser = await Enduser.findOne({ user: id });
+    const enduser = req.user.enduser
 
     const data = {
         amount: amount / 100,

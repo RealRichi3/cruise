@@ -6,30 +6,40 @@ const { addClient, removeClient } = require('./ws/clients');
 const app = require("./app");
 const { randomUUID } = require('crypto');
 
-const initializeSocketListeners = (socket) => {
-    console.log(randomUUID())
-    // Initialize socket listeners
+const initializeSocketEventHandlers = (socket) => {
+    // Initialize socket event handlers
     require('./ws/event-handlers/location.events')(io, socket);
     require('./ws/event-handlers/call.events')(io, socket);
+    require('./ws/event-handlers/chat.events')(io, socket);
+}
 
-    socket.on('message', (message) => {
-        console.log(message);
-    });
-
-    socket.on('disconnect', () => {
-        console.log(socket.user.email + ': disconnected');
-
-        // Remove client from clients map
-        removeClient(socket);
-    });
-
-    socket.on('error', (error) => {
-        // Send error to client
-        console.log(error);
-
-        // Close connection
-        socket.disconnect();
-    });
+const initializeSocketListeners = (socket) => {
+    try {
+        // Initialize socket listeners
+        socket.on('message', (message) => {
+            console.log(message);
+        });
+    
+        socket.on('disconnect', () => {
+            console.log(socket.user.email + ': disconnected');
+    
+            // Remove client from clients map
+            removeClient(socket);
+        });
+    
+        socket.on('error', (error) => {
+            // Send error to client
+            console.log(error);
+    
+            // Close connection
+            socket.disconnect();
+        });
+    
+        // Initialize socket event handlers
+        initializeSocketEventHandlers(socket);
+    } catch (error) {
+        console.log(error);        
+    }
 };
 
 let curr_client;
