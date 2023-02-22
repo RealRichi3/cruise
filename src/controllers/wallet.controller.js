@@ -18,7 +18,7 @@ const {
     initiateTransaction,
     verifyTransactionStatus,
 } = require('../services/payment/transaction.service');
-const config = require('../utils/config');
+const config = require('../config');
 const sendEmail = require('../services/email.service');
 const {
     WalletTopupInvoiceMessage,

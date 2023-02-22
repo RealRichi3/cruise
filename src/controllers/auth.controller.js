@@ -20,7 +20,7 @@ const {
 const Password = require('../models/password.model');
 
 // Utils
-const config = require('../utils/config');
+const config = require('../config');
 const asyncWrapper = require('../utils/async_wrapper');
 const sendEmail = require('../services/email.service');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');

@@ -9,7 +9,7 @@ const {
 } = require('../services/ride.service');
 const { clients } = require('../ws/clients');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
-const config = require('../utils/config');
+const config = require('../config');
 
 // Models
 const { DepartureOrDestination, RiderLocation } = require('../models/location.model');
