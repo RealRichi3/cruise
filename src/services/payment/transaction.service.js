@@ -86,8 +86,11 @@ const initiateTransaction = async function (data) {
         if (payment_method == 'bank_transfer') {
             const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
             transaction.virtual_account = virtual_account._id
+            transaction.payment_gateway = 'flutterwave'
 
             console.log(virtual_account)
+        } else if (payment_method == 'card') {
+            transaction.payment_gateway = 'paystack'
         }
 
         invoice.transaction = transaction._id;
@@ -140,7 +143,7 @@ const initiateTransaction = async function (data) {
  * @throws {Error} - If there is an error while verifying the transaction
  * @throws {Error} - If the transaction is not successful
  */
-const verifyPaystackTransaction = async function (reference) {
+const verifyTransactionFromPaystackAPI = async function (reference) {
     try {
         const URL = `https://api.paystack.co/transaction/verify/${reference}`;
 
@@ -176,6 +179,10 @@ const verifyPaystackTransaction = async function (reference) {
     }
 };
 
+const verifyTransactionFromFlutterewaveAPI = async function (reference) {
+    const transaction = await Transaction.findOne({ reference })
+}
+
 /**
  * Verify transaction status
  *
@@ -203,9 +210,16 @@ const verifyTransactionStatus = function (reference) {
             if (!transaction) throw new Error('Transaction not found');
 
             let gateway_transaction_result;
-            gateway_transaction_result = await verifyPaystackTransaction(
-                reference
-            );
+            switch (transaction.payment_gateway) {
+                case 'paystack':
+                    gateway_transaction_result = await verifyTransactionFromPaystackAPI(reference)
+                    break;
+                case 'flutterwave':
+                    gateway_transaction_result = await verifyTransactionFromFlutterewaveAPI(reference)
+                    break;
+                default:
+                    throw new Error('Please specify payment gateway for transaction')
+            }
 
             // Check for transaction amount mismatch
             if (
