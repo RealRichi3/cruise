@@ -204,44 +204,37 @@ const verifyTransactionFromFlutterewaveAPI = async function (reference) {
  * @throws {Error} - If the transaction amount is not equal to the amount in the database
  * @throws {Error} - If the transaction is not found
  * */
-const verifyTransactionStatus = function (reference) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let transaction = await Transaction.findOne({ reference });
+const verifyTransactionStatus = async function (reference) {
+    let transaction = await Transaction.findOne({ reference });
 
-            // Check if transaction exists
-            if (!transaction) throw new Error('Transaction not found');
+    // Check if transaction exists
+    if (!transaction) throw new Error('Transaction not found');
 
-            let gateway_transaction_result;
-            switch (transaction.payment_gateway) {
-                case 'paystack':
-                    gateway_transaction_result = await verifyTransactionFromPaystackAPI(reference)
-                    break;
-                case 'flutterwave':
-                    gateway_transaction_result = await verifyTransactionFromFlutterewaveAPI(reference)
-                    break;
-                default:
-                    throw new Error('Please specify payment gateway for transaction')
-            }
+    let gateway_transaction_result;
+    switch (transaction.payment_gateway) {
+        case 'paystack':
+            gateway_transaction_result = await verifyTransactionFromPaystackAPI(reference)
+            break;
+        case 'flutterwave':
+            gateway_transaction_result = await verifyTransactionFromFlutterewaveAPI(reference)
+            break;
+        default:
+            throw new Error('Please specify payment gateway for transaction')
+    }
 
-            // Check for transaction amount mismatch
-            if (
-                transaction.amount !=
-                gateway_transaction_result.data.amount / 100
-            ) {
-                throw new Error('Transaction amount mismatch');
-            }
+    // Check for transaction amount mismatch
+    if (
+        transaction.amount !=
+        gateway_transaction_result.data.amount / 100
+    ) {
+        throw new Error('Transaction amount mismatch');
+    }
 
-            // Check if transaction is successful
-            if (gateway_transaction_result.data.status != 'success')
-                throw new Error('Transaction not successful');
+    // Check if transaction is successful
+    if (gateway_transaction_result.data.status != 'success')
+        throw new Error('Transaction not successful');
 
-            resolve(transaction);
-        } catch (error) {
-            console.log(error);
-            reject(error);
-        }
-    });
+    return transaction
 };
 
 async function effectVerifiedRidePaymentTransaction(transaction_id) {

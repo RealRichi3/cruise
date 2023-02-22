@@ -4,7 +4,8 @@ const router = express.Router();
 const {
     getWalletTransactions,
     getTransactionData,
-    confirmTopup
+    confirmTopup,
+    handleFlutterWaveTransactionWebhook
 } = require('../controllers/transaction.controller');
 
 const { basicAuth } = require('../middlewares/auth');
@@ -16,6 +17,6 @@ router
     .get('/wallet', getWalletTransactions)
     .get('/:id', getTransactionData)
     .post('/topup/confirm', confirmTopup)
-    // .post('/confirm')
+    .post('/webhook', handleFlutterWaveTransactionWebhook)
 
 module.exports = router;

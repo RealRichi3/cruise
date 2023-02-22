@@ -181,6 +181,7 @@ const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
 
     console.log(transaction)
 }
+
 module.exports = {
     getUsersTransactions,
     getTransactionData,
