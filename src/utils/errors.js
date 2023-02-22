@@ -47,6 +47,13 @@ class NoContentError extends CustomAPIError {
     }
 }
 
+class APIServerError extends CustomAPIError {
+    constructor(message) {
+        super(message)
+        this.statusCode = 500
+    }
+}
+
 const UnauthenticatedError = UnauthorizedError
 
 module.exports = {
@@ -58,4 +65,5 @@ module.exports = {
     NotFoundError,
     ConflictError,
     NoContentError,
+    APIServerError
 }

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 const { UnauthorizedError } = require('./custom_errors')
-const config = require('./config')
+const config = require('../config')
 
 const decodeJWT = (jwtToken, jwtSecret = null) => {
     try {

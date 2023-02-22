@@ -1,5 +1,5 @@
 const { BadRequestError } = require('../utils/errors');
-const { vehicleimages }  = require('../utils/imageupload');    
+const { vehicleimages } = require('../services/imageupload.service');
 
 // Models
 const { Rider } = require('../models/users.model');
@@ -34,7 +34,7 @@ const addVehicle = async (req, res, next) => {
         color,
         plate_number,
     });
-    
+
     // Add vehicle image to vehicle object
 
     const rider = await Rider.findOne({ user: req.user.id }).populate('vehicles');
@@ -46,14 +46,14 @@ const addVehicle = async (req, res, next) => {
     // }
 
     // Upload vehicle image by sending the req.files object
-   /*  const vehicle_images = await vehicleimages(req,res,next)
-
-    // Check if vehicle image is uploaded
-    if (!vehicle_images) {
-        return next(new BadRequestError('Vehicle image upload failed'));
-    }
-
-    vehicle.images = vehicle_images; */
+    /*  const vehicle_images = await vehicleimages(req,res,next)
+ 
+     // Check if vehicle image is uploaded
+     if (!vehicle_images) {
+         return next(new BadRequestError('Vehicle image upload failed'));
+     }
+ 
+     vehicle.images = vehicle_images; */
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();

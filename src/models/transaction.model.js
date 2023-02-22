@@ -72,8 +72,8 @@ const transactionsSchema = new schema(
             required: true,
             enum: ['ussd', 'card', 'bank_transfer'],
         },
-        dedicated_virtual_account: {
-            type: schema.Types.ObjectId, ref: 'DedicatedVirtualAccount',
+        virtual_account: {
+            type: schema.Types.ObjectId, ref: 'VirtualAccount',
             // required: true   // Required if payment_mode is is bank transfer
         },
         status: {

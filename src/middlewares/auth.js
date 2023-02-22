@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { BlacklistedToken } = require('../models/token.model');
 const { getAuthTokens } = require('../utils/token');
 
-const config = require('../utils/config');
+const config = require('../config');
 
 const getRequiredConfigVars = (type) => {
     switch (type) {

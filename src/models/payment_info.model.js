@@ -35,15 +35,16 @@ const bankAccountSchema = new schema({
     bank_name: { type: String, required: true },
 });
 
-const dedicatedVirtualAccountSchema = new schema({
+const virtualAccountSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
-    enduser: { type: schema.Types.ObjectId, ref: 'EndUser', required: true },
-    bankname: { type: schema.Types.String, requird: true },
-    bankid: { type: schema.Types.Number, required: true },
-    account_name: { type: schema.Types.String, required: true },
-    account_number: { type: schema.Types.Number, required: true },
-    currency: { type: schema.Types.String, default: 'NGN' },
-    customer_code: { type: schema.Types.String, required: true }
+    transaction: { type: schema.Types.ObjectId, ref: 'Transaction', required: true },
+    bank_name: { type: schema.Types.String, /* requird: true */ },
+    account_number: { type: schema.Types.Number, /* required: true */ },
+    created_at: { type: schema.Types.Date, required: true },
+    expiry_date: { type: schema.Types.Date, required: true },
+    flw_ref: { type: schema.Types.String, required: true },
+    order_ref: { type: schema.Types.String, requird: true },
+    frequency: { type: schema.Types.Number, required: true },
 })
 
 const cardSchema = new schema({
@@ -57,13 +58,6 @@ const cardSchema = new schema({
     cvv: { type: String, required: true },
 });
 
-dedicatedVirtualAccountSchema.virtual('transactions', {
-    ref: 'Transaction',
-    localField: '_id',
-    foreignField: 'user',
-    jsutOne: true,
-})
-
 const Card = mongoose.model('Card', cardSchema);
 const BankAccount = mongoose.model('BankAccount', bankAccountSchema);
 const Wallet = mongoose.model('Wallet', walletSchema);
@@ -71,12 +65,12 @@ const WithdrawalRequest = mongoose.model(
     'WithdrawalRequest',
     withdrawalRequestSchema
 );
-const DedicatedVirtualAccount = mongoose.model('DedicatedVirtualAccoun', dedicatedVirtualAccountSchema)
+const VirtualAccount = mongoose.model('VirtualAccount', virtualAccountSchema)
 
 module.exports = {
     Card,
     BankAccount,
     Wallet,
     WithdrawalRequest,
-    DedicatedVirtualAccount
+    VirtualAccount
 };

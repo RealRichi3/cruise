@@ -1,8 +1,54 @@
-const { Transaction, Invoice } = require('../models/transaction.model');
-const config = require('../utils/config');
+const { Transaction, Invoice } = require('../../models/transaction.model');
+const config = require('../../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../utils/errors');
-const { Wallet } = require('../models/payment_info.model');
+const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
+const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
+const { User } = require('../../models/users.model');
+
+async function createVirtualAccountForTransaction(user_id, txn) {
+    if (!txn.reference) throw new Error('No transaction reference');
+
+    const user = await User.findById(user_id)
+    if (!user) { throw new Error('User does not exist') }
+
+    const data = {
+        firstname, lastname, email,
+        tx_ref: txn.reference,
+        frequency: 1,
+        amount: txn.amount,
+        is_permanent: false,
+    } = user
+
+    console.log(data)
+
+    // Send request to flutterwave to create virtual account
+    const axios_config = {
+        method: 'post',
+        url: 'https://api.flutterwave.com/v3/virtual-account-numbers',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.FLUTTEWAVE_SECRET_KEY}`
+        },
+        data: data
+    };
+    const response = await axios(axios_config)
+    if (response.data.status != 'success') {
+        throw new Error('An error occured')
+    }
+
+    // Get flutterwave transaction data from response data
+    const flw_txn_data = {
+        user: user._id,
+        flw_ref, order_ref, account_number,
+        bank_name, created_at, expiry_date, amount,
+        frequency
+    } = response.data.data
+
+    // Create Virtual account record in DB
+    const virtual_account = await VirtualAccount.create(flw_txn_data)
+
+    return virtual_account
+}
 
 // Transaction Controller
 /**
@@ -45,6 +91,12 @@ const initiateTransaction = async function (data) {
             payment_method,
             invoice: invoice._id,
         });
+
+        // Generate virtual account if payment method is bank transfer
+        if (payment_method == 'bank_transfer') {
+            const virtual_account = createVirtualAccountForTransaction(user_id, transaction)
+            transaction.virtual_account = virtual_account._id
+        }
 
         invoice.transaction = transaction._id;
         let iresult = await invoice

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const schema = mongoose.Schema
-const { JWT_REFRESH_EXP } = require('../utils/config')
+const { JWT_REFRESH_EXP } = require('../config')
 
 const blacklistedTokenSchema = new schema(
     {
