@@ -6,7 +6,8 @@ const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
 const { WalletTopupInvoiceMessage,
-    WalletTopupReceiptMessage } = require('../../utils/mail_message');
+    WalletTopupReceiptMessage,
+    WalletWithdrawalReceiptMessage } = require('../../utils/mail_message');
 
 /**
  * Get Temporary Virtual Account
