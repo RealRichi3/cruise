@@ -120,7 +120,7 @@ transactionsSchema.methods.generateReceipt = async function () {
         receipt.rider = this.rider;
     }
 
-    if (this.type == 'wallet_topup') {
+    if (this.type == 'wallet_topup' || this.type == 'wallet_withdrawal') {
         receipt.enduser = this.enduser;
     }
 
@@ -130,7 +130,7 @@ transactionsSchema.methods.generateReceipt = async function () {
 
     await this.save();
 
-    return receipt;
+    return await receipt.populate('transaction');
 };
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
