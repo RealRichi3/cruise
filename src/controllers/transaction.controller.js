@@ -109,69 +109,33 @@ const confirmTopup = async (req, res, next) => {
 
     // Verify transaction
     const result = await verifyTransactionStatus(reference)
-        .then((result) => {
-            return result;
-        })
-        .catch((err) => {
-            return err;
-        });
-
 
     /*  
     If transaction is not successful, the result will be an error
     If successful, the result will be a transaction object 
     */
-    const possible_error_msgs = [
-        'Transaction not found',
-        'Transaction not successful',
-        'Transaction amount mismatch',
-    ];
-    // If error occured while verifying transaction, return error
-    if (result instanceof Error) {
+   // If error occured while verifying transaction, return error
+   if (result instanceof Error) {
+        const possible_error_msgs = [
+            'Transaction not found',
+            'Transaction not successful',
+            'Transaction amount mismatch',
+        ];
         if (possible_error_msgs.includes(result.message))
             return next(new BadRequestError(result.message));
 
         return next(result);
     }
-    const transaction = result;
-
-    if (transaction instanceof Error) return next(transaction);
+    
+    let transaction = result;
 
     /* 
         If the transaction is successful
-        and the transaction is not already in the users wallet,
+        and the transaction has not reflected the users wallet,
         proceed to update wallet balance and transaction status 
     */
     if (!transaction.reflected) {
-        // Update wallet balance
-        await Wallet.findOneAndUpdate(
-            { user: transaction.user },
-            { $inc: { balance: transaction.amount } },
-            { new: true }
-        );
-
-        // Update transaction reflected status
-        transaction.reflected = true;
-
-        // Update transaction status
-        transaction.status = 'success';
-
-        // Generate receipt
-        const receipt = await (
-            await transaction.generateReceipt()
-        ).populate('transaction');
-
-        await transaction.save();
-
-        const confirm_topup_message = new WalletTopupReceiptMessage();
-        confirm_topup_message.setBody(receipt);
-
-        // Send receipt to users email
-        sendEmail({
-            email: req.user.email,
-            subject: 'Receipt for Wallet Topup',
-            html: confirm_topup_message.getBody(),
-        });
+        transaction = await effectVerifiedWalletTopupTransaction(transaction._id)
     }
 
     res.status(200).json({
