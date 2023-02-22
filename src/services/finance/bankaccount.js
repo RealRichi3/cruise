@@ -1,5 +1,5 @@
 const { default: axios } = require("axios");
-const config = require('../config')
+const config = require('../../utils/config')
 const { User, Rider } = require('../../models/users.model');
 const { DedicatedVirtualAccount } = require("../../models/payment_info.model");
 

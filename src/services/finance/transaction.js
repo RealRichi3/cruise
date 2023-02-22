@@ -1,11 +1,11 @@
 const { Transaction, Invoice } = require('../../models/transaction.model');
-const config = require('../config');
+const config = require('../../utils/config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../errors');
+const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const { Wallet } = require('../../models/payment_info.model');
 
 
-async function handleBankTransfer () {
+async function handleBankTransfer() {
     // Generate dedicated virtual account data
     // Stoore DVA to reference user
     // return account data

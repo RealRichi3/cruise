@@ -134,6 +134,13 @@ riderSchema.virtual('location', {
     justOne: true,
 });
 
+riderSchema.virtual('dedicated_virtual_account', {
+    ref: 'DedicatedVirtualAccount',
+    localField: '_id',
+    foreignField: 'rider',
+    justOne: true
+})
+
 userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });

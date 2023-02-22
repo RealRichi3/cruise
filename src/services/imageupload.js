@@ -9,7 +9,7 @@ const vehicleimages = async (req, res, next) => {
     }
     var bufferarray = [];
     const data = {
-        folder :'vehicleimages',
+        folder: 'vehicleimages',
         id: req.body.plate_number
     };
     for (let i = 0; i < req.files.length; i++) {

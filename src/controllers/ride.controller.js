@@ -6,7 +6,7 @@ const {
     getRideRouteInKm,
     vehicle_rating,
     getClosestRiders,
-} = require('../utils/ride');
+} = require('../services/ride');
 const { clients } = require('../ws/clients');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 const config = require('../utils/config');
