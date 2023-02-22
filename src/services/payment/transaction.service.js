@@ -5,7 +5,9 @@ const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
-const { WalletTopupInvoiceMessage,
+const sendEmail = require('../email.service')
+const {
+    WalletTopupInvoiceMessage,
     WalletTopupReceiptMessage,
     WalletWithdrawalReceiptMessage } = require('../../utils/mail_message');
 
@@ -64,7 +66,7 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  *
  * @throws {Error} - If there is an error while initiating the transaction
  * */
-async function initiateTransaction (data) {
+async function initiateTransaction(data) {
     try {
         const { amount, type, payment_method, user_id, enduser_id } = data;
 
@@ -95,6 +97,9 @@ async function initiateTransaction (data) {
         } else if (payment_method == 'card') {
             transaction.payment_gateway = 'paystack'
         }
+
+        console.log(transaction)
+        console.log(invoice)
 
         invoice.transaction = transaction._id;
         let iresult = await invoice
@@ -146,7 +151,7 @@ async function initiateTransaction (data) {
  * @throws {Error} - If there is an error while verifying the transaction
  * @throws {Error} - If the transaction is not successful
  */
-async function verifyTransactionFromPaystackAPI (reference) {
+async function verifyTransactionFromPaystackAPI(reference) {
     try {
         const URL = `https://api.paystack.co/transaction/verify/${reference}`;
 
@@ -182,7 +187,7 @@ async function verifyTransactionFromPaystackAPI (reference) {
     }
 };
 
-async function verifyTransactionFromFlutterwaveAPI (reference) {
+async function verifyTransactionFromFlutterwaveAPI(reference) {
     const transaction = await Transaction.findOne({ reference })
 }
 
@@ -204,7 +209,7 @@ async function verifyTransactionFromFlutterwaveAPI (reference) {
  * @throws {Error} - If the transaction amount is not equal to the amount in the database
  * @throws {Error} - If the transaction is not found
  * */
-async function verifyTransactionStatus (reference) {
+async function verifyTransactionStatus(reference) {
     let transaction = await Transaction.findOne({ reference });
 
     // Check if transaction exists
@@ -241,11 +246,6 @@ async function effectVerifiedRidePaymentTransaction(transaction_id) {
     let transaction = await Transaction.findById(transcation_id)
     if (!transaction) throw new Error('No matching transaction found')
 
-    // Check if transaction is successful
-    if (transaction.status != 'success') {
-        throw new Error('Transaction status is not successful');
-    }
-
     // Check if transaction has reflected
     if (transaction.reflected != true) {
 
@@ -261,11 +261,6 @@ async function effectVerifiedWalletTopupTransaction(transaction_id) {
     let transaction = await Transaction.findById(transaction_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
-    // Check if transaction is successful
-    if (transaction.status != 'success') {
-        throw new Error('Transaction status is not successful');
-    }
-
     if (transaction.reflected) return transaction;
 
     // Transaction has not reflected
@@ -276,11 +271,10 @@ async function effectVerifiedWalletTopupTransaction(transaction_id) {
         { new: true }
     )
 
-    transaction.reflected = true
-    transaction = await transaction.save()
-
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
+    await transaction.updateOne({ status: 'success', reflected: true })
+    transaction = await transaction.save()
 
     // Generate email notification
     const mail_message = new WalletTopupReceiptMessage();
@@ -299,11 +293,6 @@ async function effectVerifiedWalletWithdrawalTranscation(transaction_id) {
     let transaction = await Transaction.findById(transcation_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
-    // Check if transaction is successful
-    if (transaction.status != 'success') {
-        throw new Error('Transaction status is not successful');
-    }
-
     if (transaction.reflected) return transaction;  //  Transacation has reflected
 
     //  Transaction has reflected
@@ -314,11 +303,10 @@ async function effectVerifiedWalletWithdrawalTranscation(transaction_id) {
         { new: true }
     )
 
-    transaction.reflected = true
-    transaction = await transaction.save()
-
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
+    transaction.updateOne({ status: 'success', reflected: true })
+    transaction = await transaction.save()
 
     // Generate email notification
     const mail_message = new WalletWithdrawalReceiptMessage();

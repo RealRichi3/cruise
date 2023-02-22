@@ -135,6 +135,7 @@ const confirmTopup = async (req, res, next) => {
         proceed to update wallet balance and transaction status 
     */
     if (!transaction.reflected) {
+        await transaction.updateOne({ status: 'success'})
         transaction = await effectVerifiedWalletTopupTransaction(transaction._id)
     }
 

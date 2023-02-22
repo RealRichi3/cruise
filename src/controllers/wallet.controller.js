@@ -98,7 +98,8 @@ const getWalletBalance = async (req, res, next) => {
  * @throws {InternalServerError} - If there is an error while initiating the transaction
  * */
 const topUpWallet = async (req, res, next) => {
-    const { amount, payment_method, type } = req.body;
+    const { amount, payment_method } = req.body;
+    const type = 'wallet_topup'
     const id = req.user.id;
     const enduser = req.user.enduser
 
@@ -138,7 +139,9 @@ const topUpWallet = async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        data: result,
+        data: {
+            transaction: result
+        },
     });
 };
 
