@@ -137,8 +137,8 @@ riderSchema.virtual('location', {
 userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
-        // status.isVerified = this.role == 'enduser' ? true : false;
-        status.isVerified = true; status.isActive = true;
+        status.isVerified = this.role == 'enduser' ? true : false;
+        
         if (process.env.NODE_ENV == 'dev') {
             status.isVerified = true;
             status.isActive = true;
