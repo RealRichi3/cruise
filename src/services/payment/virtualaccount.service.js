@@ -4,13 +4,13 @@ const config = require('../../config')
 /**
  * Create New Virtual Account data From FlutterWave
  * 
- * @param {string} email,
- * @param {string} firstname,
- * @param {string} lastname,
- * @param {string} tx_ref,
- * @param {number} frequency,
- * @param {number} amount
- * @param {boolean} is_permanent 
+ * @param {string} email
+ * @param {string} firstname
+ * @param {string} lastname
+ * @param {string} tx_ref - Transaction reference
+ * @param {number} frequency - Maximum number of payments alloed
+ * @param {number} amount  - Expected ammount to be payed
+ * @param {boolean} is_permanent - Chooses between temporary or permanent account
  *  
  * @returns {Object} Virtual Account data
  */
@@ -42,7 +42,6 @@ async function createFLWVirtualAccount(data) {
         throw new Error('An error occured')
     }
 
-    console.log(response.data.data)
     return response.data.data
 }
 
