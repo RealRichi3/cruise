@@ -176,6 +176,19 @@ const confirmTopup = async (req, res, next) => {
     });
 };
 
+/**
+ * 
+ */
+const confirmFlutterWaveTransacton = async (req, res, next) => {
+    if (req.body.event != 'charge.completed') return next();
+
+    const txn_data = req.body.data
+    const { tx_ref, amount, charged_amount } = txn_data
+
+    const transaction_data = await Transaction.findOne({
+        reference: tx_ref, amount
+    })
+}
 module.exports = {
     getUsersTransactions,
     getTransactionData,

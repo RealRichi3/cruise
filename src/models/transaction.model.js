@@ -85,6 +85,7 @@ const transactionsSchema = new schema(
         reference: { type: String, default: UU, required: true },
         reflected: { type: Boolean, default: false, required: true }, // If transaction has been reflected in user's wallet
         date: { type: Date, default: Date.now, required: true },
+        payment_gateway: { type: String, enum: ['flutterwave', 'paystack'], required: true}
     },
     { timestamps: true }
 );

@@ -15,6 +15,7 @@ router.use(basicAuth(), rbac('enduser rider superadmin'));
 router
     .get('/wallet', getWalletTransactions)
     .get('/:id', getTransactionData)
-    .post('/topup/confirm', confirmTopup);
+    .post('/topup/confirm', confirmTopup)
+    // .post('/confirm')
 
 module.exports = router;
