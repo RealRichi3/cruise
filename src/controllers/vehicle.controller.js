@@ -1,5 +1,5 @@
 const { BadRequestError } = require('../utils/errors');
-const { vehicleimages } = require('../services/imageupload');
+const { vehicleimages } = require('../services/imageupload.service');
 
 // Models
 const { Rider } = require('../models/users.model');
