@@ -1,62 +1,51 @@
 const { default: axios } = require("axios");
 const config = require('../../config')
-const { User, Rider } = require('../../models/users.model');
-const { DedicatedVirtualAccount } = require("../../models/payment_info.model");
 
 /**
- * Create New Dedicated Virtual Account data
+ * Create New Virtual Account data From FlutterWave
  * 
  * @param {string} email,
- * @param {string} preferred_bank,
+ * @param {string} firstname,
+ * @param {string} lastname,
+ * @param {string} tx_ref,
+ * @param {number} frequency,
+ * @param {number} amount
+ * @param {boolean} is_permanent 
  *  
- * @returns {Object} Dedicated Virtual Account data
+ * @returns {Object} Virtual Account data
  */
-async function createVirtualAccount(email, preferred_bank) {
-    if (process.env.NODE_ENV == 'dev') { preferred_bank = 'test-bank'}
-    const user = await User.findOne({ email }).populate('rider')
-    if (!user) { return new Error('User does not exist') }
+async function createFLWVirtualAccount(data) {
+    const account_data = {
+        firstname: data.firstname,
+        lastname: data.lastname,
+        email: data.email,
+        tx_ref: data.tx_ref,
+        frequency: data.frequency,
+        amount: data.amount,
+        is_permanent: data.is_permanent,
+        user: data.user
+    }
 
-    let rider = user.rider
-    if (!rider) { return new Error('User is not a rider') }
-
-    rider = await user.rider.populate('dedicated_virtual_account')
-
-    let riders_dva = rider.dedicated_virtual_account
-    console.log(riders_dva)
-
-    // Send request to paystack API to generate Dedicated virtual account
-    const PAYSTACK_DVA_URL = 'https://api.paystack.co/dedicated_account/'
+    // Send request data to flutterwave to create virtual account
     const axios_config = {
         method: 'post',
-        url: PAYSTACK_DVA_URL,
+        url: 'https://api.flutterwave.com/v3/virtual-account-numbers',
         headers: {
-            'Authorization': `Bearer ${config.PAYSTACK_SECRET_KEY}`,
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.FLUTTEWAVE_SECRET_KEY}`
         },
-        data: {
-            customer: riders_dva.customer_code,
-            preferred_bank: preferred_bank || config.DVA_PREFERRED_BANK || 'access-bank'
-        }
-    }
-    const api_response = await axios(axios_config)
+        data: account_data
+    };
 
-    // Check if request was successful
-    if (!api_response.data.status) {
-        return new Error("An error occured while generating a dedicated Virtual account")
+    const response = await axios(axios_config)
+    if (response.data.status != 'success') {
+        throw new Error('An error occured')
     }
 
-    // Update riders dedicated virtual account
-    const created_dva = api_response.data.data
-    riders_dva = riders_dva.updateOne({
-        account_name: created_dva.account_name,
-        account_number: created_dva.account_number,
-        bank_name: created_dva.bank.name,
-        bank_id: created_dva.back.id
-    })
-
-    return riders_dva
+    console.log(response.data.data)
+    return response.data.data
 }
 
 module.exports = {
-    createVirtualAccount
+    createFLWVirtualAccount
 }
