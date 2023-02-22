@@ -5,6 +5,8 @@ const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
+const { WalletTopupInvoiceMessage,
+    WalletTopupReceiptMessage } = require('../../utils/mail_message');
 
 /**
  * Get Temporary Virtual Account
@@ -241,7 +243,106 @@ const verifyTransactionStatus = function (reference) {
     });
 };
 
+async function effectVerifiedRidePaymentTransaction(transaction_id) {
+    let transaction = await Transaction.findById(transcation_id)
+    if (!transaction) throw new Error('No matching transaction found')
+
+    // Check if transaction is successful
+    if (transaction.status != 'success') {
+        throw new Error('Transaction status is not successful');
+    }
+
+    // Check if transaction has reflected
+    if (transaction.reflected != true) {
+
+    }
+
+    transaction = await transaction.save()
+
+    //  return updated transaction data
+    return transaction
+}
+
+async function effectVerifiedWalletTopupTransaction(transaction_id) {
+    let transaction = await Transaction.findById(transaction_id).populate('user')
+    if (!transaction) throw new Error('No matching transaction found')
+
+    // Check if transaction is successful
+    if (transaction.status != 'success') {
+        throw new Error('Transaction status is not successful');
+    }
+
+    if (transaction.reflected) return transaction;
+
+    // Transaction has not reflected
+    // Update wallet balance
+    await Wallet.findOneAndUpdate(
+        { user: transaction.user },
+        { $inc: { balance: transaction.amount } },
+        { new: true }
+    )
+
+    transaction.reflected = true
+    transaction = await transaction.save()
+
+    // Generate transaction receipt
+    const receipt = await transaction.generateReceipt()
+
+    // Generate email notification
+    const mail_message = new WalletTopupReceiptMessage();
+    mail_message.setBody(receipt);
+
+    sendEmail({
+        email: transaction.user.email,
+        subject: `Receipt for Wallet Topup`,
+        html: mail_message.getBody(),
+    })
+
+    return transaction
+}
+
+async function effectVerifiedWalletWithdrawalTranscation(transaction_id) {
+    let transaction = await Transaction.findById(transcation_id).populate('user')
+    if (!transaction) throw new Error('No matching transaction found')
+
+    // Check if transaction is successful
+    if (transaction.status != 'success') {
+        throw new Error('Transaction status is not successful');
+    }
+
+    if (transaction.reflected) return transaction;  //  Transacation has reflected
+
+    //  Transaction has reflected
+    //  Update Wallet balance
+    await Wallet.findOneAndUpdate(
+        { user: transaction.user },
+        { $inc: { balance: -transaction.amount } },
+        { new: true }
+    )
+
+    transaction.reflected = true
+    transaction = await transaction.save()
+
+    // Generate transaction receipt
+    const receipt = await transaction.generateReceipt()
+
+    // Generate email notification
+    const mail_message = new WalletWithdrawalReceiptMessage();
+    mail_message.setBody(receipt);
+
+    sendEmail({
+        email: transaction.user.email,
+        subject: `Receipt for Wallet Withdrawal`,
+        html: mail_message.getBody(),
+    })
+
+    return transaction
+}
+
 module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
+    effectVerifiedRidePaymentTransaction,
+    effectVerifiedWalletTopupTransaction,
+    effectVerifiedWalletWithdrawalTranscation
 };
