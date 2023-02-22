@@ -26,7 +26,7 @@ const sendEmail = require('../services/email.service');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
 const { Wallet, PaymentInfo, DedicatedVirtualAccount } = require('../models/payment_info.model');
-const { createDVA } = require('../services/payment/dva.service');
+
 
 /**
  * Handle existing unverified user.
@@ -298,7 +298,7 @@ const riderSignup = async (req, res, next) => {
             session,
         }).then((rider) => rider[0]);
 
-        
+
         // Create dedicated virtual bank account
         const dva_result = await createDVA(user)
         if (dva instanceof Error) next(dva_result);
