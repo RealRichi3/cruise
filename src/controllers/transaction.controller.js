@@ -6,8 +6,12 @@ const { NotFoundError, UnauthorizedError } = require('../utils/errors');
 const {
     initiateTransaction,
     verifyTransactionStatus,
+    effectVerifiedRidePaymentTransaction,
+    effectVerifiedWalletTopupTransaction,
+    effectVerifiedWalletWithdrawalTransaction,
 } = require('../services/payment/transaction.service');
-const { WalletTopupReceiptMessage } = require('../utils/mail_message')
+const { WalletTopupReceiptMessage } = require('../utils/mail_message');
+const sendEmail = require('../services/email.service');
 
 const getUsersTransactions = async (req, res, next) => {
     const transactions = await Transaction.find({ user: req.user.id }).populate(
@@ -179,20 +183,45 @@ const confirmTopup = async (req, res, next) => {
 /**
  * 
  */
-const confirmFlutterWaveTransacton = async (req, res, next) => {
+const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
     if (req.body.event != 'charge.completed') return next();
 
     const txn_data = req.body.data
     const { tx_ref, amount, charged_amount } = txn_data
 
-    const transaction_data = await Transaction.findOne({
+    let transaction = await Transaction.findOne({
         reference: tx_ref, amount
     })
+
+    // Update transaction status
+    await transaction.updateOne({ status: 'success' })
+
+    switch (transaction.type) {
+        case 'wallet_topup':
+            // Handle verified wallet transaction
+            transaction = await effectVerifiedWalletTopupTransaction(transaction._id)
+            break;
+
+        case 'book_ride':
+            // Handle verififed ride payment
+            break;
+
+        case 'wallet_withdrawal':
+            // Handle verified Wallet withdrawal transaction
+            transaction = await effectVerifiedWalletWithdrawalTransaction(transaction._id)
+            
+            break;
+        default:
+            throw new Error('Please specify transaction type')
+    }
+
+    console.log(transaction)
 }
 module.exports = {
     getUsersTransactions,
     getTransactionData,
     getWalletTransactions,
     getTransactionData,
-    confirmTopup
+    confirmTopup,
+    handleFlutterWaveTransactionWebhook,
 };
