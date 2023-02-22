@@ -1,9 +1,9 @@
 const { default: axios } = require("axios");
-const config = require('../../utils')
+const config = require('../../config')
 const { User, Rider } = require('../../models/users.model');
 const { DedicatedVirtualAccount } = require("../../models/payment_info.model");
 
-async function createCustomerProfileForDedicatedAccount(user_data) {
+async function createDVACustomerProfile(user_data) {
     const { email, first_name, lastname, phone } = data
 
     // Send request to paystack API to create customer profile
@@ -51,7 +51,7 @@ async function createCustomerProfileForDedicatedAccount(user_data) {
  *  
  * @returns {Object} Dedicated Virtual Account data
  */
-async function ceateDedicatedVirtualAccount(data) {
+async function createDVA(data) {
     const { email, preferred_bank } = data
 
     const user = await User.findOne({ email }).populate('rider')
