@@ -73,7 +73,7 @@ const WithdrawalRequest = mongoose.model(
     'WithdrawalRequest',
     withdrawalRequestSchema
 );
-const DedicatedVirtualAccount = mongoose.model('DedicatedVirtualAccoun', dedicatedVirtualAccountSchema)
+const DedicatedVirtualAccount = mongoose.model('DedicatedVirtualAccount', dedicatedVirtualAccountSchema)
 
 module.exports = {
     Card,

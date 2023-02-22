@@ -4,42 +4,45 @@ const { User, Rider } = require('../../models/users.model');
 const { DedicatedVirtualAccount } = require("../../models/payment_info.model");
 
 async function createDVACustomerProfile(user_data) {
-    const { email, first_name, lastname, phone } = data
+    const { email, first_name, lastname, phone } = user_data;
 
     // Send request to paystack API to create customer profile
-    const url = 'https://api.paystack.co/customer'
+    const url = "https://api.paystack.co/customer";
     const axios_config = {
-        method: 'post',
+        method: "post",
         url,
         headers: {
-            'Authorization': `Bearer ${config.PAYSTACK_SECRET_KEY}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
+            "Content-Type": "application/json",
         },
-        data: { email, first_name, lastname, phone }
-    }
-    const api_response = await axios(axios_config)
+        data: { email, first_name, lastname, phone },
+    };
+    const api_response = await axios(axios_config);
 
     // Check if request was unsuccessful
     if (!api_response.data.status) {
-        return new Error("An error occured while generating a dedicated Virtual account")
+        return new Error("An error occured while generating a dedicated Virtual account");
     }
 
-    const { customer_code, id } = api_response.data.data
+    const { customer_code, id } = api_response.data.data;
 
     // Update users saved record
-    const users_data = await User.findOne({ email }).populate('rider')
-    if (!users_data) { return new Error('User does not exist') }
+    const users_data = await User.findOne({ email }).populate("rider");
+    if (!users_data) {
+        return new Error("User does not exist");
+    }
 
-    const rider = users_data.rider.populate('dedicated_virtual_account')
-    let rider_dva = rider.dedicated_virtual_account
+    const rider = await users_data.rider.populate("dedicated_virtual_account");
+
+    let rider_dva = rider.dedicated_virtual_account;
     if (!rider_dva) {
-        rider_dva = await DedicatedVirtualAccount.create({ rider: rider._id, user: rider.user })
+        rider_dva = await DedicatedVirtualAccount.create({ rider: rider._id, user: rider.user, customer_code, customer_id: id });
     }
 
     // Update riders dedicated virtual account data
-    await rider_dva.updateOne({ customer_code, customer_id: id })
+    await rider_dva.updateOne({ customer_code, customer_id: id });
 
-    return rider_dva
+    return rider_dva;
 }
 
 /**
@@ -95,4 +98,9 @@ async function createDVA(data) {
     })
 
     return riders_dva
+}
+
+module.exports = {
+    createDVACustomerProfile,
+    createDVA
 }

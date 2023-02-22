@@ -7,6 +7,7 @@ const {
 // Models
 const { Rider } = require('../models/users.model');
 const { BankAccount } = require('../models/payment_info.model');
+const { createDVA, createDVACustomerProfile } = require('../services/payment/dva.service');
 
 // Bank Controller
 /**
@@ -159,9 +160,24 @@ const getBankAccountData = async (req, res, next) => {
     });
 };
 
+const createDedicatedVirtualBankAccount = async (req, res, next) => {
+    const dva_result = await createDVACustomerProfile(req.user)
+    if (dva_result instanceof Error) next(dva_result);
+
+    res.status(200).send({
+        success: true,
+        data: dva_result
+    })
+}
+
+const getLinkedDedicatedVirtualBankAccount = async (req, res, next) => {
+
+}
+
 module.exports = {
     addNewBankAccount,
     removeBankAccount,
     getBankAccounts,
     getBankAccountData,
+    createDedicatedVirtualBankAccount
 };

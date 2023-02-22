@@ -180,6 +180,7 @@ riderSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const wallet = new Wallet({ user: this.user._id, rider: this._id });
         this.wallet = wallet._id;
+        
         await wallet.save();
     }
 
