@@ -4,50 +4,40 @@ const axios = require('axios');
 const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
+const { createFLWVirtualAccount } = require('./virtualaccount.service');
 
-async function createVirtualAccountForTransaction(user_id, txn) {
+/**
+ * Get Temporary Virtual Account
+ * 
+ * @param {MoongooseObjectId} user_id 
+ * @param {MongooseObject} txn - Transaction record
+ * 
+ * @returns {MongooseObject} - Virtual Account record in database
+ */
+async function getTemporaryVirtualAccount(user_id, txn) {
     if (!txn.reference) throw new Error('No transaction reference');
 
     const user = await User.findById(user_id)
     if (!user) { throw new Error('User does not exist') }
 
-    const data = {
-        firstname, lastname, email,
-        tx_ref: txn.reference,
-        frequency: 1,
-        amount: txn.amount,
-        is_permanent: false,
-    } = user
+    const data = { firstname, lastname, email, } = user
+    data.tx_ref = txn.reference
+    data.frequency = 1          // Maximum number of allowed payment
+    data.amount = txn.amount
+    data.is_permanent = false   // for static virtual account, set to true
 
-    console.log(data)
-
-    // Send request to flutterwave to create virtual account
-    const axios_config = {
-        method: 'post',
-        url: 'https://api.flutterwave.com/v3/virtual-account-numbers',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.FLUTTEWAVE_SECRET_KEY}`
-        },
-        data: data
-    };
-    const response = await axios(axios_config)
-    if (response.data.status != 'success') {
-        throw new Error('An error occured')
-    }
-
-    // Get flutterwave transaction data from response data
-    const flw_txn_data = {
-        user: user._id,
-        flw_ref, order_ref, account_number,
-        bank_name, created_at, expiry_date, amount,
-        frequency
-    } = response.data.data
+    // Create virtual account from flutterwave API
+    const virtual_account_data = await createFLWVirtualAccount(data)
+    virtual_account_data.user = user._id
 
     // Create Virtual account record in DB
-    const virtual_account = await VirtualAccount.create(flw_txn_data)
+    const db_virtual_account = await VirtualAccount.create({
+        ...virtual_account_data,
+        ...data,
+        transaction: txn._id
+    })
 
-    return virtual_account
+    return db_virtual_account
 }
 
 // Transaction Controller
@@ -94,8 +84,10 @@ const initiateTransaction = async function (data) {
 
         // Generate virtual account if payment method is bank transfer
         if (payment_method == 'bank_transfer') {
-            const virtual_account = createVirtualAccountForTransaction(user_id, transaction)
+            const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
             transaction.virtual_account = virtual_account._id
+
+            console.log(virtual_account)
         }
 
         invoice.transaction = transaction._id;
@@ -129,9 +121,9 @@ const initiateTransaction = async function (data) {
         }
 
         console.log(transaction);
-        return transaction;
+        return transaction.populate('invoice user virtual_account');
     } catch (error) {
-        throw new Error(error);
+        throw error;
     }
 };
 
