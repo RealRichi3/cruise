@@ -156,8 +156,7 @@ const getWalletTransactionData = async (req, res, next) => {
 const topUpWallet = async (req, res, next) => {
     const { amount, payment_method, type } = req.body;
     const id = req.user.id;
-
-    const enduser = await Enduser.findOne({ user: id });
+    const enduser = req.user.enduser
 
     const data = {
         amount: amount / 100,
