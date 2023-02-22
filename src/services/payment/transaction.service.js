@@ -64,7 +64,7 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  *
  * @throws {Error} - If there is an error while initiating the transaction
  * */
-const initiateTransaction = async function (data) {
+async function initiateTransaction (data) {
     try {
         const { amount, type, payment_method, user_id, enduser_id } = data;
 
@@ -146,7 +146,7 @@ const initiateTransaction = async function (data) {
  * @throws {Error} - If there is an error while verifying the transaction
  * @throws {Error} - If the transaction is not successful
  */
-const verifyTransactionFromPaystackAPI = async function (reference) {
+async function verifyTransactionFromPaystackAPI (reference) {
     try {
         const URL = `https://api.paystack.co/transaction/verify/${reference}`;
 
@@ -182,7 +182,7 @@ const verifyTransactionFromPaystackAPI = async function (reference) {
     }
 };
 
-const verifyTransactionFromFlutterewaveAPI = async function (reference) {
+async function verifyTransactionFromFlutterwaveAPI (reference) {
     const transaction = await Transaction.findOne({ reference })
 }
 
@@ -204,7 +204,7 @@ const verifyTransactionFromFlutterewaveAPI = async function (reference) {
  * @throws {Error} - If the transaction amount is not equal to the amount in the database
  * @throws {Error} - If the transaction is not found
  * */
-const verifyTransactionStatus = async function (reference) {
+async function verifyTransactionStatus (reference) {
     let transaction = await Transaction.findOne({ reference });
 
     // Check if transaction exists
@@ -216,7 +216,7 @@ const verifyTransactionStatus = async function (reference) {
             gateway_transaction_result = await verifyTransactionFromPaystackAPI(reference)
             break;
         case 'flutterwave':
-            gateway_transaction_result = await verifyTransactionFromFlutterewaveAPI(reference)
+            gateway_transaction_result = await verifyTransactionFromFlutterwaveAPI(reference)
             break;
         default:
             throw new Error('Please specify payment gateway for transaction')
