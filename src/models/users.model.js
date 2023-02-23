@@ -79,6 +79,7 @@ const riderSchema = new schema(
             default: 'available',
             enum: ['available', 'unavailable'],
         },
+        rider_doc: [{ type: schema.Types.ObjectId, ref: 'RiderDoc' }]
     },
     { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } },
 );

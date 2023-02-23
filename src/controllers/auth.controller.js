@@ -300,8 +300,8 @@ const riderSignup = async (req, res, next) => {
 
 
         // Create dedicated virtual bank account
-        const dva_result = await createDVA(user)
-        if (dva instanceof Error) next(dva_result);
+        // const dva_result = await createDVA(user)
+        // if (dva instanceof Error) next(dva_result);
 
         // Create Vehicle info
         if (rider.hasVehicle) {
