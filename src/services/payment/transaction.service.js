@@ -258,7 +258,7 @@ async function effectVerifiedRidePaymentTransaction(transaction_id) {
     return transaction
 }
 
-async function effectVerifiedWalletCreditTransaction(transaction_id) {
+async function creditWallet(transaction_id) {
     let transaction = await Transaction.findById(transaction_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
@@ -291,7 +291,7 @@ async function effectVerifiedWalletCreditTransaction(transaction_id) {
     return transaction
 }
 
-async function effectVerifiedWalletDebitTranscation(transaction_id) {
+async function debitWallet(transaction_id) {
     let transaction = await Transaction.findById(transaction_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
@@ -311,7 +311,7 @@ async function effectVerifiedWalletDebitTranscation(transaction_id) {
         transaction_id,
         { status: 'success', reflected: true },
         { new: true }
-    )
+    ).populate('user')
     
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
@@ -334,6 +334,6 @@ module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
-    effectVerifiedWalletCreditTransaction,
-    effectVerifiedWalletDebitTranscation
+    creditWallet,
+    debitWallet
 };

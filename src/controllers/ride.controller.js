@@ -17,7 +17,7 @@ const { Rider } = require('../models/users.model');
 const { Ride, RideRequest, RideReview } = require('../models/ride.model');
 const { stringify } = require('../utils/json');
 const Vehicle = require('../models/vehicle.model');
-const { initiateTransaction, effectVerifiedWalletDebitTranscation } = require('../services/payment/transaction.service');
+const { initiateTransaction, debitWallet } = require('../services/payment/transaction.service');
 
 // TODO: Improve code documentation by adding more explanations to errors 
 
@@ -702,7 +702,7 @@ const payForRide = async (req, res, next) => {
 
         case 'wallet':
             // Handle wallet payment
-            transaction = await effectVerifiedWalletDebitTranscation(transaction_record._id)
+            transaction = await debitWallet(transaction_record._id)
             break;
 
         default:

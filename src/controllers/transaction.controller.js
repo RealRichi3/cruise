@@ -7,7 +7,7 @@ const {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
-    effectVerifiedWalletCreditTransaction,
+    creditWallet,
     effectVerifiedWalletDebitTransaction,
 } = require('../services/payment/transaction.service');
 const { WalletTopupReceiptMessage } = require('../utils/mail_message');
@@ -136,7 +136,7 @@ const confirmTopup = async (req, res, next) => {
     */
     if (!transaction.reflected) {
         await transaction.updateOne({ status: 'success' })
-        transaction = await effectVerifiedWalletCreditTransaction(transaction._id)
+        transaction = await creditWallet(transaction._id)
     }
 
     res.status(200).json({
@@ -169,7 +169,7 @@ const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
     switch (transaction.type) {
         case 'wallet_topup':
             // Handle verified wallet transaction
-            transaction = await effectVerifiedWalletCreditTransaction(transaction._id)
+            transaction = await creditWallet(transaction._id)
             break;
 
         case 'book_ride':
