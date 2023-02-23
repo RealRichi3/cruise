@@ -5,6 +5,11 @@ const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
+const sendEmail = require('../email.service')
+const {
+    WalletTopupInvoiceMessage,
+    WalletTopupReceiptMessage,
+    WalletWithdrawalReceiptMessage } = require('../../utils/mail_message');
 
 /**
  * Get Temporary Virtual Account
@@ -61,9 +66,9 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  *
  * @throws {Error} - If there is an error while initiating the transaction
  * */
-const initiateTransaction = async function (data) {
+async function initiateTransaction(data) {
     try {
-        const { amount, type, payment_method, user_id, enduser_id } = data;
+        const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
 
         // Create Invoice for pending transaction
         const invoice = new Invoice({
@@ -80,15 +85,22 @@ const initiateTransaction = async function (data) {
             type,
             payment_method,
             invoice: invoice._id,
+            ride: ride_id, // If transaction is payment for ride
         });
 
         // Generate virtual account if payment method is bank transfer
         if (payment_method == 'bank_transfer') {
             const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
             transaction.virtual_account = virtual_account._id
+            transaction.payment_gateway = 'flutterwave'
 
             console.log(virtual_account)
+        } else if (payment_method == 'card') {
+            transaction.payment_gateway = 'paystack'
         }
+
+        console.log(transaction)
+        console.log(invoice)
 
         invoice.transaction = transaction._id;
         let iresult = await invoice
@@ -112,7 +124,7 @@ const initiateTransaction = async function (data) {
         if (tresult instanceof Error) throw tresult;
 
         // Add transaction to wallet
-        if (type == 'wallet_topup') {
+        if (type == 'wallet_topup' || payment_method == 'wallet') {
             const wall = await Wallet.findOneAndUpdate(
                 { user: user_id },
                 { $push: { transactions: transaction._id } }
@@ -140,7 +152,7 @@ const initiateTransaction = async function (data) {
  * @throws {Error} - If there is an error while verifying the transaction
  * @throws {Error} - If the transaction is not successful
  */
-const verifyPaystackTransaction = async function (reference) {
+async function verifyTransactionFromPaystackAPI(reference) {
     try {
         const URL = `https://api.paystack.co/transaction/verify/${reference}`;
 
@@ -176,6 +188,10 @@ const verifyPaystackTransaction = async function (reference) {
     }
 };
 
+async function verifyTransactionFromFlutterwaveAPI(reference) {
+    const transaction = await Transaction.findOne({ reference })
+}
+
 /**
  * Verify transaction status
  *
@@ -194,40 +210,130 @@ const verifyPaystackTransaction = async function (reference) {
  * @throws {Error} - If the transaction amount is not equal to the amount in the database
  * @throws {Error} - If the transaction is not found
  * */
-const verifyTransactionStatus = function (reference) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let transaction = await Transaction.findOne({ reference });
+async function verifyTransactionStatus(reference) {
+    let transaction = await Transaction.findOne({ reference });
 
-            // Check if transaction exists
-            if (!transaction) throw new Error('Transaction not found');
+    // Check if transaction exists
+    if (!transaction) throw new Error('Transaction not found');
 
-            let gateway_transaction_result;
-            gateway_transaction_result = await verifyPaystackTransaction(
-                reference
-            );
+    let gateway_transaction_result;
+    switch (transaction.payment_gateway) {
+        case 'paystack':
+            gateway_transaction_result = await verifyTransactionFromPaystackAPI(reference)
+            break;
+        case 'flutterwave':
+            gateway_transaction_result = await verifyTransactionFromFlutterwaveAPI(reference)
+            break;
+        default:
+            throw new Error('Please specify payment gateway for transaction')
+    }
 
-            // Check for transaction amount mismatch
-            if (
-                transaction.amount !=
-                gateway_transaction_result.data.amount / 100
-            ) {
-                throw new Error('Transaction amount mismatch');
-            }
+    // Check for transaction amount mismatch
+    if (
+        transaction.amount !=
+        gateway_transaction_result.data.amount / 100
+    ) {
+        throw new Error('Transaction amount mismatch');
+    }
 
-            // Check if transaction is successful
-            if (gateway_transaction_result.data.status != 'success')
-                throw new Error('Transaction not successful');
+    // Check if transaction is successful
+    if (gateway_transaction_result.data.status != 'success')
+        throw new Error('Transaction not successful');
 
-            resolve(transaction);
-        } catch (error) {
-            console.log(error);
-            reject(error);
-        }
-    });
+    return transaction
 };
+
+async function effectVerifiedRidePaymentTransaction(transaction_id) {
+    let transaction = await Transaction.findById(transaction_id)
+    if (!transaction) throw new Error('No matching transaction found')
+
+    if (transaction.reflected) return transaction;
+
+
+
+
+    transaction = await transaction.save()
+
+    //  return updated transaction data
+    return transaction
+}
+
+async function creditWallet(transaction_id) {
+    let transaction = await Transaction.findById(transaction_id).populate('user')
+    if (!transaction) throw new Error('No matching transaction found')
+
+    if (transaction.reflected) return transaction;
+
+    // Transaction has not reflected
+    // Update wallet balance
+    const wall = await Wallet.findOneAndUpdate(
+        { user: transaction.user },
+        { $inc: { balance: transaction.amount } },
+        { new: true }
+    )
+    console.log(wall)
+
+    // Generate transaction receipt
+    const receipt = await transaction.generateReceipt()
+    await transaction.updateOne({ status: 'success', reflected: true })
+    transaction = await transaction.save()
+
+    // Generate email notification
+    const mail_message = new WalletTopupReceiptMessage();
+    mail_message.setBody(receipt);
+
+    sendEmail({
+        email: transaction.user.email,
+        subject: `Receipt for Wallet Topup`,
+        html: mail_message.getBody(),
+    })
+
+    return transaction
+}
+
+async function debitWallet(transaction_id) {
+    let transaction = await Transaction.findById(transaction_id).populate('user')
+    if (!transaction) throw new Error('No matching transaction found')
+
+    if (transaction.reflected) return transaction;  //  Transacation has reflected
+
+    const wallet = await Wallet.findOne({ user: transaction.user })
+    if (wallet.balance < transaction.amount) {
+        throw new Error('Insufficient funds')
+    }
+
+    //  Transaction has reflected
+    //  Update Wallet balance
+    await wallet.updateOne({ $inc: { balance: -transaction.amount } })
+
+    // Update transaction status
+    transaction = await Transaction.findByIdAndUpdate(
+        transaction_id,
+        { status: 'success', reflected: true },
+        { new: true }
+    ).populate('user')
+
+    // Generate transaction receipt
+    const receipt = await transaction.generateReceipt()
+    transaction = await transaction.save()
+
+    // Generate email notification
+    const mail_message = new WalletWithdrawalReceiptMessage();
+    mail_message.setBody(receipt);
+
+    sendEmail({
+        email: transaction.user.email,
+        subject: `Receipt for Wallet Withdrawal`,
+        html: mail_message.getBody(),
+    })
+
+    return transaction.populate('receipt invoice ride user')
+}
 
 module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
+    effectVerifiedRidePaymentTransaction,
+    creditWallet,
+    debitWallet
 };

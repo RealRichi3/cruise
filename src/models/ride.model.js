@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const schema = mongoose.Schema
 const { Rider } = require('./users.model')
 
+// TODO: Add checks to enforce dynamic schema field required rules
 const rideReviewSchema = new schema({
     ride: { type: schema.Types.ObjectId, ref: 'Ride', required: true },
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -13,7 +14,7 @@ const rideRequestSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
     departure: { type: schema.Types.ObjectId, ref: 'DepartureOrDestination', required: true },
     destination: { type: schema.Types.ObjectId, ref: 'DepartureOrDestination', required: true },
-    payment_method: { type: String, enum: ['cash', 'card', 'wallet'] },
+    payment_method: { type: String, enum: ['cash', 'card', 'wallet', 'bank_transfer'] },
     status: { type: String, enum: ['pending', 'accepted', 'cancelled'], default: 'pending' },
     urban_cost: { type: Number },
     standard_cost: { type: Number },
@@ -24,7 +25,7 @@ const rideRequestSchema = new schema({
 }, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 /**
- * @todo: Implement getEstimatedRideTime() method
+ * //TODO: Implement getEstimatedRideTime() method
  */
 const rideSchema = new schema({
     rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true },
@@ -39,6 +40,12 @@ const rideSchema = new schema({
     start_time: { type: Date },
     end_time: { type: Date },
     estimated_ride_time: { type: Number },
+    paid: { type: schema.Types.Boolean, default: false },
+    cost: {
+        type: schema.Types.Number,
+        requird: true,
+        default: process.env.NODE_ENV == 'dev' ? 2000 : undefined
+    },
     status: {
         type: String,
         required: true,
@@ -63,6 +70,12 @@ rideSchema.virtual('ride_review', {
     justOne: true,
 })
 
+rideSchema.virtual('transactions', {
+    ref: 'Transaction',
+    localField: '_id',
+    foreignField: 'ride',
+})
+
 /**
  * 
  * @param {string} rider_id 
@@ -75,7 +88,7 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
     try {
         const rider = await Rider.findById(rider_id)
         if (!rider) throw new Error('Rider not found')
-        
+
         // Create new ride
         const ride = await Ride.create({
             rider: rider._id,
@@ -84,7 +97,7 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
             departure: this.departure,
             destination: this.destination,
         })
-        
+
         // Update ride request to include ride
         this.ride = ride._id
 
@@ -103,7 +116,7 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
         // this.status = 'accepted'
         await this.save()
         // console.log(ride)
-    
+
         return ride
             .populate({
                 path: 'rider',
@@ -113,7 +126,7 @@ rideRequestSchema.methods.createNewRide = async function (rider_id) {
                     select: 'firstname lastname'
                 },
             })
-        
+
     } catch (error) {
         console.log(error)
         return error

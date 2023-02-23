@@ -57,6 +57,7 @@ const getAuthTokens = async (user_id, token_type = null) => {
         }
 
         const data = {
+            _id: current_user.id,
             id: current_user.id,
             email: current_user.email,
             role: current_user.role,

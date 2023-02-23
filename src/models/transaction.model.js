@@ -70,7 +70,7 @@ const transactionsSchema = new schema(
         payment_method: {
             type: String,
             required: true,
-            enum: ['ussd', 'card', 'bank_transfer'],
+            enum: ['ussd', 'card', 'bank_transfer', 'wallet'],
         },
         virtual_account: {
             type: schema.Types.ObjectId, ref: 'VirtualAccount',
@@ -85,8 +85,9 @@ const transactionsSchema = new schema(
         reference: { type: String, default: UU, required: true },
         reflected: { type: Boolean, default: false, required: true }, // If transaction has been reflected in user's wallet
         date: { type: Date, default: Date.now, required: true },
+        payment_gateway: { type: String, enum: ['flutterwave', 'paystack'], required: true ? true : false }
     },
-    { timestamps: true }
+    { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 );
 
 transactionsSchema.pre('validate', async function (next) {
@@ -103,9 +104,10 @@ transactionsSchema.pre('validate', async function (next) {
     next()
 });
 
+transactionsSchema.post('updateOne', async function () { return this })
 transactionsSchema.methods.generateReceipt = async function () {
     if (this.status != 'success')
-        throw new Error('Transaction is not successful');
+        throw new Error('Transaction is not successful, Can not generate receipt');
 
     const receipt = new Receipt({
         user: this.user,
@@ -119,7 +121,7 @@ transactionsSchema.methods.generateReceipt = async function () {
         receipt.rider = this.rider;
     }
 
-    if (this.type == 'wallet_topup') {
+    if (this.type == 'wallet_topup' || this.type == 'wallet_withdrawal') {
         receipt.enduser = this.enduser;
     }
 
@@ -129,7 +131,7 @@ transactionsSchema.methods.generateReceipt = async function () {
 
     await this.save();
 
-    return receipt;
+    return await receipt.populate('transaction');
 };
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
