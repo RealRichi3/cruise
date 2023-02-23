@@ -20,12 +20,13 @@ const {
 const Password = require('../models/password.model');
 
 // Utils
-const config = require('../utils/config');
+const config = require('../config');
 const asyncWrapper = require('../utils/async_wrapper');
-const sendEmail = require('../utils/email');
+const sendEmail = require('../services/email.service');
 const { getAuthCodes, getAuthTokens } = require('../utils/token');
 const Vehicle = require('../models/vehicle.model');
-const { Wallet, PaymentInfo } = require('../models/payment_info.model');
+const { Wallet, PaymentInfo, DedicatedVirtualAccount } = require('../models/payment_info.model');
+
 
 /**
  * Handle existing unverified user.
@@ -275,8 +276,6 @@ const riderSignup = async (req, res, next) => {
     const { personal_details, vehicle_details } = req.body;
     const { email, password } = personal_details;
 
-    const role = 'rider';
-
     const existing_user = await User.findOne({ email }).populate('status');
 
     if (existing_user) {
@@ -292,8 +291,8 @@ const riderSignup = async (req, res, next) => {
         user = await User.create([{ ...personal_details, role: 'rider' }], {
             session,
         }).then((user) => user[0]);
-
         console.log(user);
+
         // Create Rider info
         rider = await Rider.create([{ user: user._id, ...personal_details }], {
             session,

@@ -6,7 +6,7 @@ const profileuploadSchema = new schema(
     {
         enduser: { type: schema.Types.ObjectId, ref: 'EndUser'},
         rider: { type: schema.Types.ObjectId, ref: 'Rider'},
-        image: { type: String, required: true },
+        image: { type: String, required: true }, 
     },
     { timestamps: true }
 );
@@ -39,30 +39,30 @@ const vehicledocsSchema = new schema(
 );
 
 // virtuals
-uploadStatusSchema.virtual('user', {
-    ref: 'User',
-    localField: 'user',
-    foreignField: '_id',
-    justOne: true,
-});
+// uploadStatusSchema.virtual('user', {
+//     ref: 'User',
+//     localField: 'user',
+//     foreignField: '_id',
+//     justOne: true,
+// });
 
 // check image type before saving
-profileuploadSchema.pre('save', function (next) {
-    if (!this.image || this.image.startsWith('data:image')) {
-        next();
-    } else {
-        next(new Error('Invalid image type'));
-    }
-});
+// profileuploadSchema.pre('save', function (next) {
+//     if (!this.image || this.image.startsWith('data:image')) {
+//         next();
+//     } else {
+//         next(new Error('Invalid image type'));
+//     }
+// });
 
 // check doc type before saving
-userdocSchema.pre('save', function (next) {
-    if (!this.docurl || this.docurl.startsWith('data:application')) {
-        next();
-    } else {
-        next(new Error('Invalid document type'));
-    }
-});
+// userdocSchema.pre('save', function (next) {
+//     if (!this.docurl || this.docurl.startsWith('data:application')) {
+//         next();
+//     } else {
+//         next(new Error('Invalid document type'));
+//     }
+// });
 
 // check array doc type before saving
 // vehicleimagesSchema.pre('save', function (next) {

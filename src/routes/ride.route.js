@@ -14,7 +14,9 @@ const {
     completeRide,
     submitRideReview,
     getRidersReviews,
-    payForRide
+    payForRide,
+    getUsersBookedRides,
+    getRidersCompletedRides
 } = require('../controllers/ride.controller')
 
 const { basicAuth } = require('../middlewares/auth');
@@ -29,8 +31,11 @@ router
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
+    .post('/pay', permit('enduser'), payForRide)
     .get('/data', permit('enduser rider superadmin'), getRideData)
     .get('/rides', permit('enduser'), getUsersRides)
+    .get('/booked', getUsersBookedRides)
+    .get('/completed', getRidersCompletedRides)
 
     // Ride review
     .post('/review/submit', permit('rider enduser'), submitRideReview)

@@ -1,12 +1,12 @@
-const { BadRequestError } = require('../utils/errors');
-const { vehicleimages }  = require('../utils/imageupload');    
+const { BadRequestError, UnauthorizedError } = require('../utils/errors');
+const { uploadvehicleimages } = require('../services/imageupload.service');
 
 // Models
 const { Rider } = require('../models/users.model');
 const Password = require('../models/password.model');
-
-// Utils
 const Vehicle = require('../models/vehicle.model');
+const { VehicleImages, VehicleDocs } = require('../models/usersdoc.model');
+
 
 /**
  * Add a new vehicle
@@ -34,39 +34,45 @@ const addVehicle = async (req, res, next) => {
         color,
         plate_number,
     });
-    
-    // Add vehicle image to vehicle object
 
     const rider = await Rider.findOne({ user: req.user.id }).populate('vehicles');
     if (!rider) return next(new UnauthorizedError('User is not a rider'));
 
-    // Check if vehicle image is provided
-    // if (!req.files) {
-    //     return next(new BadRequestError('Vehicle image is required'));
-    // }
+    if (!req.files) {
+        return next(new BadRequestError('Vehicle image is required'));
+    }
 
-    // Upload vehicle image by sending the req.files object
-   /*  const vehicle_images = await vehicleimages(req,res,next)
+    const vehicle_images = await uploadvehicleimages(req, res, next);
+    const { banner, images } = vehicle_images;
 
-    // Check if vehicle image is uploaded
     if (!vehicle_images) {
         return next(new BadRequestError('Vehicle image upload failed'));
     }
 
-    vehicle.images = vehicle_images; */
+    vehicle.banner = banner;
     vehicle.rider = rider._id;
     await vehicle.validate();
     await vehicle.save();
 
-    // const new_riders_vehicle = await (await rider.addVehicle(vehicle)).populate('rider');
+    // Save the vehicle images to the database
+    const vehicleImages = new VehicleImages({
+        rider: rider._id,
+        vehicle: vehicle._id,
+        imagearray: images
+    });
+    await vehicleImages.save();
+
     const new_riders_vehicle = await rider.addVehicle(vehicle)
 
     res.status(200).send({
         success: true,
         message: 'Vehicle added successfully',
         data: new_riders_vehicle,
+        vehicle,
+        vehicleImages
     });
 };
+
 
 /**
  * Get Vehicle data

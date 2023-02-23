@@ -79,6 +79,7 @@ const riderSchema = new schema(
             default: 'available',
             enum: ['available', 'unavailable'],
         },
+        rider_doc: [{ type: schema.Types.ObjectId, ref: 'RiderDoc' }]
     },
     { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } },
 );
@@ -137,8 +138,8 @@ riderSchema.virtual('location', {
 userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
-        // status.isVerified = this.role == 'enduser' ? true : false;
-        status.isVerified = true; status.isActive = true;
+        status.isVerified = this.role == 'enduser' ? true : false;
+        
         if (process.env.NODE_ENV == 'dev') {
             status.isVerified = true;
             status.isActive = true;
@@ -173,6 +174,7 @@ riderSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const wallet = new Wallet({ user: this.user._id, rider: this._id });
         this.wallet = wallet._id;
+
         await wallet.save();
     }
 

@@ -1,3 +1,5 @@
+const { BadRequestError } = require('../utils/errors');
+
 const mongoose = require('mongoose'),
     bcrypt = require('bcryptjs'),
     schema = mongoose.Schema,
@@ -68,12 +70,11 @@ const transactionsSchema = new schema(
         payment_method: {
             type: String,
             required: true,
-            enum: ['ussd', 'card', 'bank_transfer'],
+            enum: ['ussd', 'card', 'bank_transfer', 'wallet'],
         },
-        type: {
-            type: String,
-            required: true,
-            enum: ['wallet_topup', 'book_ride', 'wallet_withdrawal'],
+        virtual_account: {
+            type: schema.Types.ObjectId, ref: 'VirtualAccount',
+            // required: true   // Required if payment_mode is is bank transfer
         },
         status: {
             type: String,
@@ -81,32 +82,32 @@ const transactionsSchema = new schema(
             default: 'pending',
             enum: ['pending', 'success', 'failed'],
         },
-        reference: { type: String, default: UU },
-        reflected: { type: Boolean, default: false }, // If transaction has been reflected in user's wallet
-        date: { type: Date, default: Date.now },
+        reference: { type: String, default: UU, required: true },
+        reflected: { type: Boolean, default: false, required: true }, // If transaction has been reflected in user's wallet
+        date: { type: Date, default: Date.now, required: true },
+        payment_gateway: { type: String, enum: ['flutterwave', 'paystack'], required: true ? true : false }
     },
-    { timestamps: true }
+    { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 );
 
 transactionsSchema.pre('validate', async function (next) {
-    return new Promise(async (resolve, reject) => {
-        if (this.status == 'success') {
-            // There should be a receipt if status is success
-            if (!this.receipt) {
-                reject('Please specify receipt id');
-            }
-            if (!this.invoice) {
-                reject(new 'Please specify invoice id'());
-            }
+    if (this.status == 'success') {
+        // There should be a receipt if status is success
+        if (!this.receipt) {
+            return next(new BadRequestError('Please specify receipt id'));
         }
+        if (!this.invoice) {
+            return next(new BadRequestError('Please specify invoice id'));
+        }
+    }
 
-        resolve();
-    });
+    next()
 });
 
+transactionsSchema.post('updateOne', async function () { return this })
 transactionsSchema.methods.generateReceipt = async function () {
     if (this.status != 'success')
-        throw new Error('Transaction is not successful');
+        throw new Error('Transaction is not successful, Can not generate receipt');
 
     const receipt = new Receipt({
         user: this.user,
@@ -120,7 +121,7 @@ transactionsSchema.methods.generateReceipt = async function () {
         receipt.rider = this.rider;
     }
 
-    if (this.type == 'wallet_topup') {
+    if (this.type == 'wallet_topup' || this.type == 'wallet_withdrawal') {
         receipt.enduser = this.enduser;
     }
 
@@ -130,7 +131,7 @@ transactionsSchema.methods.generateReceipt = async function () {
 
     await this.save();
 
-    return receipt;
+    return await receipt.populate('transaction');
 };
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
