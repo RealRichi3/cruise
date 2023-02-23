@@ -151,14 +151,14 @@ const confirmTopup = async (req, res, next) => {
 const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
     if (req.body.event != 'charge.completed') return next();
 
-    const verification_hash = req.headers.verify_hash
-    if (verification_hash != config.FLUTTEWAVE_VERIFY_HASH) {
+    // Verify if request is coming from FLUTTERWAVE
+    const verification_hash = req.headers['verif-hash']
+    if (verification_hash != config.FLUTTERWAVE_VERIFY_HASH) {
         return next(new UnauthenticatedError('Please provide valid authorization'))
     }
-    
-    const txn_data = req.body.data
-    const { tx_ref, amount, charged_amount } = txn_data
 
+    const txn_data = req.body.data
+    const { tx_ref, amount } = txn_data
     let transaction = await Transaction.findOne({
         reference: tx_ref, amount
     })

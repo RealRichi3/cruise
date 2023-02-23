@@ -265,11 +265,12 @@ async function effectVerifiedWalletTopupTransaction(transaction_id) {
 
     // Transaction has not reflected
     // Update wallet balance
-    await Wallet.findOneAndUpdate(
+    const wall = await Wallet.findOneAndUpdate(
         { user: transaction.user },
         { $inc: { balance: transaction.amount } },
         { new: true }
-    )
+    )   
+    console.log(wall)
 
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
