@@ -85,7 +85,7 @@ async function initiateTransaction(data) {
             type,
             payment_method,
             invoice: invoice._id,
-            ride_id, // If transaction is payment for ride
+            ride: ride_id, // If transaction is payment for ride
         });
 
         // Generate virtual account if payment method is bank transfer
@@ -312,7 +312,7 @@ async function debitWallet(transaction_id) {
         { status: 'success', reflected: true },
         { new: true }
     ).populate('user')
-    
+
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
     transaction = await transaction.save()
