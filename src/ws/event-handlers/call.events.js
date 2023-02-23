@@ -1,5 +1,5 @@
 const { clients } = require('../clients');
-const config = require('../../utils/config');
+const config = require('../../config');
 
 /**
  * Initiate new Call request to a target user

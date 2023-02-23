@@ -8,7 +8,7 @@ const {
     getClosestRiders,
 } = require('../services/ride.service');
 const { clients } = require('../ws/clients');
-const { BadRequestError, UnauthorizedError, NotFoundError } = require('../utils/errors');
+const { BadRequestError, UnauthorizedError, NotFoundError, APIServerError } = require('../utils/errors');
 const config = require('../config');
 
 // Models
@@ -17,6 +17,7 @@ const { Rider } = require('../models/users.model');
 const { Ride, RideRequest, RideReview } = require('../models/ride.model');
 const { stringify } = require('../utils/json');
 const Vehicle = require('../models/vehicle.model');
+const { initiateTransaction, effectVerifiedWalletDebitTranscation } = require('../services/payment/transaction.service');
 
 // TODO: Improve code documentation by adding more explanations to errors 
 
@@ -659,7 +660,82 @@ const getRidersCompletedRides = async (req, res, next) => {
     });
 }
 
-const payForRide = async (req, res, next) => { };
+const payForRide = async (req, res, next) => {
+    // Get the ride cost
+    const { ride_id, payment_method } = req.body
+
+    const ride = await Ride.findById(ride_id).populate('passenger')
+    if (!ride) { return next(new NotFoundError('Ride does not exist')) }
+
+    // Check if ride is completed
+
+    // Check if user booked this ride
+    if (ride.passenger._id.toString() != req.user._id) {
+        return next(new UnauthorizedError('This user did not book this ride'))
+    }
+
+    // Check if ride has already been paid for
+    if (ride.paid) {
+        return next(new BadRequestError('Ride has already been paid for'))
+    }
+
+    const data = {
+        amount: ride.cost,
+        payment_method,
+        type: 'book_ride',
+        user_id: req.user._id,
+        enduser_id: req.user.enduser._id,
+        ride_id: ride._id
+    }
+
+    let transaction_record = await initiateTransaction(data)
+
+    let transaction;
+    switch (payment_method) {
+        case 'card':
+            // Handle card payment
+            break;
+
+        case 'bank_transfer':
+            // Handle bank transfer
+            break;
+
+        case 'wallet':
+            // Handle wallet payment
+            transaction = await effectVerifiedWalletDebitTranscation(transaction_record._id)
+            break;
+
+        default:
+            return next(new BadRequestError('Please specify payment method'))
+    }
+    if (transaction instanceof Error) {
+        if (transaction.message == 'Insufficient funds') {
+            return next(new BadRequestError('Insufficient funds'))
+        }
+
+        return next(new APIServerError('An error occured'))
+    }
+
+    // Update ride paid status
+    await ride.updateOne({ paid: true })
+
+    // Get payment method
+    // Card - use paystack
+    // Bank transfer - use flutter wave
+    // Wallet 
+
+    // Card
+    // Init transaction
+    // Direct debit
+    // On success - effect
+
+    return res.status(200).send({
+        success: true,
+        data: {
+            transaction: transaction || transaction_record
+        }
+    })
+};
 
 module.exports = {
     initRideRequest,

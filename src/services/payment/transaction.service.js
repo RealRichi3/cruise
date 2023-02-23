@@ -68,7 +68,7 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  * */
 async function initiateTransaction(data) {
     try {
-        const { amount, type, payment_method, user_id, enduser_id } = data;
+        const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
 
         // Create Invoice for pending transaction
         const invoice = new Invoice({
@@ -85,6 +85,7 @@ async function initiateTransaction(data) {
             type,
             payment_method,
             invoice: invoice._id,
+            ride_id, // If transaction is payment for ride
         });
 
         // Generate virtual account if payment method is bank transfer
@@ -123,7 +124,7 @@ async function initiateTransaction(data) {
         if (tresult instanceof Error) throw tresult;
 
         // Add transaction to wallet
-        if (type == 'wallet_topup') {
+        if (type == 'wallet_topup' || payment_method == 'wallet') {
             const wall = await Wallet.findOneAndUpdate(
                 { user: user_id },
                 { $push: { transactions: transaction._id } }
@@ -243,13 +244,13 @@ async function verifyTransactionStatus(reference) {
 };
 
 async function effectVerifiedRidePaymentTransaction(transaction_id) {
-    let transaction = await Transaction.findById(transcation_id)
+    let transaction = await Transaction.findById(transaction_id)
     if (!transaction) throw new Error('No matching transaction found')
 
-    // Check if transaction has reflected
-    if (transaction.reflected != true) {
+    if (transaction.reflected) return transaction;
 
-    }
+
+
 
     transaction = await transaction.save()
 
@@ -257,7 +258,7 @@ async function effectVerifiedRidePaymentTransaction(transaction_id) {
     return transaction
 }
 
-async function effectVerifiedWalletTopupTransaction(transaction_id) {
+async function effectVerifiedWalletCreditTransaction(transaction_id) {
     let transaction = await Transaction.findById(transaction_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
@@ -269,7 +270,7 @@ async function effectVerifiedWalletTopupTransaction(transaction_id) {
         { user: transaction.user },
         { $inc: { balance: transaction.amount } },
         { new: true }
-    )   
+    )
     console.log(wall)
 
     // Generate transaction receipt
@@ -290,23 +291,30 @@ async function effectVerifiedWalletTopupTransaction(transaction_id) {
     return transaction
 }
 
-async function effectVerifiedWalletWithdrawalTranscation(transaction_id) {
-    let transaction = await Transaction.findById(transcation_id).populate('user')
+async function effectVerifiedWalletDebitTranscation(transaction_id) {
+    let transaction = await Transaction.findById(transaction_id).populate('user')
     if (!transaction) throw new Error('No matching transaction found')
 
     if (transaction.reflected) return transaction;  //  Transacation has reflected
 
+    const wallet = await Wallet.findOne({ user: transaction.user })
+    if (wallet.balance < transaction.amount) {
+        throw new Error('Insufficient funds')
+    }
+
     //  Transaction has reflected
     //  Update Wallet balance
-    await Wallet.findOneAndUpdate(
-        { user: transaction.user },
-        { $inc: { balance: -transaction.amount } },
+    await wallet.updateOne({ $inc: { balance: -transaction.amount } })
+
+    // Update transaction status
+    transaction = await Transaction.findByIdAndUpdate(
+        transaction_id,
+        { status: 'success', reflected: true },
         { new: true }
     )
-
+    
     // Generate transaction receipt
     const receipt = await transaction.generateReceipt()
-    transaction.updateOne({ status: 'success', reflected: true })
     transaction = await transaction.save()
 
     // Generate email notification
@@ -319,13 +327,13 @@ async function effectVerifiedWalletWithdrawalTranscation(transaction_id) {
         html: mail_message.getBody(),
     })
 
-    return transaction
+    return transaction.populate('receipt invoice ride user')
 }
 
 module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
-    effectVerifiedWalletTopupTransaction,
-    effectVerifiedWalletWithdrawalTranscation
+    effectVerifiedWalletCreditTransaction,
+    effectVerifiedWalletDebitTranscation
 };
