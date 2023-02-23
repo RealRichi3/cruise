@@ -662,12 +662,14 @@ const getRidersCompletedRides = async (req, res, next) => {
 
 const payForRide = async (req, res, next) => {
     // Get the ride cost
-    const { ride_id, payment_method } = req.body
+    const { ride_id } = req.body
 
-    const ride = await Ride.findById(ride_id).populate('passenger')
+    const ride = await Ride.findById(ride_id).populate('passenger ride_request')
     if (!ride) { return next(new NotFoundError('Ride does not exist')) }
 
-    // Check if ride is completed
+    const { payment_method } = ride.ride_request
+    
+    // TODO: Check if ride is completed
 
     // Check if user booked this ride
     if (ride.passenger._id.toString() != req.user._id) {
@@ -694,15 +696,21 @@ const payForRide = async (req, res, next) => {
     switch (payment_method) {
         case 'card':
             // Handle card payment
+            // Wait for webhook to confirm transaction
             break;
 
         case 'bank_transfer':
             // Handle bank transfer
+            // Wait for webhook to confirm transaction
             break;
 
         case 'wallet':
             // Handle wallet payment
             transaction = await debitWallet(transaction_record._id)
+
+            // Update ride paid status
+            await ride.updateOne({ paid: true })
+
             break;
 
         default:
@@ -716,8 +724,6 @@ const payForRide = async (req, res, next) => {
         return next(new APIServerError('An error occured'))
     }
 
-    // Update ride paid status
-    await ride.updateOne({ paid: true })
 
     // Get payment method
     // Card - use paystack
