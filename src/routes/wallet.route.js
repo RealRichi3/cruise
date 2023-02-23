@@ -3,11 +3,8 @@ const router = express.Router();
 
 const {
     getWalletBalance,
-    getWalletTransactions,
-    getWalletTransactionData,
     getWalletData,
     topUpWallet,
-    confirmTopup
 } = require('../controllers/wallet.controller');
 
 const { basicAuth } = require('../middlewares/auth');
@@ -18,9 +15,6 @@ router.use(basicAuth(), rbac('enduser rider superadmin'));
 router
     .get('/', getWalletData)
     .get('/balance', getWalletBalance)
-    .get('/transactions', getWalletTransactions)
-    .get('/transaction-data/:id', getWalletTransactionData)
     .post('/topup', rbac('enduser'), topUpWallet)
-    .post('/topup/confirm', confirmTopup);
 
 module.exports = router;

@@ -85,6 +85,7 @@ const transactionsSchema = new schema(
         reference: { type: String, default: UU, required: true },
         reflected: { type: Boolean, default: false, required: true }, // If transaction has been reflected in user's wallet
         date: { type: Date, default: Date.now, required: true },
+        payment_gateway: { type: String, enum: ['flutterwave', 'paystack'], required: true}
     },
     { timestamps: true }
 );
@@ -119,7 +120,7 @@ transactionsSchema.methods.generateReceipt = async function () {
         receipt.rider = this.rider;
     }
 
-    if (this.type == 'wallet_topup') {
+    if (this.type == 'wallet_topup' || this.type == 'wallet_withdrawal') {
         receipt.enduser = this.enduser;
     }
 
@@ -129,7 +130,7 @@ transactionsSchema.methods.generateReceipt = async function () {
 
     await this.save();
 
-    return receipt;
+    return await receipt.populate('transaction');
 };
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);

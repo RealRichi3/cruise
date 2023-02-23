@@ -298,11 +298,6 @@ const riderSignup = async (req, res, next) => {
             session,
         }).then((rider) => rider[0]);
 
-
-        // Create dedicated virtual bank account
-        const dva_result = await createDVA(user)
-        if (dva instanceof Error) next(dva_result);
-
         // Create Vehicle info
         if (rider.hasVehicle) {
             vehicle = await Vehicle.create(
