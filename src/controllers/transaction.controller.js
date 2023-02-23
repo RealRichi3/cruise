@@ -2,16 +2,17 @@ const { Transaction, Invoice } = require('../models/transaction.model');
 const { Wallet } = require('../models/payment_info.model.js')
 const config = require('../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError, UnauthenticatedError } = require('../utils/errors');
+const { NotFoundError, UnauthorizedError, UnauthenticatedError, BadRequestError } = require('../utils/errors');
 const {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
-    effectVerifiedWalletCreditTransaction,
-    effectVerifiedWalletDebitTransaction,
+    creditWallet,
+    debitWallet,
 } = require('../services/payment/transaction.service');
 const { WalletTopupReceiptMessage } = require('../utils/mail_message');
 const sendEmail = require('../services/email.service');
+const { Ride } = require('../models/ride.model');
 
 const getUsersTransactions = async (req, res, next) => {
     const transactions = await Transaction.find({ user: req.user.id }).populate(
@@ -136,7 +137,7 @@ const confirmTopup = async (req, res, next) => {
     */
     if (!transaction.reflected) {
         await transaction.updateOne({ status: 'success' })
-        transaction = await effectVerifiedWalletCreditTransaction(transaction._id)
+        transaction = await creditWallet(transaction._id)
     }
 
     res.status(200).json({
@@ -149,7 +150,10 @@ const confirmTopup = async (req, res, next) => {
  * 
  */
 const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
-    if (req.body.event != 'charge.completed') return next();
+    // For payments under this category, the payment method used is bank transfer
+    if (req.body.event != 'charge.completed') {
+        return next(new BadRequestError('Unsuccessful transaction'));
+    }
 
     // Verify if request is coming from FLUTTERWAVE
     const verification_hash = req.headers['verif-hash']
@@ -159,33 +163,55 @@ const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
 
     const txn_data = req.body.data
     const { tx_ref, amount } = txn_data
-    let transaction = await Transaction.findOne({
-        reference: tx_ref, amount
-    })
+    let transaction = await Transaction.findOne(
+        {
+            reference: tx_ref, amount
+        }
+    ).populate('ride')
+
+    if (transaction.reflected) return res.status(200);
 
     // Update transaction status
-    await transaction.updateOne({ status: 'success' })
+    await transaction.update({ status: 'success' })
 
     switch (transaction.type) {
+        // Handle verified wallet transaction
         case 'wallet_topup':
-            // Handle verified wallet transaction
-            transaction = await effectVerifiedWalletCreditTransaction(transaction._id)
+            transaction = await creditWallet(transaction._id)
             break;
 
+        // Handle verififed ride payment
         case 'book_ride':
-            // Handle verififed ride payment
+            // Check if ride has been paid for
+            let ride = await Ride.findById(transaction.ride)
+
+            // Check if ride has already been paid for
+            if (ride.paid) {
+                return next(new BadRequestError('Ride has already been paid for'))
+            }
+
+            // Update ride paid status
+            await ride.update({ paid: true })
+
             break;
 
+        // Handle verified Wallet withdrawal transaction
         case 'wallet_withdrawal':
-            // Handle verified Wallet withdrawal transaction
-            transaction = await effectVerifiedWalletDebitTransaction(transaction._id)
-
+            transaction = await debitWallet(transaction._id)
             break;
+
         default:
             throw new Error('Please specify transaction type')
     }
 
-    console.log(transaction)
+    await Transaction.findByIdAndUpdate(transaction._id, { reflected: true }, { new: true })
+
+    return res.status(200).send({
+        success: true,
+        data: {
+            message: 'Success'
+        }
+    })
 }
 
 module.exports = {
