@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const schema = mongoose.Schema
 const { Rider } = require('./users.model')
 
+// TODO: Add checks to enforce dynamic schema field required rules
 const rideReviewSchema = new schema({
     ride: { type: schema.Types.ObjectId, ref: 'Ride', required: true },
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
@@ -13,7 +14,7 @@ const rideRequestSchema = new schema({
     user: { type: schema.Types.ObjectId, ref: 'User', required: true },
     departure: { type: schema.Types.ObjectId, ref: 'DepartureOrDestination', required: true },
     destination: { type: schema.Types.ObjectId, ref: 'DepartureOrDestination', required: true },
-    payment_method: { type: String, enum: ['cash', 'card', 'wallet'] },
+    payment_method: { type: String, enum: ['cash', 'card', 'wallet', 'bank_transfer'] },
     status: { type: String, enum: ['pending', 'accepted', 'cancelled'], default: 'pending' },
     urban_cost: { type: Number },
     standard_cost: { type: Number },
