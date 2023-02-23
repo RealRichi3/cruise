@@ -25,20 +25,29 @@ const vehicleSchema = new schema({
     actve_ride: { type: schema.Types.ObjectId, ref: 'Ride' },
     rating: {type: Number, min: 1, max: 5, default: 4},
     banner: { type: String, required: true }, // vehicle banner image
-    vehicle_images: {
-        type: schema.Types.ObjectId,
-        ref: 'VehicleImages',
-    },
-    vehicleDocs: {
-        type: schema.Types.ObjectId,
-        ref: 'VehicleImages',
-    }
+    // vehicle_images: {
+    //     type: schema.Types.ObjectId,
+    //     ref: 'VehicleImages',
+    // },
+    // vehicleDocs: {
+    //     type: schema.Types.ObjectId,
+    //     ref: 'VehicleDocs',
+    // }
+}, {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
 
 vehicleSchema.virtual('location', {
     ref: 'Location',
     localField: '_id',
     foreignField: 'vehicle', 
+})
+
+vehicleSchema.virtual('vehicle_images', {
+    ref: 'VehicleImages',
+    localField: '_id',
+    foreignField: 'vehicle',
 })
 
 const VehicleStatus = mongoose.model('VehicleStatus', vehicle_statusSchema);

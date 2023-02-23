@@ -17,6 +17,7 @@ const { VehicleImages, VehicleDocs } = require('../models/usersdoc.model');
  * @param {number} year - The year of the vehicle
  * @param {string} color - The color of the vehicle
  * @param {string} plate_number - The plate number of the vehicle
+ * @param {string} banner - The display image url of the vehicle 
  *
  * @returns {Object} - The vehicle object
  *
@@ -49,11 +50,6 @@ const addVehicle = async (req, res, next) => {
         return next(new BadRequestError('Vehicle image upload failed'));
     }
 
-    vehicle.banner = banner;
-    vehicle.rider = rider._id;
-    await vehicle.validate();
-    await vehicle.save();
-
     // Save the vehicle images to the database
     const vehicleImages = new VehicleImages({
         rider: rider._id,
@@ -62,14 +58,18 @@ const addVehicle = async (req, res, next) => {
     });
     await vehicleImages.save();
 
+    vehicle.banner = banner;
+    vehicle.rider = rider._id;
+    await vehicle.validate();
+    await vehicle.save();
+
+
     const new_riders_vehicle = await rider.addVehicle(vehicle)
 
     res.status(200).send({
         success: true,
         message: 'Vehicle added successfully',
         data: new_riders_vehicle,
-        vehicle,
-        vehicleImages
     });
 };
 
@@ -97,6 +97,9 @@ const getVehicleData = async (req, res, next) => {
         },
     });
 
+    const newdata = await vehicle.populate('vehicle_images');
+    console.log("here is new data",newdata.toObject())
+
     const vehicle_data = await Vehicle.findById(vehicle_id).populate('status');
     console.log(vehicle_data);
     // Check if vehicle exists
@@ -110,6 +113,7 @@ const getVehicleData = async (req, res, next) => {
         data: vehicle,
     });
 };
+
 
 /**
  * Update vehicle data

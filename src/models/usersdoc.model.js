@@ -22,11 +22,11 @@ const riderdocSchema = new schema(
 
 const vehicleimagesSchema = new schema(
     {
-        rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true },
-        vehicle: { type: schema.Types.ObjectId, ref: 'Vehicle', required: true },
+        rider: { type: schema.Types.ObjectId, ref: 'Rider', required: true, select: false },
+        vehicle: { type: schema.Types.ObjectId, ref: 'Vehicle', required: true, select: false },
         imagearray: { type: Array, required: true },
     },
-    { timestamps: true }
+    { timestamps: true, toJSON: {virtuals:true}}
 );
 
 const vehicledocsSchema = new schema(
