@@ -1,7 +1,7 @@
 const { Transaction, Invoice } = require('../../models/transaction.model');
 const config = require('../../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
+const { NotFoundError, UnauthorizedError, BadRequestError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
@@ -330,10 +330,63 @@ async function debitWallet(transaction_id) {
     return transaction.populate('receipt invoice ride user')
 }
 
+/**
+ * Effects successfull transaction
+ * for wallet topup - Credits wallet
+ * for wallet withdrawal - Debits wallet
+ * for book ride - Updates ride paid status
+ * 
+ * Transaction status has to be verified before being effected
+ * 
+ * @param {string} transaction_id 
+ * 
+ * @returns {MongooseObject} transaction data
+ * @returns {Error} if Transaction not found
+ * @returns {BadRequestError} if Ride has already been paid for
+ * @returns {Error} if Transaction type is not specified in transaction document
+ */
+async function effectSuccessfullTransaction(transaction_id) {
+    const transaction = await Transaction.findById(transaction_id)
+    if (!transaction) { throw new Error('Transaction not found') }
+
+    switch (transaction.type) {
+        // Handle verified wallet transaction
+        case 'wallet_topup':
+            transaction = await creditWallet(transaction._id)
+            break;
+
+        // Handle verififed ride payment
+        case 'book_ride':
+            // Check if ride has been paid for
+            let ride = await Ride.findById(transaction.ride)
+
+            // Check if ride has already been paid for
+            if (ride.paid) {
+                return next(new BadRequestError('Ride has already been paid for'))
+            }
+
+            // Update ride paid status
+            await ride.update({ paid: true })
+
+            break;
+
+        // Handle verified Wallet withdrawal transaction
+        case 'wallet_withdrawal':
+            transaction = await debitWallet(transaction._id)
+            break;
+
+        default:
+            throw new Error('Please specify transaction type')
+    }
+
+    return transaction
+}
+
 module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
     creditWallet,
-    debitWallet
+    debitWallet,
+    effectSuccessfullTransaction
 };
