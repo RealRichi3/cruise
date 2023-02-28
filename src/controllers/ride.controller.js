@@ -672,7 +672,8 @@ const payForRide = async (req, res, next) => {
     // TODO: Check if ride is completed
 
     // Check if user booked this ride
-    if (ride.passenger._id.toString() != req.user._id) {
+    if (ride.passenger._id.toString() != req.user._id
+     && ride.rider != req.user.rider?._id) {    // Rider can also pay for ride
         return next(new UnauthorizedError('This user did not book this ride'))
     }
 
@@ -686,7 +687,7 @@ const payForRide = async (req, res, next) => {
         payment_method,
         type: 'book_ride',
         user_id: req.user._id,
-        enduser_id: req.user.enduser._id,
+        enduser_id: req.user.enduser?._id,  // If the ride is being paid by the passenger
         ride_id: ride._id
     }
 
