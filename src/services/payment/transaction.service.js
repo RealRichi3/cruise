@@ -10,6 +10,7 @@ const {
     WalletTopupInvoiceMessage,
     WalletTopupReceiptMessage,
     WalletWithdrawalReceiptMessage } = require('../../utils/mail_message');
+const { Ride } = require('../../models/ride.model');
 
 /**
  * Get Temporary Virtual Account
@@ -67,76 +68,62 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  * @throws {Error} - If there is an error while initiating the transaction
  * */
 async function initiateTransaction(data) {
-    try {
-        const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
+    const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
 
-        // Create Invoice for pending transaction
-        const invoice = new Invoice({
-            user: user_id,
-            amount,
-            type,
-        });
+    // Create Invoice for pending transaction
+    const invoice = new Invoice({
+        user: user_id,
+        amount,
+        type,
+    });
 
-        // Create transaction record in Database
-        const transaction = new Transaction({
-            enduser: enduser_id,
-            user: user_id,
-            amount,
-            type,
-            payment_method,
-            invoice: invoice._id,
-            ride: ride_id, // If transaction is payment for ride
-        });
+    // Create transaction record in Database
+    const transaction = new Transaction({
+        enduser: enduser_id,
+        user: user_id,
+        amount,
+        type,
+        payment_method,
+        invoice: invoice._id,
+        ride: ride_id, // If transaction is payment for ride
+    });
 
-        // Generate virtual account if payment method is bank transfer
-        if (payment_method == 'bank_transfer') {
-            const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
-            transaction.virtual_account = virtual_account._id
-            transaction.payment_gateway = 'flutterwave'
+    // Generate virtual account if payment method is bank transfer
+    if (payment_method == 'bank_transfer' || payment_method == 'cash') {
+        const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
+        transaction.virtual_account = virtual_account._id
+        transaction.payment_gateway = 'flutterwave'
 
-            console.log(virtual_account)
-        } else if (payment_method == 'card') {
-            transaction.payment_gateway = 'paystack'
-        }
-
-        console.log(transaction)
-        console.log(invoice)
-
-        invoice.transaction = transaction._id;
-        let iresult = await invoice
-            .save()
-            .then()
-            .catch((err) => {
-                return err;
-            });
-
-        // Error occured while saving invoice
-        if (iresult instanceof Error) throw iresult;
-
-        let tresult = await transaction
-            .save()
-            .then()
-            .catch((err) => {
-                return err;
-            });
-
-        // Error occured while saving transaction
-        if (tresult instanceof Error) throw tresult;
-
-        // Add transaction to wallet
-        if (type == 'wallet_topup' || payment_method == 'wallet') {
-            const wall = await Wallet.findOneAndUpdate(
-                { user: user_id },
-                { $push: { transactions: transaction._id } }
-            );
-            console.log(wall);
-        }
-
-        console.log(transaction);
-        return transaction.populate('invoice user virtual_account');
-    } catch (error) {
-        throw error;
+        console.log(virtual_account)
+    } else if (payment_method == 'card') {
+        transaction.payment_gateway = 'paystack'
     }
+
+    console.log(transaction)
+    console.log(invoice)
+
+    invoice.transaction = transaction._id;
+    let iresult = await invoice.save()
+
+    // Error occured while saving invoice
+    if (iresult instanceof Error) throw iresult;
+
+    let tresult = await transaction.save()
+
+    // Error occured while saving transaction
+    if (tresult instanceof Error) throw tresult;
+
+    // Add transaction to wallet
+    if (type == 'wallet_topup' || payment_method == 'wallet') {
+        const wall = await Wallet.findOneAndUpdate(
+            { user: user_id },
+            { $push: { transactions: transaction._id } }
+        );
+        console.log(wall);
+    }
+
+    console.log(transaction);
+    return transaction.populate('invoice user virtual_account');
 };
 
 /**
