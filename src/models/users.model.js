@@ -74,11 +74,8 @@ const riderSchema = new schema(
         },
         hasVehicle: { type: Boolean, default: false },
         isOnline: { type: Boolean, default: false },
-        rideStatus: {
-            type: String,
-            default: 'available',
-            enum: ['available', 'unavailable'],
-        },
+        isAvailable: { type: Boolean },
+        current_ride: {type: schema.Types.ObjectId, ref: 'Ride'},
     },
     { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } },
 );
@@ -138,7 +135,7 @@ userSchema.pre('validate', async function (next) {
     if (this.isNew) {
         const status = new Status({ user: this._id });
         status.isVerified = this.role == 'enduser' ? true : false;
-        
+
         if (process.env.NODE_ENV == 'dev') {
             status.isVerified = true;
             status.isActive = true;
@@ -255,6 +252,22 @@ riderSchema.methods.addVehicle = async function (vehicle, session = null) {
 riderSchema.methods.goOnline = async function (vehicle_id = null) {
     // console.log(this)
     this.isOnline = true; // set rider to online
+
+    await this.populate({
+        path: 'current_ride',
+        populate: {
+            path: 'ride_request'
+        }
+    })
+
+    /* 
+        If payment method is cash,
+        rider should  receive cash from passenger and pay to company,
+        when payment is confirmed rider will be allowed to take rides
+    */
+    const payment_method = this.current_ride?.ride_request?.payment_method
+    const is_paid = this.current_ride?.paid
+    this.isAvailable = payment_method == 'cash' && !is_paid ? false: true
 
     const setCurrVehicle = (vehicle_id) => {
         this.depopulate('currentVehicle defaultVehicle');
