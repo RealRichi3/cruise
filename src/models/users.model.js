@@ -76,6 +76,7 @@ const riderSchema = new schema(
         isOnline: { type: Boolean, default: false },
         isAvailable: { type: Boolean },
         current_ride: {type: schema.Types.ObjectId, ref: 'Ride'},
+        rider_doc: [{ type: schema.Types.ObjectId, ref: 'RiderDoc' }]
     },
     { timestamps: true, toObject: { virtuals: true }, toJSON: { virtuals: true } },
 );

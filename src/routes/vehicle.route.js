@@ -17,7 +17,10 @@ const rbacMiddleware = require('../middlewares/rbac');
 router.use(basicAuth(), rbacMiddleware('rider'));
 
 router
-    .post('/add', upload.array("images", 5), addVehicle)
+    .post('/add', upload.fields([
+        { name: 'images', maxCount: 5 },
+        { name: 'banner', maxCount: 1 }
+    ]), addVehicle)    
     .get(
         '/get/:id',
         rbacMiddleware('enduser rider admin superadmin'),

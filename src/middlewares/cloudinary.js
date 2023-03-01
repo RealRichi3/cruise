@@ -9,7 +9,7 @@ cloudinary.config({
 });
 
 const uploadtocloudinary = (filepath, name, data) => {
-    try {
+    try { 
         const { folder, id } = data;
         const options = {
             use_filename: true,
