@@ -1,7 +1,7 @@
 const { Transaction, Invoice } = require('../../models/transaction.model');
 const config = require('../../config');
 const axios = require('axios');
-const { NotFoundError, UnauthorizedError } = require('../../utils/errors');
+const { NotFoundError, UnauthorizedError, BadRequestError } = require('../../utils/errors');
 const { Wallet, VirtualAccount } = require('../../models/payment_info.model');
 const { User } = require('../../models/users.model');
 const { createFLWVirtualAccount } = require('./virtualaccount.service');
@@ -10,6 +10,7 @@ const {
     WalletTopupInvoiceMessage,
     WalletTopupReceiptMessage,
     WalletWithdrawalReceiptMessage } = require('../../utils/mail_message');
+const { Ride } = require('../../models/ride.model');
 
 /**
  * Get Temporary Virtual Account
@@ -67,76 +68,62 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  * @throws {Error} - If there is an error while initiating the transaction
  * */
 async function initiateTransaction(data) {
-    try {
-        const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
+    const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
 
-        // Create Invoice for pending transaction
-        const invoice = new Invoice({
-            user: user_id,
-            amount,
-            type,
-        });
+    // Create Invoice for pending transaction
+    const invoice = new Invoice({
+        user: user_id,
+        amount,
+        type,
+    });
 
-        // Create transaction record in Database
-        const transaction = new Transaction({
-            enduser: enduser_id,
-            user: user_id,
-            amount,
-            type,
-            payment_method,
-            invoice: invoice._id,
-            ride: ride_id, // If transaction is payment for ride
-        });
+    // Create transaction record in Database
+    const transaction = new Transaction({
+        enduser: enduser_id,
+        user: user_id,
+        amount,
+        type,
+        payment_method,
+        invoice: invoice._id,
+        ride: ride_id, // If transaction is payment for ride
+    });
 
-        // Generate virtual account if payment method is bank transfer
-        if (payment_method == 'bank_transfer') {
-            const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
-            transaction.virtual_account = virtual_account._id
-            transaction.payment_gateway = 'flutterwave'
+    // Generate virtual account if payment method is bank transfer
+    if (payment_method == 'bank_transfer' || payment_method == 'cash') {
+        const virtual_account = await getTemporaryVirtualAccount(user_id, transaction)
+        transaction.virtual_account = virtual_account._id
+        transaction.payment_gateway = 'flutterwave'
 
-            console.log(virtual_account)
-        } else if (payment_method == 'card') {
-            transaction.payment_gateway = 'paystack'
-        }
-
-        console.log(transaction)
-        console.log(invoice)
-
-        invoice.transaction = transaction._id;
-        let iresult = await invoice
-            .save()
-            .then()
-            .catch((err) => {
-                return err;
-            });
-
-        // Error occured while saving invoice
-        if (iresult instanceof Error) throw iresult;
-
-        let tresult = await transaction
-            .save()
-            .then()
-            .catch((err) => {
-                return err;
-            });
-
-        // Error occured while saving transaction
-        if (tresult instanceof Error) throw tresult;
-
-        // Add transaction to wallet
-        if (type == 'wallet_topup' || payment_method == 'wallet') {
-            const wall = await Wallet.findOneAndUpdate(
-                { user: user_id },
-                { $push: { transactions: transaction._id } }
-            );
-            console.log(wall);
-        }
-
-        console.log(transaction);
-        return transaction.populate('invoice user virtual_account');
-    } catch (error) {
-        throw error;
+        console.log(virtual_account)
+    } else if (payment_method == 'card') {
+        transaction.payment_gateway = 'paystack'
     }
+
+    console.log(transaction)
+    console.log(invoice)
+
+    invoice.transaction = transaction._id;
+    let iresult = await invoice.save()
+
+    // Error occured while saving invoice
+    if (iresult instanceof Error) throw iresult;
+
+    let tresult = await transaction.save()
+
+    // Error occured while saving transaction
+    if (tresult instanceof Error) throw tresult;
+
+    // Add transaction to wallet
+    if (type == 'wallet_topup' || payment_method == 'wallet') {
+        const wall = await Wallet.findOneAndUpdate(
+            { user: user_id },
+            { $push: { transactions: transaction._id } }
+        );
+        console.log(wall);
+    }
+
+    console.log(transaction);
+    return transaction.populate('invoice user virtual_account');
 };
 
 /**
@@ -330,10 +317,79 @@ async function debitWallet(transaction_id) {
     return transaction.populate('receipt invoice ride user')
 }
 
+/**
+ * Effects successfull transaction
+ * for wallet topup - Credits wallet
+ * for wallet withdrawal - Debits wallet
+ * for book ride - Updates ride paid status
+ * 
+ * Transaction status has to be verified before being effected
+ * 
+ * @param {string} transaction_id 
+ * 
+ * @returns {MongooseObject} transaction data
+ * @returns {Error} if Transaction not found
+ * @returns {BadRequestError} if Ride has already been paid for
+ * @returns {Error} if Transaction type is not specified in transaction document
+ */
+async function effectSuccessfullTransaction(transaction_id) {
+    const transaction = await Transaction.findById(transaction_id)
+    if (!transaction) { throw new Error('Transaction not found') }
+
+    switch (transaction.type) {
+        // Handle verified wallet transaction
+        case 'wallet_topup':
+            transaction = await creditWallet(transaction._id)
+            break;
+
+        // Handle verififed ride payment
+        case 'book_ride':
+            // Check if ride has been paid for
+            let ride = await Ride.findById(transaction.ride).populate('rider')
+
+            
+            const initiator = transaction.user.toString(),
+            riders_user_profile = ride.rider.user.toString(),
+            riders_latest_ride = ride.rider.current_ride.toString(),
+            current_ride = ride._id.toString();
+            
+            // Check if rider paid for ride
+            // if yes, check if this ride matches riders latest ride
+            // if yes, make rider available for new rides
+            if (initiator == riders_user_profile &&
+                riders_latest_ride == current_ride)
+                if (transaction.user.toString() == ride.rider.user &&
+                    ride.rider.current_ride.toString() == ride._id.toString()) {
+                    await ride.rider.updateOne({ isAvailable: true })
+                }
+
+            // Check if ride has already been paid for
+            if (ride.paid) {
+                throw new BadRequestError('Ride has already been paid for')
+            }
+
+            // Update ride paid status
+            await ride.update({ paid: true })
+
+            break;
+
+        // Handle verified Wallet withdrawal transaction
+        case 'wallet_withdrawal':
+            transaction = await debitWallet(transaction._id)
+            break;
+
+        default:
+            throw new Error('Please specify transaction type')
+    }
+
+    return transaction
+}
+
 module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
     creditWallet,
-    debitWallet
+    debitWallet,
+    effectSuccessfullTransaction
 };

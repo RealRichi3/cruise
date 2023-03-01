@@ -4,11 +4,9 @@ const config = require('../config');
 const axios = require('axios');
 const { NotFoundError, UnauthorizedError, UnauthenticatedError, BadRequestError } = require('../utils/errors');
 const {
-    initiateTransaction,
     verifyTransactionStatus,
-    effectVerifiedRidePaymentTransaction,
     creditWallet,
-    debitWallet,
+    effectSuccessfullTransaction,
 } = require('../services/payment/transaction.service');
 const { WalletTopupReceiptMessage } = require('../utils/mail_message');
 const sendEmail = require('../services/email.service');
@@ -161,48 +159,21 @@ const handleFlutterWaveTransactionWebhook = async (req, res, next) => {
         return next(new UnauthenticatedError('Please provide valid authorization'))
     }
 
+    // Check if matching transaction record exists in DB
     const txn_data = req.body.data
     const { tx_ref, amount } = txn_data
     let transaction = await Transaction.findOne(
         {
             reference: tx_ref, amount
         }
-    ).populate('ride')
+    ).populate('ride')  // if any ride is tied to transaction
 
     if (transaction.reflected) return res.status(200);
 
+    await effectSuccessfullTransaction(transaction._id)
+
     // Update transaction status
     await transaction.update({ status: 'success' })
-
-    switch (transaction.type) {
-        // Handle verified wallet transaction
-        case 'wallet_topup':
-            transaction = await creditWallet(transaction._id)
-            break;
-
-        // Handle verififed ride payment
-        case 'book_ride':
-            // Check if ride has been paid for
-            let ride = await Ride.findById(transaction.ride)
-
-            // Check if ride has already been paid for
-            if (ride.paid) {
-                return next(new BadRequestError('Ride has already been paid for'))
-            }
-
-            // Update ride paid status
-            await ride.update({ paid: true })
-
-            break;
-
-        // Handle verified Wallet withdrawal transaction
-        case 'wallet_withdrawal':
-            transaction = await debitWallet(transaction._id)
-            break;
-
-        default:
-            throw new Error('Please specify transaction type')
-    }
 
     await Transaction.findByIdAndUpdate(transaction._id, { reflected: true }, { new: true })
 

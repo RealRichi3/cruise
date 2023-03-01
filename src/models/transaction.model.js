@@ -70,7 +70,7 @@ const transactionsSchema = new schema(
         payment_method: {
             type: String,
             required: true,
-            enum: ['ussd', 'card', 'bank_transfer', 'wallet'],
+            enum: ['ussd', 'card', 'bank_transfer', 'wallet', 'cash'],
         },
         virtual_account: {
             type: schema.Types.ObjectId, ref: 'VirtualAccount',

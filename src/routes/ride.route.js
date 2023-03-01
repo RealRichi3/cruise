@@ -31,7 +31,7 @@ router
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)
-    .post('/pay', permit('enduser'), payForRide)
+    .post('/pay', permit('enduser rider'), payForRide)
     .get('/data', permit('enduser rider superadmin'), getRideData)
     .get('/rides', permit('enduser'), getUsersRides)
     .get('/booked', getUsersBookedRides)
