@@ -345,11 +345,27 @@ async function effectSuccessfullTransaction(transaction_id) {
         // Handle verififed ride payment
         case 'book_ride':
             // Check if ride has been paid for
-            let ride = await Ride.findById(transaction.ride)
+            let ride = await Ride.findById(transaction.ride).populate('rider')
+
+            
+            const initiator = transaction.user.toString(),
+            riders_user_profile = ride.rider.user.toString(),
+            riders_latest_ride = ride.rider.current_ride.toString(),
+            current_ride = ride._id.toString();
+            
+            // Check if rider paid for ride
+            // if yes, check if this ride matches riders latest ride
+            // if yes, make rider available for new rides
+            if (initiator == riders_user_profile &&
+                riders_latest_ride == current_ride)
+                if (transaction.user.toString() == ride.rider.user &&
+                    ride.rider.current_ride.toString() == ride._id.toString()) {
+                    await ride.rider.updateOne({ isAvailable: true })
+                }
 
             // Check if ride has already been paid for
             if (ride.paid) {
-                return next(new BadRequestError('Ride has already been paid for'))
+                throw new BadRequestError('Ride has already been paid for')
             }
 
             // Update ride paid status
