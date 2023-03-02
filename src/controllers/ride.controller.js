@@ -139,7 +139,7 @@ const initRideRequest = async (req, res, next) => {
  */
 const completeRideRequest = async (req, res, next) => {
     // Get the selected ride class
-    const { ride_class, payment_method, ride_request_id } = req.body;
+    const { ride_class, ride_request_id } = req.body;
 
     // Check if ride request exists
     const ride_request = await RideRequest.findOneAndUpdate(
@@ -149,7 +149,7 @@ const completeRideRequest = async (req, res, next) => {
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
 
     // Update ride request payment method
-    ride_request.payment_method = payment_method;
+    ride_request.payment_method = 'cash';
 
     // Search for riders within the current users location
     const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
@@ -245,6 +245,11 @@ const cancelRideRequest = async (req, res, next) => {
 
     // Update ride request status
     ride_request.status = 'cancelled';
+
+    // Make rider available for new rides
+    const ride = ride_request.ride,
+        rider = (await ride.populate('rider')).rider
+    await rider.updateOne({ isAvailable: true })
 
     // Save ride request
     await ride_request.save();
@@ -357,7 +362,7 @@ const startRide = async (req, res, next) => {
 
     // Save ride
     await ride.save();
-    
+
     // Update riders current ride
     ride.rider.current_ride = ride._id
 
