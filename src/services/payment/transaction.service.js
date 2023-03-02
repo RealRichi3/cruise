@@ -68,7 +68,14 @@ async function getTemporaryVirtualAccount(user_id, txn) {
  * @throws {Error} - If there is an error while initiating the transaction
  * */
 async function initiateTransaction(data) {
-    const { amount, type, payment_method, user_id, enduser_id, ride_id } = data;
+    const { amount, type, payment_method, 
+        user_id, ride_id } = data;
+    
+    const user = await User.findById(user_id)
+    if (!user) { throw new Error('User does not exist')}
+
+    // const enduser_id = user.enduser, // if ride is being paid by passenger
+    const rider_id = user.rider;
 
     // Create Invoice for pending transaction
     const invoice = new Invoice({
@@ -79,7 +86,7 @@ async function initiateTransaction(data) {
 
     // Create transaction record in Database
     const transaction = new Transaction({
-        enduser: enduser_id,
+        rider: rider_id,
         user: user_id,
         amount,
         type,

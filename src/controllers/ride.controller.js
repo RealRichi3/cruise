@@ -141,7 +141,7 @@ const completeRideRequest = async (req, res, next) => {
     // Get the selected ride class
     const { ride_class, ride_request_id } = req.body,
         payment_method = 'cash';
-        
+
     // Check if ride request exists
     const ride_request = await RideRequest.findOneAndUpdate(
         { _id: ride_request_id, status: 'pending' },
@@ -693,11 +693,10 @@ const getRidersCompletedRides = async (req, res, next) => {
 const payForRide = async (req, res, next) => {
     // Get the ride cost
     const { ride_id, balance_payment_method } = req.body
+    const payment_method = balance_payment_method;
 
-    const ride = await Ride.findById(ride_id).populate('passenger ride_request')
+    const ride = await Ride.findById(ride_id).populate('passenger rider ride_request')
     if (!ride) { return next(new NotFoundError('Ride does not exist')) }
-
-    const { payment_method } = ride.ride_request
 
     // TODO: Check if ride is completed
 
@@ -717,7 +716,6 @@ const payForRide = async (req, res, next) => {
         payment_method,
         type: 'book_ride',
         user_id: req.user._id,
-        enduser_id: req.user.enduser?._id,  // If the ride is being paid by the passenger
         ride_id: ride._id
     }
 
@@ -743,15 +741,6 @@ const payForRide = async (req, res, next) => {
             await ride.updateOne({ paid: true })
 
             break;
-
-        /*
-            if cash - User paid to rider
-            rider is meant to send balance to company
-            i.e current payment request was initiated by rider
-            balance_payment_method - how the rider wishes make payment
-        */
-        case 'cash':
-            if (balance_payment_method) break;
 
         default:
             return next(new BadRequestError('Please specify payment method'))
