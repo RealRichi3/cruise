@@ -2,6 +2,7 @@ const { Rider } = require("../models/users.model");
 const { clients } = require("../ws/clients");
 const { Ride, RideRequest } = require("../models/ride.model");
 const { RiderLocation } = require("../models/location.model");
+const config = require('../config')
 
 const vehicle_rating = {
     urban: 0,
@@ -28,6 +29,11 @@ function getCost(distance, vehicle_rating) {
     //  Calculate cost of ride - based on distance, and vehicle rating
     const cost = distance * vehicle_rating;
     return cost;
+}
+
+function getActualCost(original_cost) {
+    const new_cost = original_cost * (config.PERCENTAGE_CUT / 100)
+    return Math.ceil(new_cost / 100) * 100
 }
 
 function sendRideRequestToRider(client, ride_request) {
@@ -158,6 +164,7 @@ async function getRideRouteInKm() { }
 module.exports = {
     calcCordDistance,
     getCost,
+    getActualCost,
     getClosestRiders,
     sendRideRequestToRiders,
     getRideRouteInKm,

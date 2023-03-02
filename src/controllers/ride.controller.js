@@ -139,7 +139,8 @@ const initRideRequest = async (req, res, next) => {
  */
 const completeRideRequest = async (req, res, next) => {
     // Get the selected ride class
-    const { ride_class, payment_method, ride_request_id } = req.body;
+    const { ride_class, ride_request_id } = req.body,
+        payment_method = 'cash';
 
     // Check if ride request exists
     const ride_request = await RideRequest.findOneAndUpdate(
@@ -156,7 +157,14 @@ const completeRideRequest = async (req, res, next) => {
 
     // Filter closest riders based on vehicle rating and online status
     const filtered_riders = closest_riders.filter(
-        (rider) => rider.vehicle.rating >= vehicle_rating[ride_class] && rider.rider.isOnline
+        (rider) => {
+            if (
+                rider.vehicle.rating >= vehicle_rating[ride_class] &&
+                rider.rider.isOnline &&
+                rider.rider.isAvailable) {
+                return rider
+            }
+        }
     );
 
     // Check if matching riders are available
@@ -238,6 +246,11 @@ const cancelRideRequest = async (req, res, next) => {
 
     // Update ride request status
     ride_request.status = 'cancelled';
+
+    // Make rider available for new rides
+    const ride = ride_request.ride,
+        rider = (await ride.populate('rider')).rider
+    await rider.updateOne({ isAvailable: true })
 
     // Save ride request
     await ride_request.save();
@@ -351,6 +364,13 @@ const startRide = async (req, res, next) => {
     // Save ride
     await ride.save();
 
+    // Update riders current ride
+    ride.rider.current_ride = ride._id
+
+    // Make rider unavailable until he completes the ride
+    ride.rider.isAvailable = false
+    await ride.rider.save()
+
     return res.status(200).json({
         success: true,
         data: {
@@ -392,6 +412,16 @@ const completeRide = async (req, res, next) => {
 
     // Update ride status
     ride.status = 'completed';
+
+    /* 
+        If payment method is cash,
+        rider should  receive cash from passenger and pay to company,
+        when payment is confirmed rider will be allowed to take rides
+    */
+    if (ride.ride_request.payment_method != 'cash') {
+        ride.rider.isAvailable = true
+        await ride.rider.save()
+    }
 
     // Save ride
     await ride.save();
@@ -662,17 +692,17 @@ const getRidersCompletedRides = async (req, res, next) => {
 
 const payForRide = async (req, res, next) => {
     // Get the ride cost
-    const { ride_id } = req.body
+    const { ride_id, balance_payment_method } = req.body
+    const payment_method = balance_payment_method;
 
-    const ride = await Ride.findById(ride_id).populate('passenger ride_request')
+    const ride = await Ride.findById(ride_id).populate('passenger rider ride_request')
     if (!ride) { return next(new NotFoundError('Ride does not exist')) }
 
-    const { payment_method } = ride.ride_request
-    
     // TODO: Check if ride is completed
 
     // Check if user booked this ride
-    if (ride.passenger._id.toString() != req.user._id) {
+    if (ride.passenger._id.toString() != req.user._id
+        && ride.rider != req.user.rider?._id) {    // Rider can also pay for ride
         return next(new UnauthorizedError('This user did not book this ride'))
     }
 
@@ -682,11 +712,10 @@ const payForRide = async (req, res, next) => {
     }
 
     const data = {
-        amount: ride.cost,
+        amount: ride.amount_to_remit,
         payment_method,
         type: 'book_ride',
         user_id: req.user._id,
-        enduser_id: req.user.enduser._id,
         ride_id: ride._id
     }
 
@@ -704,14 +733,14 @@ const payForRide = async (req, res, next) => {
             // Wait for webhook to confirm transaction
             break;
 
-        case 'wallet':
-            // Handle wallet payment
-            transaction = await debitWallet(transaction_record._id)
+        // case 'wallet':
+        //     // Handle wallet payment
+        //     transaction = await debitWallet(transaction_record._id)
 
-            // Update ride paid status
-            await ride.updateOne({ paid: true })
+        //     // Update ride paid status
+        //     await ride.updateOne({ paid: true })
 
-            break;
+        //     break;
 
         default:
             return next(new BadRequestError('Please specify payment method'))
@@ -723,17 +752,6 @@ const payForRide = async (req, res, next) => {
 
         return next(new APIServerError('An error occured'))
     }
-
-
-    // Get payment method
-    // Card - use paystack
-    // Bank transfer - use flutter wave
-    // Wallet 
-
-    // Card
-    // Init transaction
-    // Direct debit
-    // On success - effect
 
     return res.status(200).send({
         success: true,
