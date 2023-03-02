@@ -139,8 +139,9 @@ const initRideRequest = async (req, res, next) => {
  */
 const completeRideRequest = async (req, res, next) => {
     // Get the selected ride class
-    const { ride_class, ride_request_id } = req.body;
-
+    const { ride_class, ride_request_id } = req.body,
+        payment_method = 'cash';
+        
     // Check if ride request exists
     const ride_request = await RideRequest.findOneAndUpdate(
         { _id: ride_request_id, status: 'pending' },
@@ -149,7 +150,7 @@ const completeRideRequest = async (req, res, next) => {
     if (!ride_request) return next(new BadRequestError('Invalid ride request'));
 
     // Update ride request payment method
-    ride_request.payment_method = 'cash';
+    ride_request.payment_method = payment_method;
 
     // Search for riders within the current users location
     const closest_riders = await getClosestRiders(ride_request.departure.location.coordinates);
