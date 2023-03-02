@@ -1,16 +1,12 @@
 const { Transaction, Invoice } = require('../models/transaction.model');
 const { Wallet } = require('../models/payment_info.model.js')
 const config = require('../config');
-const axios = require('axios');
 const { NotFoundError, UnauthorizedError, UnauthenticatedError, BadRequestError } = require('../utils/errors');
 const {
     verifyTransactionStatus,
     creditWallet,
     effectSuccessfullTransaction,
 } = require('../services/payment/transaction.service');
-const { WalletTopupReceiptMessage } = require('../utils/mail_message');
-const sendEmail = require('../services/email.service');
-const { Ride } = require('../models/ride.model');
 
 const getUsersTransactions = async (req, res, next) => {
     const transactions = await Transaction.find({ user: req.user.id }).populate(

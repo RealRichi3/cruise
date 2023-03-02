@@ -27,7 +27,7 @@ router.use(basicAuth());
 router
     .post('/request/init', permit('enduser rider superadmin'), initRideRequest)
     .post('/request/complete', permit('enduser rider superadmin'), completeRideRequest)
-    .post('/request/cancel', permit('enduser superadmin'), cancelRideRequest)
+    .post('/request/cancel', permit('enduser rider superadmin'), cancelRideRequest)
     .post('/arrived', permit('rider'), rideArrived)
     .post('/start', permit('rider'), startRide)
     .post('/complete', permit('rider'), completeRide)

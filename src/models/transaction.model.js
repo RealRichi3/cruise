@@ -53,7 +53,7 @@ const transactionsSchema = new schema(
         },
         user: { type: schema.Types.ObjectId, ref: 'User', required: true },
         rider: { type: schema.Types.ObjectId, ref: 'Rider' },
-        enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
+        // enduser: { type: schema.Types.ObjectId, ref: 'EndUser' },
         ride: { type: schema.Types.ObjectId, ref: 'Ride' },
         // Receipt is only required if transaction status is success
         receipt: {
