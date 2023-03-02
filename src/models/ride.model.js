@@ -46,6 +46,10 @@ const rideSchema = new schema({
         requird: true,
         default: process.env.NODE_ENV == 'dev' ? 2000 : undefined
     },
+    actual_cost: {
+        type: schema.Types.Number,
+        required: true,
+    },
     status: {
         type: String,
         required: true,
@@ -76,6 +80,12 @@ rideSchema.virtual('transactions', {
     foreignField: 'ride',
 })
 
+rideSchema.pre('save', async function () {
+    if (!this.isNew) next()
+
+    const companies_cut = this.cost * (Number(config.PERCENTAGE_CUT) / 100)
+    this.actual_cost = Math.ceil(companies_cut / 100) * 100     // Round cost to nearest 100
+})
 /**
  * 
  * @param {string} rider_id 
