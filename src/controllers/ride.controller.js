@@ -712,7 +712,7 @@ const payForRide = async (req, res, next) => {
     }
 
     const data = {
-        amount: ride.cost,
+        amount: ride.amount_to_remit,
         payment_method,
         type: 'book_ride',
         user_id: req.user._id,
@@ -733,14 +733,14 @@ const payForRide = async (req, res, next) => {
             // Wait for webhook to confirm transaction
             break;
 
-        case 'wallet':
-            // Handle wallet payment
-            transaction = await debitWallet(transaction_record._id)
+        // case 'wallet':
+        //     // Handle wallet payment
+        //     transaction = await debitWallet(transaction_record._id)
 
-            // Update ride paid status
-            await ride.updateOne({ paid: true })
+        //     // Update ride paid status
+        //     await ride.updateOne({ paid: true })
 
-            break;
+        //     break;
 
         default:
             return next(new BadRequestError('Please specify payment method'))
