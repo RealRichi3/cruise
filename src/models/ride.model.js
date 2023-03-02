@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const schema = mongoose.Schema
 const { Rider } = require('./users.model')
+const { getActualCost } = require('../services/ride.service')
 
 // TODO: Add checks to enforce dynamic schema field required rules
 const rideReviewSchema = new schema({
@@ -46,7 +47,7 @@ const rideSchema = new schema({
         requird: true,
         default: process.env.NODE_ENV == 'dev' ? 2000 : undefined
     },
-    actual_cost: {
+    amount_to_remit: {
         type: schema.Types.Number,
         required: true,
     },
@@ -80,12 +81,12 @@ rideSchema.virtual('transactions', {
     foreignField: 'ride',
 })
 
-rideSchema.pre('save', async function () {
+rideSchema.pre('validate', async function () {
     if (!this.isNew) next()
 
-    const companies_cut = this.cost * (Number(config.PERCENTAGE_CUT) / 100)
-    this.actual_cost = Math.ceil(companies_cut / 100) * 100     // Round cost to nearest 100
+    this.amount_to_remit = getActualCost(this.cost)     // Round cost to nearest 100
 })
+
 /**
  * 
  * @param {string} rider_id 
@@ -95,52 +96,47 @@ rideSchema.pre('save', async function () {
  */
 // TODO: set ride status to 'accepted' after ride is created
 rideRequestSchema.methods.createNewRide = async function (rider_id) {
-    try {
-        const rider = await Rider.findById(rider_id)
-        if (!rider) throw new Error('Rider not found')
+    const rider = await Rider.findById(rider_id)
+    if (!rider) throw new Error('Rider not found')
 
-        // Create new ride
-        const ride = await Ride.create({
-            rider: rider._id,
-            passenger: this.user,
-            vehicle: rider.currentVehicle,
-            departure: this.departure,
-            destination: this.destination,
-        })
+    console.log('creating ride')
+    // Create new ride
+    const ride = await Ride.create({
+        rider: rider._id,
+        passenger: this.user,
+        vehicle: rider.currentVehicle,
+        departure: this.departure,
+        destination: this.destination,
+    })
 
-        // Update ride request to include ride
-        this.ride = ride._id
+    // Update ride request to include ride
+    this.ride = ride._id
 
-        // Populate ride
-        ride.populate({
-            path: 'passenger',
-            select: 'firstname lastname',
+    // Populate ride
+    ride.populate({
+        path: 'passenger',
+        select: 'firstname lastname',
+        populate: {
+            path: 'enduser',
+            select: 'phone -user'
+        }
+    }).catch(err => console.log(err))
+    ride.populate('vehicle')
+
+    // Update ride request status
+    // this.status = 'accepted'
+    await this.save()
+    // console.log(ride)
+
+    return ride
+        .populate({
+            path: 'rider',
+            select: 'phone address city state _id',
             populate: {
-                path: 'enduser',
-                select: 'phone -user'
-            }
-        }).catch(err => console.log(err))
-        ride.populate('vehicle')
-
-        // Update ride request status
-        // this.status = 'accepted'
-        await this.save()
-        // console.log(ride)
-
-        return ride
-            .populate({
-                path: 'rider',
-                select: 'phone address city state _id',
-                populate: {
-                    path: 'user',
-                    select: 'firstname lastname'
-                },
-            })
-
-    } catch (error) {
-        console.log(error)
-        return error
-    }
+                path: 'user',
+                select: 'firstname lastname'
+            },
+        })
 }
 
 const RideReview = mongoose.model('RideReview', rideReviewSchema)
