@@ -252,77 +252,77 @@ async function effectVerifiedRidePaymentTransaction(transaction_id) {
     return transaction
 }
 
-async function creditWallet(transaction_id) {
-    let transaction = await Transaction.findById(transaction_id).populate('user')
-    if (!transaction) throw new Error('No matching transaction found')
+// async function creditWallet(transaction_id) {
+//     let transaction = await Transaction.findById(transaction_id).populate('user')
+//     if (!transaction) throw new Error('No matching transaction found')
 
-    if (transaction.reflected) return transaction;
+//     if (transaction.reflected) return transaction;
 
-    // Transaction has not reflected
-    // Update wallet balance
-    const wall = await Wallet.findOneAndUpdate(
-        { user: transaction.user },
-        { $inc: { balance: transaction.amount } },
-        { new: true }
-    )
-    console.log(wall)
+//     // Transaction has not reflected
+//     // Update wallet balance
+//     const wall = await Wallet.findOneAndUpdate(
+//         { user: transaction.user },
+//         { $inc: { balance: transaction.amount } },
+//         { new: true }
+//     )
+//     console.log(wall)
 
-    // Generate transaction receipt
-    const receipt = await transaction.generateReceipt()
-    await transaction.updateOne({ status: 'success', reflected: true })
-    transaction = await transaction.save()
+//     // Generate transaction receipt
+//     const receipt = await transaction.generateReceipt()
+//     await transaction.updateOne({ status: 'success', reflected: true })
+//     transaction = await transaction.save()
 
-    // Generate email notification
-    const mail_message = new WalletTopupReceiptMessage();
-    mail_message.setBody(receipt);
+//     // Generate email notification
+//     const mail_message = new WalletTopupReceiptMessage();
+//     mail_message.setBody(receipt);
 
-    sendEmail({
-        email: transaction.user.email,
-        subject: `Receipt for Wallet Topup`,
-        html: mail_message.getBody(),
-    })
+//     sendEmail({
+//         email: transaction.user.email,
+//         subject: `Receipt for Wallet Topup`,
+//         html: mail_message.getBody(),
+//     })
 
-    return transaction
-}
+//     return transaction
+// }
 
-async function debitWallet(transaction_id) {
-    let transaction = await Transaction.findById(transaction_id).populate('user')
-    if (!transaction) throw new Error('No matching transaction found')
+// async function debitWallet(transaction_id) {
+//     let transaction = await Transaction.findById(transaction_id).populate('user')
+//     if (!transaction) throw new Error('No matching transaction found')
 
-    if (transaction.reflected) return transaction;  //  Transacation has reflected
+//     if (transaction.reflected) return transaction;  //  Transacation has reflected
 
-    const wallet = await Wallet.findOne({ user: transaction.user })
-    if (wallet.balance < transaction.amount) {
-        throw new Error('Insufficient funds')
-    }
+//     const wallet = await Wallet.findOne({ user: transaction.user })
+//     if (wallet.balance < transaction.amount) {
+//         throw new Error('Insufficient funds')
+//     }
 
-    //  Transaction has reflected
-    //  Update Wallet balance
-    await wallet.updateOne({ $inc: { balance: -transaction.amount } })
+//     //  Transaction has reflected
+//     //  Update Wallet balance
+//     await wallet.updateOne({ $inc: { balance: -transaction.amount } })
 
-    // Update transaction status
-    transaction = await Transaction.findByIdAndUpdate(
-        transaction_id,
-        { status: 'success', reflected: true },
-        { new: true }
-    ).populate('user')
+//     // Update transaction status
+//     transaction = await Transaction.findByIdAndUpdate(
+//         transaction_id,
+//         { status: 'success', reflected: true },
+//         { new: true }
+//     ).populate('user')
 
-    // Generate transaction receipt
-    const receipt = await transaction.generateReceipt()
-    transaction = await transaction.save()
+//     // Generate transaction receipt
+//     const receipt = await transaction.generateReceipt()
+//     transaction = await transaction.save()
 
-    // Generate email notification
-    const mail_message = new WalletWithdrawalReceiptMessage();
-    mail_message.setBody(receipt);
+//     // Generate email notification
+//     const mail_message = new WalletWithdrawalReceiptMessage();
+//     mail_message.setBody(receipt);
 
-    sendEmail({
-        email: transaction.user.email,
-        subject: `Receipt for Wallet Withdrawal`,
-        html: mail_message.getBody(),
-    })
+//     sendEmail({
+//         email: transaction.user.email,
+//         subject: `Receipt for Wallet Withdrawal`,
+//         html: mail_message.getBody(),
+//     })
 
-    return transaction.populate('receipt invoice ride user')
-}
+//     return transaction.populate('receipt invoice ride user')
+// }
 
 /**
  * Effects successfull transaction
@@ -344,10 +344,10 @@ async function effectSuccessfullTransaction(transaction_id) {
     if (!transaction) { throw new Error('Transaction not found') }
 
     switch (transaction.type) {
-        // Handle verified wallet transaction
-        case 'wallet_topup':
-            transaction = await creditWallet(transaction._id)
-            break;
+        // // Handle verified wallet transaction
+        // case 'wallet_topup':
+        //     transaction = await creditWallet(transaction._id)
+        //     break;
 
         // Handle verififed ride payment
         case 'book_ride':
@@ -380,10 +380,10 @@ async function effectSuccessfullTransaction(transaction_id) {
 
             break;
 
-        // Handle verified Wallet withdrawal transaction
-        case 'wallet_withdrawal':
-            transaction = await debitWallet(transaction._id)
-            break;
+        // // Handle verified Wallet withdrawal transaction
+        // case 'wallet_withdrawal':
+        //     transaction = await debitWallet(transaction._id)
+        //     break;
 
         default:
             throw new Error('Please specify transaction type')
@@ -396,7 +396,7 @@ module.exports = {
     initiateTransaction,
     verifyTransactionStatus,
     effectVerifiedRidePaymentTransaction,
-    creditWallet,
-    debitWallet,
+    // creditWallet,
+    // debitWallet,
     effectSuccessfullTransaction
 };
