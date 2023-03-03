@@ -761,6 +761,23 @@ const payForRide = async (req, res, next) => {
     })
 };
 
+const startTrackingRide = async (req, res, next) => {
+    const ride_id = req.params.ride_id
+
+    // Get riders data from ride
+
+    // Check if ride has ended
+        // if yes send last coordinate - ride ended
+    
+    // Send html with unique id to connect to location update broadcast
+
+    // Add user to ride broadcast
+
+    // Start broadcasting if it hasn't started
+
+    // Send ride destination
+}
+
 module.exports = {
     initRideRequest,
     completeRideRequest,
