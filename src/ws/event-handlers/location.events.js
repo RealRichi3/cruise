@@ -40,6 +40,9 @@ const updateLocation = async function (data, res) {
             }
             await saveNewLocation(new_location_data, socket)
 
+            // Broadcast current riders location to listeners
+            await broadcastRiderlocation(new_location_data)
+
             res.send(null, new_location_data)
             return
         }
@@ -47,6 +50,9 @@ const updateLocation = async function (data, res) {
         // Update existing location
         const new_location_data = await location.updateCoordinates(longitude, latitude)
 
+        // Broadcast current location to listeners
+        await broadcastRiderlocation(new_location_data)
+        
         res.send(null, new_location_data)
         return
     } catch (error) {
