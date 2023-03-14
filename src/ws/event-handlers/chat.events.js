@@ -3,18 +3,7 @@ const { ChatRoom, Message } = require("../../models/chat.model")
 const { Ride } = require("../../models/ride.model")
 const { clients } = require("../clients")
 const { User } = require("../../models/users.model")
-
-async function addClientToChatRoom(client, room_id) {
-    // Convert room_id to string ..
-    // .. for cases where MongooseObjectId is passed
-    room_id = room_id.toString()
-
-    // Add client to room if not already in
-    const client_in_chatroom = room_id in client.rooms
-    if (!client_in_chatroom) {
-        client.join(room_id)
-    }
-}
+const { joinRoom } = require('../utils/rooms')
 
 async function sendChatRoomInviteToClient(target_user_id, room_id) {
     const target_user_data = await User.findById(target_user_id);
@@ -74,7 +63,7 @@ const initiateChat = async function (req, res) {
     // and invite target user to chat room
     if (chat_room) {
         // Add initiator to chat room
-        addClientToChatRoom(socket, chat_room._id)
+        joinRoom(socket, chat_room._id)
 
         // Send invite to target user (i.e invitee)
         sendChatRoomInviteToClient(targetuser_id, chat_room._id)
@@ -90,7 +79,7 @@ const initiateChat = async function (req, res) {
         messages: [],
     });
 
-    addClientToChatRoom(socket, new_chat_room._id)
+    joinRoom(socket, new_chat_room._id)
 
     // Invite target user to chat room
     sendChatRoomInviteToClient(targetuser_id, new_chat_room._id)
@@ -167,7 +156,7 @@ const joinChatRoom = async function (req, res) {
     }
 
     // Add user to chat room
-    addClientToChatRoom(socket, chat_room_id)
+    joinRoom(socket, chat_room_id)
 
     res.send(null, { chat_room })
     return

@@ -7,6 +7,13 @@ const app = require("./app");
 const { randomUUID } = require('crypto');
 
 const initializeSocketEventHandlers = (socket) => {
+    // If the socket connection is only meant for tracking ride
+    // activate only location event handlers for this user's socket conn
+    if (socket.user.permission == 'ride_tracking') {
+        require('./ws/event-handlers/location.events')(io, socket)
+        return
+    }
+
     // Initialize socket event handlers
     require('./ws/event-handlers/location.events')(io, socket);
     require('./ws/event-handlers/call.events')(io, socket);

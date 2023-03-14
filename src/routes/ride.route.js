@@ -16,12 +16,14 @@ const {
     getRidersReviews,
     payForRide,
     getUsersBookedRides,
-    getRidersCompletedRides
+    getRidersCompletedRides,
+    startTrackingRide
 } = require('../controllers/ride.controller')
 
 const { basicAuth } = require('../middlewares/auth');
 const permit = require('../middlewares/rbac');
 
+router.get('/tracking', startTrackingRide)
 router.use(basicAuth());
 
 router
