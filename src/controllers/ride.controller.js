@@ -18,6 +18,7 @@ const { Ride, RideRequest, RideReview } = require('../models/ride.model');
 const { stringify } = require('../utils/json');
 const Vehicle = require('../models/vehicle.model');
 const { initiateTransaction, debitWallet } = require('../services/payment/transaction.service');
+const { randomUUID } = require('crypto');
 
 // TODO: Improve code documentation by adding more explanations to errors 
 
@@ -761,6 +762,27 @@ const payForRide = async (req, res, next) => {
     })
 };
 
+const startTrackingRide = async (req, res, next) => {
+    const ride_id = req.params.ride_id
+
+    const ride = await Ride.findById(ride_id)
+    if (!ride) { 
+        return next(new NotFoundError('Ride not found'))
+    }
+
+    switch (ride.status){
+        case 'cancelled':
+            return next(new BadRequestError('Ride has been cancelled'))
+
+        case 'completed':
+            return next(new BadRequestError('Ride has ended'))
+    }
+    
+    // Send html with unique id to connect to location update broadcast
+    // Send ride destination
+    const unique_tracking_id = randomUUID()
+}
+
 module.exports = {
     initRideRequest,
     completeRideRequest,
@@ -777,4 +799,5 @@ module.exports = {
     getUsersBookedRides,
     getRidersCompletedRides,
     payForRide,
+    startTrackingRide
 };
