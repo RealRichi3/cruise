@@ -12,6 +12,12 @@ The Ride-Hailing API is a backend service that allows users to book and pay for 
 - Driver Management: The app provides a dashboard for drivers to manage their rides and earnings, as well as access to features like navigation and turn-by-turn directions.
 - Trip History: The app allows users to view their ride history and receipts, providing an easy way to keep track of expenses and past trips.
 
+## Todo
+- Web page to show realtime location tracking
+- Customer support feature
+- Implement Google Map API to accurately calculate distance between rider and enduser
+- Estimated rider arrival time
+
 
 ## Requirements
 
@@ -113,6 +119,6 @@ The full API documentation can be found [here](https://documenter.getpostman.com
 
 
 ## Author
-Author: Richie Moluno
-Twitter: [@MolunoRichie](https://twitter.com/MolunoRichie)
-Email: molunorichie@gmail.com
+- Author: Richie Moluno
+- Twitter: [@MolunoRichie](https://twitter.com/MolunoRichie)
+- Email: molunorichie@gmail.com
