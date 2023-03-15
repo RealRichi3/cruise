@@ -22,6 +22,7 @@ This API was built using
 - Customer support feature
 - Implement Google Map API to accurately calculate distance between rider and enduser
 - Estimated rider arrival time
+- Detailed project documentation
 
 
 ## Requirements
