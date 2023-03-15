@@ -1,4 +1,4 @@
-# CRUISE (Ride-Hailing API)
+# CRUISE Ride-Hailing API    `still in development`
 The Ride-Hailing API is a backend service that allows users to book and pay for rides using a mobile app. This API was built using Node.js, Express.js, and MongoDB.
 
 ## Key Features
